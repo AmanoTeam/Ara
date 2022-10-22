@@ -1,0 +1,9 @@
+[submodule "submodules/jansson"]
+	path = submodules/jansson
+	url = https://github.com/akheron/jansson
+[submodule "submodules/bearssl"]
+	path = submodules/bearssl
+	url = https://www.bearssl.org/git/BearSSL
+[submodule "submodules/curl"]
+	path = submodules/curl
+	url = http://github.com/curl/curl

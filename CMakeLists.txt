@@ -1,12 +1,16 @@
 cmake_minimum_required(VERSION 3.13)
 
 project(
-	UbookDL
+	SparkleC
 	VERSION 0.1
 	DESCRIPTION "Tiny CLI tool to download courses from Hotmart"
 	HOMEPAGE_URL "https://github.com/Kartatz/SparkleC"
 	LANGUAGES C
 )
+
+option(SPARKLEC_ENABLE_LTO "Turn on compiler Link Time Optimizations" OFF)
+
+set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
 
 # curl
 set(PICKY_COMPILER OFF)
@@ -33,8 +37,10 @@ set(CURL_WERROR OFF)
 option(JANSSON_BUILD_DOCS OFF)
 set(JANSSON_BUILD_SHARED_LIBS ON CACHE BOOL "")
 
-if (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
-	add_link_options(-s)
+if (NOT APPLE)
+	if (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
+		add_link_options(-s)
+	endif()
 endif()
 
 if (CMAKE_C_COMPILER_ID STREQUAL "Clang" AND CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
@@ -353,31 +359,102 @@ set(BEARSSL_LIBRARY $<TARGET_FILE:bearssl>)
 add_subdirectory(submodules/curl EXCLUDE_FROM_ALL)
 add_subdirectory(submodules/jansson EXCLUDE_FROM_ALL)
 
+add_executable(
+	sparklec
+	src/callbacks.c
+	src/main.c
+	src/query.c
+	src/types.c
+	src/utils.c
+	src/m3u8.c
+)
+
+if (APPLE)
+	foreach(property BUILD_RPATH INSTALL_RPATH)
+		set_target_properties(
+			sparklec
+			PROPERTIES
+			${property} "@loader_path/../lib:@loader_path"
+		)
+	endforeach()
+elseif (UNIX)
+	foreach(property BUILD_RPATH INSTALL_RPATH)
+		set_target_properties(
+			sparklec
+			PROPERTIES
+			${property} "$ORIGIN/../lib:$ORIGIN"
+		)
+	endforeach()
+endif()
+
 set_target_properties(
 	libcurl
 	PROPERTIES
 	IMPORTED_LOCATION $<TARGET_FILE:bearssl>
 )
 
-set_target_properties(
-	jansson
-	PROPERTIES
-	LIBRARY_OUTPUT_DIRECTORY $<TARGET_FILE_DIR:unalix>
-)
+if (APPLE)
+	foreach(property BUILD_RPATH INSTALL_RPATH)
+		set_target_properties(
+			libcurl
+			PROPERTIES
+			${property} "@loader_path"
+		)
+	endforeach()
+elseif (UNIX)
+	foreach(property BUILD_RPATH INSTALL_RPATH)
+		set_target_properties(
+			libcurl
+			PROPERTIES
+			${property} "$ORIGIN"
+		)
+	endforeach()
+endif()
 
-add_executable(
-	sparklec
-	src/callbacks.c
-	src/main.c
-	src/query.c
-	src/sha256.c
-	src/types.c
-	src/utils.c
-)
+foreach(property RUNTIME_OUTPUT_DIRECTORY LIBRARY_OUTPUT_DIRECTORY)
+	foreach(target jansson libcurl)
+		set_target_properties(
+			${target}
+			PROPERTIES
+			${property} $<TARGET_FILE_DIR:sparklec>
+		)
+	endforeach()
+endforeach()
+
+if (WIN32)
+	target_compile_definitions(
+		sparklec
+		PRIVATE
+		UNICODE _UNICODE
+	)
+	
+	target_link_options(
+		sparklec
+		BEFORE
+		PRIVATE
+		-municode
+	)
+endif()
+
+if (SPARKLEC_ENABLE_LTO)
+	set(SPARKLEC_HAS_LTO OFF)
+	
+	include(CheckIPOSupported)
+	check_ipo_supported(RESULT SPARKLEC_HAS_LTO LANGUAGES C)
+	
+	if (SPARKLEC_HAS_LTO)
+		foreach(target sparklec bearssl jansson libcurl)
+			set_target_properties(
+				${target}
+				PROPERTIES
+				INTERPROCEDURAL_OPTIMIZATION TRUE
+			)
+		endforeach()
+	endif()
+endif()
 
 target_link_libraries(
 	sparklec
-	bearssl
 	jansson
 	libcurl
 )
@@ -386,14 +463,7 @@ foreach(target sparklec bearssl jansson libcurl)
 	install(
 		TARGETS ${target}
 		RUNTIME DESTINATION bin
-		LIBRARY DESTINATION lib
+		LIBRARY DESTINATION lib NAMELINK_SKIP
 	)
 endforeach()
 
-if (UNIX)
-	set_target_properties(
-		sparklec
-		PROPERTIES
-		INSTALL_RPATH "$ORIGIN/../lib"
-	)
-endif()

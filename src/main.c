@@ -1,163 +1,241 @@
 #include <stdlib.h>
-#include <unistd.h>
-#include <pthread.h>
-#include <sys/prctl.h>
+#include <string.h>
+#include <locale.h>
+
+#define A "SparkleC"
+
+#ifdef WIN32
+	#include <stdio.h>
+	#include <fcntl.h>
+	#include <io.h>
+	
+	#ifdef UNICODE
+		#include <stdarg.h>
+	#endif
+#endif
 
 #include <curl/curl.h>
 #include <jansson.h>
-#include <bearssl.h>
 
 #include "errors.h"
 #include "query.h"
 #include "callbacks.h"
 #include "types.h"
 #include "utils.h"
-#include "sha256.h"
+#include "symbols.h"
+#include "cacert.h"
+#include "m3u8.h"
 
-static const char DOT[] = ".";
-static const char SLASH[] = "/";
-static const char SPACE[] = " ";
-static const char QUOTATION_MARK[] = "\"";
+struct SegmentDownload {
+	CURL* handle;
+	char* filename;
+	FILE* stream;
+};
 
-static const char JSON_FILE_EXTENSION[] = "json";
+#if defined(WIN32) && defined(UNICODE)
+	int __printf(const char* const format, ...) {
+		
+		va_list list;
+		va_start(list, format);
+		
+		const int size = _vscprintf(format, list);
+		char value[size + 1];
+		vsnprintf(value, sizeof(value), format, list);
+		
+		va_end(list);
+		
+		int wcsize = MultiByteToWideChar(CP_UTF8, 0, value, -1, NULL, 0);
+		wchar_t wvalue[wcsize];
+		MultiByteToWideChar(CP_UTF8, 0, value, -1, wvalue, wcsize);
+		
+		return wprintf(L"%ls", wvalue);
+		
+	}
+	
+	int __fprintf(FILE* const stream, const char* const format, ...) {
+		
+		va_list list;
+		va_start(list, format);
+		
+		const int size = _vscprintf(format, list);
+		char value[size + 1];
+		vsnprintf(value, sizeof(value), format, list);
+		
+		va_end(list);
+		
+		int wcsize = MultiByteToWideChar(CP_UTF8, 0, value, -1, NULL, 0);
+		wchar_t wvalue[wcsize];
+		MultiByteToWideChar(CP_UTF8, 0, value, -1, wvalue, wcsize);
+		
+		return fwprintf(stream, L"%ls", wvalue);
+		
+	}
+	
+	FILE* __fopen(const char* const filename, const char* const mode) {
+		
+		int wcsize = 0;
+		
+		wcsize = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
+		wchar_t wfilename[wcsize];
+		MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfilename, wcsize);
+		
+		wcsize = MultiByteToWideChar(CP_UTF8, 0, mode, -1, NULL, 0);
+		wchar_t wmode[wcsize];
+		MultiByteToWideChar(CP_UTF8, 0, mode, -1, wmode, wcsize);
+		
+		return _wfopen(wfilename, wmode);
+		
+	};
+	
+	char* __fgets(char* const s, const int n, FILE* const stream) {
+		
+		wchar_t ws[n];
+		
+		if (fgetws(ws, sizeof(ws) / sizeof(*ws), stream) == NULL) {
+			return NULL;
+		}
+		
+		WideCharToMultiByte(CP_UTF8, 0, ws, -1, s, n, NULL, NULL);
+		
+		return s;
+		
+	}
+	
+	#define printf __printf
+	#define fprintf __fprintf
+	#define fopen __fopen
+	#define fgets __fgets
+#endif
+
+static void curl_slistp_free_all(struct curl_slist** ptr) {
+	curl_slist_free_all(*ptr);
+}
+
+static void charpp_free(char** ptr) {
+	free(*ptr);
+}
+
+static void curlupp_free(CURLU** ptr) {
+	curl_url_cleanup(*ptr);
+}
+
+static void curlcharpp_free(char** ptr) {
+	curl_free(*ptr);
+}
+
+static size_t progress_callback(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow) {
+	(void) (clientp);
+	(void) (ultotal);
+	(void) (ulnow);
+	
+	printf("\r+ Atualmente em progresso: %lli%% / 100%%", ((dlnow * 100) / dltotal));
+	
+	if (((dlnow * 100) / dltotal) == 100) {
+		printf("\n");
+	}
+	
+	return 0;
+	
+}
+
+static const char TS_FILE_EXTENSION[] = "ts";
+static const char KEY_FILE_EXTENSION[] = "key";
+
+static const char LOCAL_PLAYLIST_FILENAME[] = "playlist.m3u8";
+static const char LOCAL_ACCOUNTS_FILENAME[] = "accounts.json";
+
 static const char HTTPS_SCHEME[] = "https://";
 
-static const char APP_CONFIG_DIRECTORY[] = ".config";
-
 static const char HTTP_HEADER_AUTHORIZATION[] = "Authorization";
+static const char HTTP_HEADER_REFERER[] = "Referer";
+static const char HTTP_HEADER_TOKEN[] = "Token";
+static const char HTTP_HEADER_CLUB[] = "Club";
+static const char HTTP_DEFAULT_USER_AGENT[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36";
+static const char HTTP_AUTHENTICATION_BEARER[] = "Bearer";
+
 static const char HTTP_HEADER_SEPARATOR[] = ": ";
 
 static const char* const HOSTNAMES[] = {
-	"dns.google:443:8.8.8.8",
-	"dns.google:443:8.8.4.4"
+	"dns.google:443:8.8.8.8"
 };
 
 static const char HOTMART_CLUB_SUFFIX[] = ".club.hotmart.com";
 
-#ifdef _WIN32
-	static const char PATH_SEPARATOR[] = "\\";
-#else
-	static const char PATH_SEPARATOR[] = "/";
-#endif
+#define HOTMART_API_CLUB_PREFIX "https://api-club.hotmart.com/hot-club-api/rest/v3"
+#define HOTMART_API_SEC_PREFIX "https://api-sec-vlc.hotmart.com"
+#define SPARKLEAPP_API_PREFIX "https://api.sparkleapp.com.br"
+
+static const char HOTMART_NAVIGATION_ENDPOINT[] = 
+	HOTMART_API_CLUB_PREFIX
+	"/navigation";
+
+static const char HOTMART_MEMBERSHIP_ENDPOINT[] = 
+	HOTMART_API_CLUB_PREFIX
+	"/membership";
+
+static const char HOTMART_PAGE_ENDPOINT[] = 
+	HOTMART_API_CLUB_PREFIX
+	"/page";
+
+static const char HOTMART_ATTACHMENT_ENDPOINT[] = 
+	HOTMART_API_CLUB_PREFIX
+	"/attachment";
+
+static const char HOTMART_TOKEN_ENDPOINT[] = 
+	SPARKLEAPP_API_PREFIX
+	"/oauth/token";
+
+static const char HOTMART_TOKEN_CHECK_ENDPOINT[] = 
+	HOTMART_API_SEC_PREFIX
+	"/security/oauth/check_token";
 
 #define MAX_INPUT_SIZE 1024
-
-struct Credentials {
-	char* access_token;
-	char* refresh_token;
-	int expires_in;
-};
-
-struct Media {
-	char* url;
-};
-
-struct Medias {
-	size_t offset;
-	size_t size;
-	struct Media* items;
-};
-
-struct Attachment {
-	char* url;
-};
-
-struct Attachments {
-	size_t offset;
-	size_t size;
-	struct Attachment* items;
-};
-
-struct Page {
-	char* id;
-	char* name;
-	struct Medias medias;
-	struct Attachments attachments;
-};
-
-struct Pages {
-	size_t offset;
-	size_t size;
-	struct Page* items;
-};
-
-struct Module {
-	char* id;
-	char* name;
-	char* download_location;
-	struct Pages pages;
-};
-
-struct Modules {
-	size_t offset;
-	size_t size;
-	struct Module* items;
-};
-
-struct Resource {
-	char* name;
-	char* subdomain;
-	char* download_location;
-	struct Modules modules;
-};
-
-struct Resources {
-	size_t offset;
-	size_t size;
-	struct Resource* items;
-};
 
 static CURL* curl = NULL;
 
 static int authorize(
 	const char* const username,
 	const char* const password,
-	struct Credentials* credentials
+	struct Credentials* const credentials
 ) {
 	
-	char* user = curl_easy_escape(NULL, username, 0);
+	char* user __attribute__((__cleanup__(curlcharpp_free))) = curl_easy_escape(NULL, username, 0);
 	
 	if (user == NULL) {
 		return UERR_CURL_FAILURE;
 	}
 	
-	char* pass = curl_easy_escape(NULL, password, 0);
+	char* pass __attribute__((__cleanup__(curlcharpp_free))) = curl_easy_escape(NULL, password, 0);
 	
 	if (pass == NULL) {
 		return UERR_CURL_FAILURE;
 	}
 	
-	struct Query query = {};
+	struct Query query __attribute__((__cleanup__(query_free))) = {0};
 	
 	add_parameter(&query, "grant_type", "password");
 	add_parameter(&query, "username", user);
 	add_parameter(&query, "password", pass);
 	
-	char* post_fields = NULL;
+	char* post_fields __attribute__((__cleanup__(charpp_free))) = NULL;
 	const int code = query_stringify(query, &post_fields);
-	query_free(&query);
 	
 	if (code != UERR_SUCCESS) {
 		return code;
 	}
 	
+	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	
 	curl_easy_setopt(curl, CURLOPT_COPYPOSTFIELDS, post_fields);
-	
-	free(post_fields);
-	
-	struct String string = {0};
-	
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_cb);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &string);
-	curl_easy_setopt(curl, CURLOPT_URL, "https://api.sparkleapp.com.br/oauth/token");
+	curl_easy_setopt(curl, CURLOPT_URL, HOTMART_TOKEN_ENDPOINT);
 	
 	if (curl_easy_perform(curl) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	
-	json_t* tree = json_loads(string.s, 0, NULL);
-	
-	string_free(&string);
+	json_auto_t* tree = json_loads(string.s, 0, NULL);
 	
 	if (tree == NULL) {
 		return UERR_JSON_CANNOT_PARSE;
@@ -166,12 +244,10 @@ static int authorize(
 	const json_t* obj = json_object_get(tree, "access_token");
 	
 	if (obj == NULL) {
-		json_decref(tree);
 		return UERR_JSON_MISSING_REQUIRED_KEY;
 	}
 	
 	if (!json_is_string(obj)) {
-		json_decref(tree);
 		return UERR_JSON_NON_MATCHING_TYPE;
 	}
 	
@@ -180,12 +256,10 @@ static int authorize(
 	obj = json_object_get(tree, "refresh_token");
 	
 	if (obj == NULL) {
-		json_decref(tree);
 		return UERR_JSON_MISSING_REQUIRED_KEY;
 	}
 	
 	if (!json_is_string(obj)) {
-		json_decref(tree);
 		return UERR_JSON_NON_MATCHING_TYPE;
 	}
 	
@@ -194,26 +268,31 @@ static int authorize(
 	obj = json_object_get(tree, "expires_in");
 	
 	if (obj == NULL) {
-		json_decref(tree);
 		return UERR_JSON_MISSING_REQUIRED_KEY;
 	}
 	
 	if (!json_is_integer(obj)) {
-		json_decref(tree);
 		return UERR_JSON_NON_MATCHING_TYPE;
 	}
 	
 	const int expires_in = json_integer_value(obj);
 	
-	credentials->access_token = malloc(strlen(access_token) + 1);
-	strcpy(credentials->access_token, access_token);
-	
-	credentials->refresh_token = malloc(strlen(refresh_token) + 1);
-	strcpy(credentials->refresh_token, refresh_token);
-	
 	credentials->expires_in = expires_in;
 	
-	json_decref(tree);
+	credentials->access_token = malloc(strlen(access_token) + 1);
+	credentials->refresh_token = malloc(strlen(refresh_token) + 1);
+	
+	if (credentials->access_token == NULL || credentials->refresh_token == NULL) {
+		return UERR_MEMORY_ALLOCATE_FAILURE;
+	}
+	
+	strcpy(credentials->access_token, access_token);
+	strcpy(credentials->refresh_token, refresh_token);
+	
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, NULL);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, NULL);
+	curl_easy_setopt(curl, CURLOPT_URL, NULL);
+	curl_easy_setopt(curl, CURLOPT_COPYPOSTFIELDS, NULL);
 	
 	return UERR_SUCCESS;
 	
@@ -221,35 +300,29 @@ static int authorize(
 
 static int get_resources(
 	const struct Credentials* const credentials,
-	struct Resources* resources
+	struct Resources* const resources
 ) {
 	
-	struct Query query = {};
+	struct Query query __attribute__((__cleanup__(query_free))) = {0};
 	
 	add_parameter(&query, "token", credentials->access_token);
 	
-	char* squery = NULL;
+	char* squery __attribute__((__cleanup__(charpp_free))) = NULL;
 	const int code = query_stringify(query, &squery);
-	
-	query_free(&query);
 	
 	if (code != UERR_SUCCESS) {
 		return code;
 	}
 	
-	CURLU *cu = curl_url();
-	curl_url_set(cu, CURLUPART_URL, "https://api-sec-vlc.hotmart.com/security/oauth/check_token", 0);
+	CURLU* cu __attribute__((__cleanup__(curlupp_free))) = curl_url();
+	curl_url_set(cu, CURLUPART_URL, HOTMART_TOKEN_CHECK_ENDPOINT, 0);
 	curl_url_set(cu, CURLUPART_QUERY, squery, 0);
 	
-	char* url = NULL;
+	char* url __attribute__((__cleanup__(curlcharpp_free))) = NULL;
 	curl_url_get(cu, CURLUPART_URL, &url, 0);
 	curl_easy_setopt(curl, CURLOPT_URL, url);
 	
-	curl_url_cleanup(cu);
-	curl_free(url);
-	free(squery);
-	
-	struct String string = {0};
+	struct String string __attribute__((__cleanup__(string_free))) = {0};
 	
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_cb);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &string);
@@ -259,9 +332,7 @@ static int get_resources(
 		return UERR_CURL_FAILURE;
 	}
 	
-	json_t* tree = json_loads(string.s, 0, NULL);
-	
-	string_free(&string);
+	json_auto_t* tree = json_loads(string.s, 0, NULL);
 	
 	if (tree == NULL) {
 		return UERR_JSON_CANNOT_PARSE;
@@ -270,17 +341,15 @@ static int get_resources(
 	const json_t* obj = json_object_get(tree, "resources");
 	
 	if (obj == NULL) {
-		json_decref(tree);
 		return UERR_JSON_MISSING_REQUIRED_KEY;
 	}
 	
 	if (!json_is_array(obj)) {
-		json_decref(tree);
 		return UERR_JSON_NON_MATCHING_TYPE;
 	}
 	
-	char authorization[6 + strlen(SPACE) + strlen(credentials->access_token) + 1];
-	strcpy(authorization, "Bearer");
+	char authorization[strlen(HTTP_AUTHENTICATION_BEARER) + strlen(SPACE) + strlen(credentials->access_token) + 1];
+	strcpy(authorization, HTTP_AUTHENTICATION_BEARER);
 	strcat(authorization, SPACE);
 	strcat(authorization, credentials->access_token);
 	
@@ -288,10 +357,14 @@ static int get_resources(
 	json_t *item = NULL;
 	const size_t array_size = json_array_size(obj);
 	
-	curl_easy_setopt(curl, CURLOPT_URL, "https://api-club.hotmart.com/hot-club-api/rest/v3/membership");
+	curl_easy_setopt(curl, CURLOPT_URL, HOTMART_MEMBERSHIP_ENDPOINT);
 	
 	resources->size = sizeof(struct Resource) * array_size;
 	resources->items = malloc(resources->size);
+	
+	if (resources->items == NULL) {
+		return UERR_MEMORY_ALLOCATE_FAILURE;
+	}
 	
 	json_array_foreach(obj, index, item) {
 		if (!json_is_object(item)) {
@@ -301,35 +374,31 @@ static int get_resources(
 		const json_t* obj = json_object_get(item, "resource");
 		
 		if (obj == NULL) {
-			json_decref(tree);
 			return UERR_JSON_MISSING_REQUIRED_KEY;
 		}
 		
 		if (!json_is_object(obj)) {
-			json_decref(tree);
 			return UERR_JSON_NON_MATCHING_TYPE;
 		}
 		
 		obj = json_object_get(obj, "subdomain");
 		
 		if (obj == NULL) {
-			json_decref(tree);
 			return UERR_JSON_MISSING_REQUIRED_KEY;
 		}
 		
 		if (!json_is_string(obj)) {
-			json_decref(tree);
 			return UERR_JSON_NON_MATCHING_TYPE;
 		}
 		
 		const char* const subdomain = json_string_value(obj);
 		
 		const char* const headers[][2] = {
-			{"Authorization", authorization},
-			{"Club", subdomain}
+			{HTTP_HEADER_AUTHORIZATION, authorization},
+			{HTTP_HEADER_CLUB, subdomain}
 		};
 		
-		struct curl_slist* list = NULL;
+		struct curl_slist* list __attribute__((__cleanup__(curl_slistp_free_all))) = NULL;
 		
 		for (size_t index = 0; index < sizeof(headers) / sizeof(*headers); index++) {
 			const char** const header = (const char**) headers[index];
@@ -344,38 +413,34 @@ static int get_resources(
 			struct curl_slist* tmp = curl_slist_append(list, item);
 			
 			if (tmp == NULL) {
-				curl_slist_free_all(list);
 				return UERR_CURL_FAILURE;
 			}
 			
 			list = tmp;
 		}
 		
+		struct String string __attribute__((__cleanup__(string_free))) = {0};
+		
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &string);
 		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
 		
 		if (curl_easy_perform(curl) != CURLE_OK) {
 			return UERR_CURL_FAILURE;
 		}
 		
-		curl_slist_free_all(list);
+		json_auto_t* subtree = json_loads(string.s, 0, NULL);
 		
-		json_t* tree = json_loads(string.s, 0, NULL);
-		
-		string_free(&string);
-		
-		if (tree == NULL) {
+		if (subtree == NULL) {
 			return UERR_JSON_CANNOT_PARSE;
 		}
 		
-		obj = json_object_get(tree, "name");
+		obj = json_object_get(subtree, "name");
 		
 		if (obj == NULL) {
-			json_decref(tree);
 			return UERR_JSON_MISSING_REQUIRED_KEY;
 		}
 		
 		if (!json_is_string(obj)) {
-			json_decref(tree);
 			return UERR_JSON_NON_MATCHING_TYPE;
 		}
 		
@@ -386,13 +451,20 @@ static int get_resources(
 			.subdomain = malloc(strlen(subdomain) + 1)
 		};
 		
+		if (resource.name == NULL || resource.subdomain == NULL) {
+			return UERR_MEMORY_ALLOCATE_FAILURE;
+		}
+		
 		strcpy(resource.name, name);
 		strcpy(resource.subdomain, subdomain);
 		
 		resources->items[resources->offset++] = resource;
-		
-		json_decref(tree);
 	}
+	
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, NULL);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, NULL);
+	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, NULL);
+	curl_easy_setopt(curl, CURLOPT_URL, NULL);
 	
 	return UERR_SUCCESS;
 	
@@ -400,20 +472,20 @@ static int get_resources(
 
 static int get_modules(
 	const struct Credentials* const credentials,
-	struct Resource* resource
+	struct Resource* const resource
 ) {
 	
-	char authorization[6 + strlen(SPACE) + strlen(credentials->access_token) + 1];
-	strcpy(authorization, "Bearer");
+	char authorization[strlen(HTTP_AUTHENTICATION_BEARER) + strlen(SPACE) + strlen(credentials->access_token) + 1];
+	strcpy(authorization, HTTP_AUTHENTICATION_BEARER);
 	strcat(authorization, SPACE);
 	strcat(authorization, credentials->access_token);
 	
 	const char* const headers[][2] = {
-		{"Authorization", authorization},
-		{"Club", resource->subdomain}
+		{HTTP_HEADER_AUTHORIZATION, authorization},
+		{HTTP_HEADER_CLUB, resource->subdomain}
 	};
 	
-	struct curl_slist* list = NULL;
+	struct curl_slist* list __attribute__((__cleanup__(curl_slistp_free_all))) = NULL;
 	
 	for (size_t index = 0; index < sizeof(headers) / sizeof(*headers); index++) {
 		const char** const header = (const char**) headers[index];
@@ -428,28 +500,24 @@ static int get_modules(
 		struct curl_slist* tmp = curl_slist_append(list, item);
 		
 		if (tmp == NULL) {
-			curl_slist_free_all(list);
 			return UERR_CURL_FAILURE;
 		}
 		
 		list = tmp;
 	}
 	
-	struct String string = {0};
+	struct String string __attribute__((__cleanup__(string_free))) = {0};
 	
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_cb);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &string);
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
-	curl_easy_setopt(curl, CURLOPT_URL, "https://api-club.hotmart.com/hot-club-api/rest/v3/navigation");
+	curl_easy_setopt(curl, CURLOPT_URL, HOTMART_NAVIGATION_ENDPOINT);
 	
 	if (curl_easy_perform(curl) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	
-	curl_slist_free_all(list);
-	
-	json_t* tree = json_loads(string.s, 0, NULL);
-	
-	string_free(&string);
+	json_auto_t* tree = json_loads(string.s, 0, NULL);
 	
 	if (tree == NULL) {
 		return UERR_JSON_CANNOT_PARSE;
@@ -458,12 +526,10 @@ static int get_modules(
 	const json_t* obj = json_object_get(tree, "modules");
 	
 	if (obj == NULL) {
-		json_decref(tree);
 		return UERR_JSON_MISSING_REQUIRED_KEY;
 	}
 	
 	if (!json_is_array(obj)) {
-		json_decref(tree);
 		return UERR_JSON_NON_MATCHING_TYPE;
 	}
 	
@@ -471,10 +537,14 @@ static int get_modules(
 	json_t *item = NULL;
 	const size_t array_size = json_array_size(obj);
 	
-	curl_easy_setopt(curl, CURLOPT_URL, "https://api-club.hotmart.com/hot-club-api/rest/v3/membership");
+	curl_easy_setopt(curl, CURLOPT_URL, HOTMART_MEMBERSHIP_ENDPOINT);
 	
 	resource->modules.size = sizeof(struct Module) * array_size;
 	resource->modules.items = malloc(resource->modules.size);
+	
+	if (resource->modules.items == NULL) {
+		return UERR_MEMORY_ALLOCATE_FAILURE;
+	}
 	
 	json_array_foreach(obj, index, item) {
 		if (!json_is_object(item)) {
@@ -484,12 +554,10 @@ static int get_modules(
 		const json_t* obj = json_object_get(item, "id");
 		
 		if (obj == NULL) {
-			json_decref(tree);
 			return UERR_JSON_MISSING_REQUIRED_KEY;
 		}
 		
 		if (!json_is_string(obj)) {
-			json_decref(tree);
 			return UERR_JSON_NON_MATCHING_TYPE;
 		}
 		
@@ -498,21 +566,36 @@ static int get_modules(
 		obj = json_object_get(item, "name");
 		
 		if (obj == NULL) {
-			json_decref(tree);
 			return UERR_JSON_MISSING_REQUIRED_KEY;
 		}
 		
 		if (!json_is_string(obj)) {
-			json_decref(tree);
 			return UERR_JSON_NON_MATCHING_TYPE;
 		}
 		
 		const char* const name = json_string_value(obj);
 		
+		obj = json_object_get(item, "locked");
+		
+		if (obj == NULL) {
+			return UERR_JSON_MISSING_REQUIRED_KEY;
+		}
+		
+		if (!json_is_boolean(obj)) {
+			return UERR_JSON_NON_MATCHING_TYPE;
+		}
+		
+		const int is_locked = json_boolean_value(obj);
+		
 		struct Module module = {
 			.id = malloc(strlen(id) + 1),
-			.name = malloc(strlen(name) + 1)
+			.name = malloc(strlen(name) + 1),
+			.is_locked = is_locked
 		};
+		
+		if (module.id == NULL || module.name == NULL) {
+			return UERR_MEMORY_ALLOCATE_FAILURE;
+		}
 		
 		strcpy(module.id, id);
 		strcpy(module.name, name);
@@ -520,12 +603,10 @@ static int get_modules(
 		obj = json_object_get(item, "pages");
 		
 		if (obj == NULL) {
-			json_decref(tree);
 			return UERR_JSON_MISSING_REQUIRED_KEY;
 		}
 		
 		if (!json_is_array(obj)) {
-			json_decref(tree);
 			return UERR_JSON_NON_MATCHING_TYPE;
 		}
 		
@@ -536,6 +617,10 @@ static int get_modules(
 		module.pages.size = sizeof(struct Page) * array_size;
 		module.pages.items = malloc(module.pages.size);
 		
+		if (module.pages.items == NULL) {
+			return UERR_MEMORY_ALLOCATE_FAILURE;
+		}
+		
 		json_array_foreach(obj, page_index, page_item) {
 			if (!json_is_object(page_item)) {
 				return UERR_JSON_NON_MATCHING_TYPE;
@@ -544,12 +629,10 @@ static int get_modules(
 			const json_t* obj = json_object_get(page_item, "hash");
 			
 			if (obj == NULL) {
-				json_decref(tree);
 				return UERR_JSON_MISSING_REQUIRED_KEY;
 			}
 			
 			if (!json_is_string(obj)) {
-				json_decref(tree);
 				return UERR_JSON_NON_MATCHING_TYPE;
 			}
 			
@@ -558,12 +641,10 @@ static int get_modules(
 			obj = json_object_get(page_item, "name");
 			
 			if (obj == NULL) {
-				json_decref(tree);
 				return UERR_JSON_MISSING_REQUIRED_KEY;
 			}
 			
 			if (!json_is_string(obj)) {
-				json_decref(tree);
 				return UERR_JSON_NON_MATCHING_TYPE;
 			}
 			
@@ -574,6 +655,10 @@ static int get_modules(
 				.name = malloc(strlen(name) + 1)
 			};
 			
+			if (page.id == NULL || page.name == NULL) {
+				return UERR_MEMORY_ALLOCATE_FAILURE;
+			}
+			
 			strcpy(page.id, hash);
 			strcpy(page.name, name);
 			
@@ -583,27 +668,33 @@ static int get_modules(
 		resource->modules.items[resource->modules.offset++] = module;
 	}
 	
-	return 0;
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, NULL);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, NULL);
+	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, NULL);
+	curl_easy_setopt(curl, CURLOPT_URL, NULL);
+	
+	return UERR_SUCCESS;
+	
 }
 
 static int get_page(
 	const struct Credentials* const credentials,
-	const struct Resource* resource,
-	struct Page* page
+	const struct Resource* const resource,
+	struct Page* const page
 ) {
 	
-	char authorization[6 + strlen(SPACE) + strlen(credentials->access_token) + 1];
-	strcpy(authorization, "Bearer");
+	char authorization[strlen(HTTP_AUTHENTICATION_BEARER) + strlen(SPACE) + strlen(credentials->access_token) + 1];
+	strcpy(authorization, HTTP_AUTHENTICATION_BEARER);
 	strcat(authorization, SPACE);
 	strcat(authorization, credentials->access_token);
 	
 	const char* const headers[][2] = {
-		{"Authorization", authorization},
-		{"Club", resource->subdomain},
-		{"Referer", "https://hotmart.com"}
+		{HTTP_HEADER_AUTHORIZATION, authorization},
+		{HTTP_HEADER_CLUB, resource->subdomain},
+		{HTTP_HEADER_REFERER, "https://hotmart.com"}
 	};
 	
-	struct curl_slist* list = NULL;
+	struct curl_slist* list __attribute__((__cleanup__(curl_slistp_free_all))) = NULL;
 	
 	for (size_t index = 0; index < sizeof(headers) / sizeof(*headers); index++) {
 		const char** const header = (const char**) headers[index];
@@ -618,22 +709,20 @@ static int get_page(
 		struct curl_slist* tmp = curl_slist_append(list, item);
 		
 		if (tmp == NULL) {
-			curl_slist_free_all(list);
 			return UERR_CURL_FAILURE;
 		}
 		
 		list = tmp;
 	}
 	
-	struct String string = {0};
+	struct String string __attribute__((__cleanup__(string_free))) = {0};
 	
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_cb);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &string);
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
 	
-	const char* const endpoint = "https://api-club.hotmart.com/hot-club-api/rest/v3/page";
-	
-	char url[strlen(endpoint) + strlen(SLASH) + strlen(page->id) + 1];
-	strcpy(url, endpoint);
+	char url[strlen(HOTMART_PAGE_ENDPOINT) + strlen(SLASH) + strlen(page->id) + 1];
+	strcpy(url, HOTMART_PAGE_ENDPOINT);
 	strcat(url, SLASH);
 	strcat(url, page->id);
 	
@@ -643,9 +732,7 @@ static int get_page(
 		return UERR_CURL_FAILURE;
 	}
 	
-	json_t* tree = json_loads(string.s, 0, NULL);
-	
-	string_free(&string);
+	json_auto_t* tree = json_loads(string.s, 0, NULL);
 	
 	if (tree == NULL) {
 		return UERR_JSON_CANNOT_PARSE;
@@ -655,7 +742,6 @@ static int get_page(
 	
 	if (obj != NULL) {
 		if (!json_is_array(obj)) {
-			json_decref(tree);
 			return UERR_JSON_NON_MATCHING_TYPE;
 		}
 		
@@ -666,6 +752,10 @@ static int get_page(
 		page->medias.size = sizeof(struct Media) * array_size;
 		page->medias.items = malloc(page->medias.size);
 		
+		if (page->medias.items == NULL) {
+			return UERR_MEMORY_ALLOCATE_FAILURE;
+		}
+		
 		json_array_foreach(obj, index, item) {
 			if (!json_is_object(item)) {
 				return UERR_JSON_NON_MATCHING_TYPE;
@@ -674,17 +764,30 @@ static int get_page(
 			const json_t* obj = json_object_get(item, "mediaSrcUrl");
 			
 			if (obj == NULL) {
-				json_decref(tree);
 				return UERR_JSON_MISSING_REQUIRED_KEY;
 			}
 			
 			if (!json_is_string(obj)) {
-				json_decref(tree);
 				return UERR_JSON_NON_MATCHING_TYPE;
 			}
 			
 			const char* const media_page = json_string_value(obj);
 			
+			obj = json_object_get(item, "mediaName");
+			
+			if (obj == NULL) {
+				return UERR_JSON_MISSING_REQUIRED_KEY;
+			}
+			
+			if (!json_is_string(obj)) {
+				return UERR_JSON_NON_MATCHING_TYPE;
+			}
+			
+			const char* const media_name = json_string_value(obj);
+			
+			struct String string __attribute__((__cleanup__(string_free))) = {0};
+			
+			curl_easy_setopt(curl, CURLOPT_WRITEDATA, &string);
 			curl_easy_setopt(curl, CURLOPT_URL, media_page);
 			
 			if (curl_easy_perform(curl) != CURLE_OK) {
@@ -694,14 +797,13 @@ static int get_page(
 			const char* const ptr = strstr(string.s, "mediaAssets");
 			
 			if (ptr == NULL) {
-				string_free(&string);
 				return UERR_STRSTR_FAILURE;
 			}
 			
 			const char* const start = strstr(ptr, HTTPS_SCHEME);
 			const char* const end = strstr(start, QUOTATION_MARK);
 			
-			size_t size = end - start;
+			size_t size = (size_t) (end - start);
 			
 			char url[size + 1];
 			memcpy(url, start, size);
@@ -721,13 +823,19 @@ static int get_page(
 				}
 			}
 			
-			string_free(&string);
-			
 			struct Media media = {
+				.filename = malloc(strlen(media_name) + 1),
 				.url = malloc(strlen(url) + 1)
 			};
 			
+			if (media.filename == NULL || media.url == NULL) {
+				return UERR_MEMORY_ALLOCATE_FAILURE;
+			}
+			
 			strcpy(media.url, url);
+			strcpy(media.filename, media_name);
+			
+			normalize_filename(media.filename);
 			
 			page->medias.items[page->medias.offset++] = media;
 		}
@@ -738,7 +846,6 @@ static int get_page(
 	
 	if (obj != NULL) {
 		if (!json_is_array(obj)) {
-			json_decref(tree);
 			return UERR_JSON_NON_MATCHING_TYPE;
 		}
 		
@@ -749,41 +856,56 @@ static int get_page(
 		page->attachments.size = sizeof(struct Attachment) * array_size;
 		page->attachments.items = malloc(page->attachments.size);
 		
+		if (page->attachments.items == NULL) {
+			return UERR_MEMORY_ALLOCATE_FAILURE;
+		}
+		
 		json_array_foreach(obj, index, item) {
 			if (!json_is_object(item)) {
 				return UERR_JSON_NON_MATCHING_TYPE;
 			}
 			
-			const json_t* obj = json_object_get(item, "fileMembershipId");
+			const json_t* obj = json_object_get(item, "fileName");
 			
 			if (obj == NULL) {
-				json_decref(tree);
 				return UERR_JSON_MISSING_REQUIRED_KEY;
 			}
 			
 			if (!json_is_string(obj)) {
-				json_decref(tree);
+				return UERR_JSON_NON_MATCHING_TYPE;
+			}
+			
+			const char* const filename = json_string_value(obj);
+			
+			obj = json_object_get(item, "fileMembershipId");
+			
+			if (obj == NULL) {
+				return UERR_JSON_MISSING_REQUIRED_KEY;
+			}
+			
+			if (!json_is_string(obj)) {
 				return UERR_JSON_NON_MATCHING_TYPE;
 			}
 			
 			const char* const id = json_string_value(obj);
 			
-			const char* const endpoint = "https://api-club.hotmart.com/hot-club-api/rest/v3/attachment";
-			
-			char url[strlen(endpoint) + strlen(SLASH) + strlen(id) + strlen(SLASH) + 8 + 1];
-			strcpy(url, endpoint);
+			char url[strlen(HOTMART_ATTACHMENT_ENDPOINT) + strlen(SLASH) + strlen(id) + strlen(SLASH) + 8 + 1];
+			strcpy(url, HOTMART_ATTACHMENT_ENDPOINT);
 			strcat(url, SLASH);
 			strcat(url, id);
 			strcat(url, SLASH);
 			strcat(url, "download");
 			
+			struct String string __attribute__((__cleanup__(string_free))) = {0};
+			
+			curl_easy_setopt(curl, CURLOPT_WRITEDATA, &string);
 			curl_easy_setopt(curl, CURLOPT_URL, url);
 			
 			if (curl_easy_perform(curl) != CURLE_OK) {
 				return UERR_CURL_FAILURE;
 			}
 			
-			json_t* tree = json_loads(string.s, 0, NULL);
+			json_auto_t* subtree = json_loads(string.s, 0, NULL);
 			
 			string_free(&string);
 			
@@ -791,58 +913,101 @@ static int get_page(
 				return UERR_JSON_CANNOT_PARSE;
 			}
 			
-			obj = json_object_get(tree, "directDownloadUrl");
+			const char* download_url = NULL;
+			
+			obj = json_object_get(subtree, "token");
 			
 			if (obj == NULL) {
-				json_decref(tree);
-				return UERR_JSON_MISSING_REQUIRED_KEY;
+				obj = json_object_get(subtree, "directDownloadUrl");
+				
+				if (obj == NULL) {
+					return UERR_JSON_MISSING_REQUIRED_KEY;
+				}
+				
+				if (!json_is_string(obj)) {
+					return UERR_JSON_NON_MATCHING_TYPE;
+				}
+				
+				download_url = json_string_value(obj);
+			} else {
+				if (!json_is_string(obj)) {
+					return UERR_JSON_NON_MATCHING_TYPE;
+				}
+				
+				const char* const drm_token = json_string_value(obj);
+				
+				obj = json_object_get(subtree, "lambdaUrl");
+				
+				if (obj == NULL) {
+					return UERR_JSON_MISSING_REQUIRED_KEY;
+				}
+				
+				if (!json_is_string(obj)) {
+					return UERR_JSON_NON_MATCHING_TYPE;
+				}
+				
+				const char* const lambda_url = json_string_value(obj);
+				
+				struct curl_slist* sublist __attribute__((__cleanup__(curl_slistp_free_all))) = NULL;
+				
+				char header[strlen(HTTP_HEADER_TOKEN) + strlen(HTTP_HEADER_SEPARATOR) + strlen(drm_token) + 1];
+				strcpy(header, HTTP_HEADER_TOKEN);
+				strcat(header, HTTP_HEADER_SEPARATOR);
+				strcat(header, drm_token);
+				
+				struct curl_slist* tmp = curl_slist_append(sublist, header);
+				
+				if (tmp == NULL) {
+					return UERR_CURL_FAILURE;
+				}
+				
+				sublist = tmp;
+				
+				curl_easy_setopt(curl, CURLOPT_HTTPHEADER, sublist);
+				curl_easy_setopt(curl, CURLOPT_URL, lambda_url);
+				
+				if (curl_easy_perform(curl) != CURLE_OK) {
+					return UERR_CURL_FAILURE;
+				}
+				
+				if (!(string.slength > strlen(HTTPS_SCHEME) && memcmp(string.s, HTTPS_SCHEME, strlen(HTTPS_SCHEME)) == 0)) {
+					return UERR_ATTACHMENT_DRM_FAILURE;
+				}
+				
+				download_url = string.s;
+				
+				curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
+				curl_easy_setopt(curl, CURLOPT_URL, NULL);
 			}
-			
-			if (!json_is_string(obj)) {
-				json_decref(tree);
-				return UERR_JSON_NON_MATCHING_TYPE;
-			}
-			
-			const char* const download_url = json_string_value(obj);
 			
 			struct Attachment attachment = {
-				.url = malloc(strlen(download_url) + 1)
+				.filename = malloc(strlen(filename) + 1),
+				.url = malloc(strlen(download_url) + 1),
 			};
 			
+			if (attachment.filename == NULL || attachment.url == NULL) {
+				return UERR_MEMORY_ALLOCATE_FAILURE;
+			}
+			
 			strcpy(attachment.url, download_url);
+			strcpy(attachment.filename, filename);
+			
+			normalize_filename(attachment.filename);
 			
 			page->attachments.items[page->attachments.offset++] = attachment;
-			
-			json_decref(tree);
 		}
 	}
 	
-	json_decref(tree);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, NULL);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, NULL);
+	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, NULL);
+	curl_easy_setopt(curl, CURLOPT_URL, NULL);
 	
-	return 0;
+	return UERR_SUCCESS;
+	
 }
 
-int b() {
-	
-	if (!directory_exists(APP_CONFIG_DIRECTORY)) {
-		fprintf(stderr, "- Diretório de configurações não encontrado, criando-o\r\n");
-		
-		if (!create_directory(APP_CONFIG_DIRECTORY)) {
-			fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
-			exit(EXIT_FAILURE);
-		}
-		/*
-		char* fullpath = NULL;
-		
-		if (!expand_filename(APP_CONFIG_DIRECTORY, &fullpath)) {
-			fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
-			exit(EXIT_FAILURE);
-		}
-		*/
-		
-		printf("+ Diretório de configurações criado com sucesso!\r\n");
-		
-	}
+static int ask_user_credentials(struct Credentials* const obj) {
 	
 	char username[MAX_INPUT_SIZE + 1] = {'\0'};
 	char password[MAX_INPUT_SIZE + 1] = {'\0'};
@@ -871,24 +1036,111 @@ int b() {
 	
 	*strchr(password, '\n') = '\0';
 	
+	if (authorize(username, password, obj) != UERR_SUCCESS) {
+		fprintf(stderr, "- Não foi possível realizar a autenticação!\r\n");
+		return 0;
+	}
+	
+	obj->username = malloc(strlen(username) + 1);
+	
+	if (obj->username == NULL) {
+		
+	}
+	
+	strcpy(obj->username, username);
+	
+	printf("+ Usuário autenticado com sucesso!\r\n");
+	
+	return 1;
+	
+}
+
+#if defined(WIN32) && defined(UNICODE)
+	#define main wmain
+#endif
+
+int main() {
+	
+	#ifdef WIN32
+		_setmaxstdio(2048);
+		
+		setlocale(LC_ALL, ".UTF8");
+		
+		_setmode(_fileno(stdout), _O_WTEXT);
+		_setmode(_fileno(stderr), _O_WTEXT);
+	#endif
+	
+	/*
+	if (is_administrator()) {
+		fprintf(stderr, "- Você não precisa e nem deve executar este programa com privilégios elevados!\r\n");
+		return EXIT_FAILURE;
+	}
+	*/
+	char* const directory = get_configuration_directory();
+	
+	if (directory == NULL) {
+		fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+		return EXIT_FAILURE;
+	}
+	
+	char configuration_directory[strlen(directory) + strlen(A) + 1];
+	strcpy(configuration_directory, directory);
+	strcat(configuration_directory, A);
+	
+	free(directory);
+	
+	if (!directory_exists(configuration_directory)) {
+		fprintf(stderr, "- Diretório de configurações não encontrado, criando-o\r\n");
+		
+		if (!create_directory(configuration_directory)) {
+			fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+			return EXIT_FAILURE;
+		}
+	}
+	
+	char accounts_file[strlen(configuration_directory) + strlen(PATH_SEPARATOR) + strlen(LOCAL_ACCOUNTS_FILENAME) + 1];
+	strcpy(accounts_file, configuration_directory);
+	strcat(accounts_file, PATH_SEPARATOR);
+	strcat(accounts_file, LOCAL_ACCOUNTS_FILENAME);
 	
 	curl_global_init(CURL_GLOBAL_ALL);
+	
+	CURLM* multi_handle = curl_multi_init();
+	
+	if (multi_handle == NULL) {
+		fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+		return EXIT_FAILURE;
+	}
+	
+	curl_multi_setopt(multi_handle, CURLMOPT_MAX_HOST_CONNECTIONS, (long) 30);
+	curl_multi_setopt(multi_handle, CURLMOPT_MAX_TOTAL_CONNECTIONS, (long) 30);
+	
 	curl = curl_easy_init();
 	
 	if (curl == NULL) {
-		return UERR_CURL_FAILURE;
+		fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+		return EXIT_FAILURE;
 	}
 	
-	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 60L);
+	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
 	curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
 	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
 	curl_easy_setopt(curl, CURLOPT_DOH_SSL_VERIFYPEER, 0L);
-	curl_easy_setopt(curl, CURLOPT_TCP_FASTOPEN, 1L);
-	curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36");
-	curl_easy_setopt(curl, CURLOPT_DOH_URL, "https://1.0.0.1/dns-query");
-	curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+	//curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+	curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+	curl_easy_setopt(curl, CURLOPT_DOH_URL, "https://dns.google/dns-query");
+	curl_easy_setopt(curl, CURLOPT_USERAGENT, HTTP_DEFAULT_USER_AGENT);
+	curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 	
-	struct curl_slist* resolve_list = NULL;
+	struct curl_blob blob = {
+		.data = (char*) CACERT,
+		.len = strlen(CACERT),
+		.flags = CURL_BLOB_COPY
+	};
+	
+	curl_easy_setopt(curl, CURLOPT_CAINFO_BLOB, &blob);
+	
+	struct curl_slist* resolve_list __attribute__((__cleanup__(curl_slistp_free_all))) = NULL;
 	
 	for (size_t index = 0; index < sizeof(HOSTNAMES) / sizeof(*HOSTNAMES); index++) {
 		const char* const hostname = HOSTNAMES[index];
@@ -896,8 +1148,8 @@ int b() {
 		struct curl_slist* tmp = curl_slist_append(resolve_list, hostname);
 		
 		if (tmp == NULL) {
-			curl_slist_free_all(resolve_list);
-			return UERR_CURL_FAILURE;
+			fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+			return EXIT_FAILURE;
 		}
 		
 		resolve_list = tmp;
@@ -905,67 +1157,191 @@ int b() {
 	
 	curl_easy_setopt(curl, CURLOPT_RESOLVE, resolve_list);
 	
-	int code = 0;
-	
 	struct Credentials credentials = {0};
-	code = authorize(username, password, &credentials);
 	
-	if (code != UERR_SUCCESS) {
-		fprintf(stderr, "- Não foi possível realizar a autenticação!\r\n");
-		exit(EXIT_FAILURE);
+	if (file_exists(accounts_file)) {
+		json_auto_t* tree = json_load_file(accounts_file, 0, NULL);
+		
+		if (tree == NULL || !json_is_array(tree)) {
+			fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+			return EXIT_FAILURE;
+		}
+		
+		const size_t total_items = json_array_size(tree);
+		
+		if (total_items < 1) {
+			fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+			return EXIT_FAILURE;
+		}
+		
+		struct Credentials items[total_items];
+		
+		size_t index = 0;
+		json_t *item = NULL;
+		
+		printf("+ Selecione qual das suas contas você deseja usar: \r\n\r\n");
+		printf("0.\r\nAcessar uma outra conta\r\n\r\n");
+		
+		json_array_foreach(tree, index, item) {
+			json_t* subobj = json_object_get(item, "username");
+			
+			if (subobj == NULL || !json_is_string(subobj)) {
+				fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+				return EXIT_FAILURE;
+			}
+			
+			const char* const username = json_string_value(subobj);
+			
+			subobj = json_object_get(item, "access_token");
+			
+			if (subobj == NULL || !json_is_string(subobj)) {
+				fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+				return EXIT_FAILURE;
+			}
+			
+			const char* const access_token = json_string_value(subobj);
+			
+			subobj = json_object_get(item, "refresh_token");
+			
+			if (subobj == NULL || !json_is_string(subobj)) {
+				fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+				return EXIT_FAILURE;
+			}
+			
+			const char* const refresh_token = json_string_value(subobj);
+			
+			struct Credentials credentials = {
+				.access_token = malloc(strlen(access_token) + 1),
+				.refresh_token = malloc(strlen(refresh_token) + 1)
+			};
+			
+			if (credentials.access_token == NULL || credentials.refresh_token == NULL) {
+				fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+				return EXIT_FAILURE;
+			}
+			
+			strcpy(credentials.access_token, access_token);
+			strcpy(credentials.refresh_token, refresh_token);
+			
+			items[index] = credentials;
+			
+			printf("%zu. \r\nAcessar usando a conta: '%s'\r\n\r\n", index + 1, username);
+		}
+		
+		char answer[4 + 1];
+		int value = 0;
+		
+		while (1) {
+			printf("> Digite sua escolha: ");
+			
+			if (fgets(answer, sizeof(answer), stdin) != NULL && *answer != '\n') {
+				*strchr(answer, '\n') = '\0';
+				
+				if (isnumeric(answer)) {
+					value = atoi(answer);
+					
+					if (value >= 0 && (size_t) value <= total_items) {
+						break;
+					}
+				}
+			}
+			
+			fprintf(stderr, "- Opção inválida ou não reconhecida!\r\n");
+		}
+		
+		if (value == 0) {
+			if (!ask_user_credentials(&credentials)) {
+				return EXIT_FAILURE;
+			}
+			
+			FILE* const file = fopen(accounts_file, "wb");
+			
+			if (file == NULL) {
+				fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+				return EXIT_FAILURE;
+			}
+			
+			json_auto_t* subtree = json_object();
+			json_object_set_new(subtree, "username", json_string(credentials.username));
+			json_object_set_new(subtree, "access_token", json_string(credentials.access_token));
+			json_object_set_new(subtree, "refresh_token", json_string(credentials.refresh_token));
+			
+			json_array_append(tree, subtree);
+			
+			char* const buffer = json_dumps(tree, JSON_COMPACT);
+			
+			if (buffer == NULL) {
+				fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+				return EXIT_FAILURE;
+			}
+			
+			const size_t buffer_size = strlen(buffer);
+			const size_t wsize = fwrite(buffer, sizeof(*buffer), buffer_size, file);
+			
+			free(buffer);
+			fclose(file);
+			
+			if (wsize != buffer_size) {
+				fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+				return EXIT_FAILURE;
+			}
+			
+		} else {
+			credentials = items[value - 1];
+		}
+	} else {
+		if (!ask_user_credentials(&credentials)) {
+			return EXIT_FAILURE;
+		}
+		
+		FILE* const file = fopen(accounts_file, "wb");
+		
+		if (file == NULL) {
+			fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+			return EXIT_FAILURE;
+		}
+		
+		json_auto_t* tree = json_array();
+		json_auto_t* obj = json_object();
+		
+		if (tree == NULL || obj == NULL) {
+			fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+			return EXIT_FAILURE;
+		}
+		
+		json_object_set_new(obj, "username", json_string(credentials.username));
+		json_object_set_new(obj, "access_token", json_string(credentials.access_token));
+		json_object_set_new(obj, "refresh_token", json_string(credentials.refresh_token));
+		
+		json_array_append(tree, obj);
+		
+		char* const buffer = json_dumps(tree, JSON_COMPACT);
+		
+		if (buffer == NULL) {
+			fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+			return EXIT_FAILURE;
+		}
+		
+		const size_t buffer_size = strlen(buffer);
+		const size_t wsize = fwrite(buffer, sizeof(*buffer), buffer_size, file);
+		
+		free(buffer);
+		fclose(file);
+		
+		if (wsize != buffer_size) {
+			fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+			return EXIT_FAILURE;
+		}
+		
 	}
-	
-	printf("+ Usuário autenticado com sucesso!\r\n");
-	
-	char sha256[(br_sha256_SIZE * 2) + 1];
-	sha256_digest(username, sha256);
-	
-	char filename[strlen(APP_CONFIG_DIRECTORY) + strlen(SLASH) + strlen(sha256) + strlen(DOT) + strlen(JSON_FILE_EXTENSION) + 1];
-	strcpy(filename, APP_CONFIG_DIRECTORY);
-	strcat(filename, SLASH);
-	strcat(filename, sha256);
-	strcat(filename, DOT);
-	strcat(filename, JSON_FILE_EXTENSION);
-	
-	printf("+ Exportando arquivo de credenciais\r\n");
-	
-	FILE* file = fopen(filename, "wb");
-	
-	if (file == NULL) {
-		fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
-		exit(EXIT_FAILURE);
-	}
-	
-	json_t* tree = json_object();
-	json_object_set_new(tree, "username", json_string(username));
-	json_object_set_new(tree, "access_token", json_string(credentials.access_token));
-	json_object_set_new(tree, "refresh_token", json_string(credentials.refresh_token));
-	json_object_set_new(tree, "expires_in", json_string(credentials.refresh_token));
-	
-	char* buffer = json_dumps(tree, JSON_COMPACT);
-	const size_t buffer_size = strlen(buffer);
-	
-	const size_t wsize = fwrite(buffer, sizeof(*buffer), buffer_size, file);
-	
-	free(buffer);
-	json_decref(tree);
-	fclose(file);
-	
-	if (wsize != buffer_size) {
-		fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
-		exit(EXIT_FAILURE);
-	}
-	
-	printf("+ Arquivo de credenciais exportado com sucesso!\r\n");
 	
 	printf("+ Obtendo lista de produtos\r\n");
 	
 	struct Resources resources = {0};
-	code = get_resources(&credentials, &resources);
 	
-	if (code != UERR_SUCCESS) {
+	if (get_resources(&credentials, &resources) != UERR_SUCCESS) {
 		fprintf(stderr, "- Não foi possível obter a lista de produtos!\r\n");
-		exit(EXIT_FAILURE);
+		return EXIT_FAILURE;
 	}
 	
 	printf("+ Selecione o que deseja baixar:\r\n\r\n");
@@ -975,7 +1351,7 @@ int b() {
 	for (size_t index = 0; index < resources.offset; index++) {
 		const struct Resource* resource = &resources.items[index];
 		
-		printf("%i. \r\nNome: %s\r\nHomepage: https://%s%s\r\n\r\n", index + 1, resource->name, resource->subdomain, HOTMART_CLUB_SUFFIX);
+		printf("%zu. \r\nNome: %s\r\nHomepage: https://%s%s\r\n\r\n", index + 1, resource->name, resource->subdomain, HOTMART_CLUB_SUFFIX);
 	}
 	
 	char answer[4 + 1];
@@ -990,7 +1366,7 @@ int b() {
 			if (isnumeric(answer)) {
 				value = atoi(answer);
 				
-				if (value >= 0 && value <= resources.offset) {
+				if (value >= 0 && (size_t) value <= resources.offset) {
 					break;
 				}
 			}
@@ -999,117 +1375,509 @@ int b() {
 		fprintf(stderr, "- Opção inválida ou não reconhecida!\r\n");
 	}
 	
-	struct Resource* download_queue[resources.offset];
+	fclose(stdin);
+	
+	struct Resource download_queue[resources.offset];
 	
 	size_t queue_count = 0;
 	
 	if (value == 0) {
 		for (size_t index = 0; index < sizeof(download_queue) / sizeof(*download_queue); index++) {
-			struct Resource* resource = &resources.items[index];
+			struct Resource resource = resources.items[index];
 			download_queue[index] = resource;
 			
 			queue_count++;
 		}
 	} else {
-		struct Resource* resource = &resources.items[value - 1];
+		struct Resource resource = resources.items[value - 1];
 		*download_queue = resource;
 		
 		queue_count++;
 	}
 	
-	char* cwd = NULL;
+	char* cwd = get_current_directory();
 	
-	if (!expand_filename(".", &cwd)) {
+	if (cwd == NULL) {
 		fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
-		exit(EXIT_FAILURE);
+		return EXIT_FAILURE;
 	}
 	
 	for (size_t index = 0; index < queue_count; index++) {
-		struct Resource* resource = &resources.items[index];
+		struct Resource* resource = &download_queue[index];
 		
-		printf("+ Obtendo informações sobre o produto\r\n");
+		printf("+ Obtendo lista de módulos do produto '%s'\r\n", resource->name);
 		
-		get_modules(&credentials, resource);
+		if (get_modules(&credentials, resource) != UERR_SUCCESS) {
+			fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+			return EXIT_FAILURE;
+		}
 		
-		printf("+ Verificando estado do produto '%s'\r\n", resource->name);
-		/*
 		char directory[strlen(resource->name) + 1];
 		strcpy(directory, resource->name);
-		
 		normalize_filename(directory);
 		
-		resource->download_location = malloc(strlen(cwd) + strlen(PATH_SEPARATOR) + strlen(directory) + 1);
-		strcpy(resource->download_location, cwd);
-		strcat(resource->download_location, PATH_SEPARATOR);
-		strcat(resource->download_location, directory);
+		char resource_directory[strlen(cwd) + strlen(PATH_SEPARATOR) + strlen(directory) + 1];
+		strcpy(resource_directory, cwd);
+		strcat(resource_directory, PATH_SEPARATOR);
+		strcat(resource_directory, directory);
 		
-		if (!directory_exists(resource->download_location)) {
-			fprintf(stderr, "- O diretório '%s' não existe, criando-o\r\n", resource->download_location);
+		if (!directory_exists(resource_directory)) {
+			fprintf(stderr, "- O diretório '%s' não existe, criando-o\r\n", resource_directory);
 			
-			if (!create_directory(resource->download_location)) {
+			if (!create_directory(resource_directory)) {
 				fprintf(stderr, "- Ocorreu um erro ao tentar criar o diretório!\r\n");
-				exit(EXIT_FAILURE);
+				return EXIT_FAILURE;
 			}
 		}
-		*/
+		
 		for (size_t index = 0; index < resource->modules.offset; index++) {
 			struct Module* module = &resource->modules.items[index];
 			
 			printf("+ Verificando estado do módulo '%s'\r\n", module->name);
 			
-			printf("Module ID: %s\n", module->id);
-			printf("Module name: %s\n", module->name);
-			/*
+			if (module->is_locked) {
+				fprintf(stderr, "- Módulo inacessível, pulando para o próximo\r\n");
+				continue;
+			}
+			
 			char directory[strlen(module->name) + 1];
 			strcpy(directory, module->name);
-			
 			normalize_filename(directory);
 			
-			module->download_location = malloc(strlen(resource->download_location) + strlen(PATH_SEPARATOR) + strlen(directory) + 1);
-			strcpy(module->download_location, resource->download_location);
-			strcat(module->download_location, PATH_SEPARATOR);
-			strcat(module->download_location, directory);
+			char module_directory[strlen(resource_directory) + strlen(PATH_SEPARATOR) + strlen(directory) + 1];
+			strcpy(module_directory, resource_directory);
+			strcat(module_directory, PATH_SEPARATOR);
+			strcat(module_directory, directory);
 			
-			if (!directory_exists(module->download_location)) {
-				fprintf(stderr, "- O diretório '%s' não existe, criando-o\r\n", resource->download_location);
+			if (!directory_exists(module_directory)) {
+				fprintf(stderr, "- O diretório '%s' não existe, criando-o\r\n", module_directory);
 				
-				if (!create_directory(module->download_location)) {
+				if (!create_directory(module_directory)) {
 					fprintf(stderr, "- Ocorreu um erro ao tentar criar o diretório!\r\n");
-					exit(EXIT_FAILURE);
+					return EXIT_FAILURE;
 				}
 			}
-			*/
+			
+			printf("+ Obtendo lista de páginas do módulo '%s'\r\n", module->name);
+			
 			for (size_t index = 0; index < module->pages.offset; index++) {
 				struct Page* page = &module->pages.items[index];
 				
-				printf("Page ID: %s\n", page->id);
-				printf("Page name: %s\n", page->name);
+				if (get_page(&credentials, resource, page) != UERR_SUCCESS) {
+					fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+					return EXIT_FAILURE;
+				}
 				
-				if (get_page(&credentials, resource, page) == -2) return 1;
+				printf("+ Verificando estado da página '%s'\r\n", page->name);
+				
+				char directory[strlen(page->name) + 1];
+				strcpy(directory, page->name);
+				normalize_filename(directory);
+				
+				char page_directory[strlen(module_directory) + strlen(PATH_SEPARATOR) + strlen(directory) + 1];
+				strcpy(page_directory, module_directory);
+				strcat(page_directory, PATH_SEPARATOR);
+				strcat(page_directory, directory);
+				
+				if (!directory_exists(page_directory)) {
+					fprintf(stderr, "- O diretório '%s' não existe, criando-o\r\n", page_directory);
+					
+					if (!create_directory(page_directory)) {
+						fprintf(stderr, "- Ocorreu um erro ao tentar criar o diretório!\r\n");
+						return EXIT_FAILURE;
+					}
+				}
 				
 				for (size_t index = 0; index < page->medias.offset; index++) {
 					struct Media* media = &page->medias.items[index];
 					
-					if (media->url != NULL) {
-						printf("Media URL: %s\n", media->url);
+					char media_filename[strlen(page_directory) + strlen(PATH_SEPARATOR) + strlen(media->filename) + 1];
+					strcpy(media_filename, page_directory);
+					strcat(media_filename, PATH_SEPARATOR);
+					strcat(media_filename, media->filename);
+					
+					if (!file_exists(media_filename)) {
+						fprintf(stderr, "- O arquivo '%s' não existe, ele será baixado\r\n", media_filename);
+						printf("+ Baixando de '%s' para '%s'\r\n", media->url, media_filename);
+						
+						struct String string __attribute__((__cleanup__(string_free))) = {0};
+						
+						curl_easy_setopt(curl, CURLOPT_HTTPHEADER, NULL);
+						curl_easy_setopt(curl, CURLOPT_URL, media->url);
+						curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_cb);
+						curl_easy_setopt(curl, CURLOPT_WRITEDATA, &string);
+						
+						if (curl_easy_perform(curl) != CURLE_OK) {
+							fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+							return EXIT_FAILURE;
+						}
+						
+						struct Tags tags = {0};
+						
+						if (m3u8_parse(&tags, string.s) != UERR_SUCCESS) {
+							fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+							return EXIT_FAILURE;
+						}
+						
+						int last_width = 0;
+						const char* playlist_uri = NULL;
+						
+						for (size_t index = 0; index < tags.offset; index++) {
+							struct Tag* tag = &tags.items[index];
+							
+							if (tag->type != EXT_X_STREAM_INF) {
+								continue;
+							}
+							
+							const struct Attribute* const attribute = attributes_get(&tag->attributes, "RESOLUTION");
+							
+							const char* const start = attribute->value;
+							const char* const end = strstr(start, "x");
+							
+							const size_t size = (size_t) (end - start);
+							
+							char value[size + 1];
+							memcpy(value, start, size);
+							value[size] = '\0';
+							
+							const int width = atoi(value);
+							
+							if (last_width < width) {
+								last_width = width;
+								playlist_uri = tag->uri;
+							}
+						}
+						
+						CURLU* cu __attribute__((__cleanup__(curlupp_free))) = curl_url();
+						curl_url_set(cu, CURLUPART_URL, media->url, 0);
+						curl_url_set(cu, CURLUPART_URL, playlist_uri, 0);
+						
+						char* playlist_full_url __attribute__((__cleanup__(curlcharpp_free))) = NULL;	
+						curl_url_get(cu, CURLUPART_URL, &playlist_full_url, 0);
+						
+						m3u8_free(&tags);
+						string_free(&string);
+						
+						curl_easy_setopt(curl, CURLOPT_URL, playlist_full_url);
+						
+						if (curl_easy_perform(curl) != CURLE_OK) {
+							fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+							return EXIT_FAILURE;
+						}
+						
+						if (m3u8_parse(&tags, string.s) != UERR_SUCCESS) {
+							fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+							return EXIT_FAILURE;
+						}
+						
+						int segment_number = 1;
+						
+						struct SegmentDownload downloads[tags.offset];
+						size_t downloads_offset = 0;
+						
+						char playlist_filename[strlen(page_directory) + strlen(PATH_SEPARATOR) + strlen(LOCAL_PLAYLIST_FILENAME) + 1];
+						strcpy(playlist_filename, page_directory);
+						strcat(playlist_filename, PATH_SEPARATOR);
+						strcat(playlist_filename, LOCAL_PLAYLIST_FILENAME);
+						
+						for (size_t index = 0; index < tags.offset; index++) {
+							struct Tag* tag = &tags.items[index];
+							
+							if (tag->type == EXT_X_KEY) {
+								struct Attribute* attribute = attributes_get(&tag->attributes, "URI");
+								
+								curl_url_set(cu, CURLUPART_URL, attribute->value, 0);
+								
+								char* url __attribute__((__cleanup__(curlcharpp_free))) = NULL;
+								curl_url_get(cu, CURLUPART_URL, &url, 0);
+								
+								char* filename = malloc(strlen(page_directory) + strlen(PATH_SEPARATOR) + strlen(KEY_FILE_EXTENSION) + strlen(DOT) + strlen(KEY_FILE_EXTENSION) + 1);
+								strcpy(filename, page_directory);
+								
+								strcat(filename, PATH_SEPARATOR);
+								strcat(filename, KEY_FILE_EXTENSION);
+								strcat(filename, DOT);
+								strcat(filename, KEY_FILE_EXTENSION);
+								
+								attribute_set_value(attribute, filename);
+								tag_set_uri(tag, filename);
+								
+								CURL* handle = curl_easy_init();
+								
+								if (handle == NULL) {
+									fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+									return EXIT_FAILURE;
+								}
+								
+								curl_easy_setopt(handle, CURLOPT_FAILONERROR, 1L);
+								curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
+								curl_easy_setopt(handle, CURLOPT_DOH_SSL_VERIFYPEER, 0L);
+								curl_easy_setopt(handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+								curl_easy_setopt(handle, CURLOPT_USERAGENT, HTTP_DEFAULT_USER_AGENT);
+								curl_easy_setopt(handle, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+								curl_easy_setopt(handle, CURLOPT_CAPATH, NULL);
+								curl_easy_setopt(handle, CURLOPT_CAINFO, NULL);
+								curl_easy_setopt(handle, CURLOPT_CAINFO_BLOB, &blob);
+								curl_easy_setopt(handle, CURLOPT_RESOLVE, resolve_list);
+								curl_easy_setopt(curl, CURLOPT_DOH_URL, "https://dns.google/dns-query");
+								curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+								curl_easy_setopt(handle, CURLOPT_URL, url);
+								
+								FILE* const stream = fopen(filename, "wb");
+								
+								if (stream == NULL) {
+									fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+									return EXIT_FAILURE;
+								}
+								
+								curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void*) stream);
+								curl_multi_add_handle(multi_handle, handle);
+								
+								struct SegmentDownload download = {
+									.handle = handle,
+									.filename = filename,
+									.stream = stream
+								};
+								
+								downloads[downloads_offset++] = download;
+								
+								curl_url_set(cu, CURLUPART_URL, playlist_full_url, 0);
+							} else if (tag->type == EXTINF && tag->uri != NULL) {
+								curl_url_set(cu, CURLUPART_URL, tag->uri, 0);
+								
+								char* url __attribute__((__cleanup__(curlcharpp_free))) = NULL;
+								curl_url_get(cu, CURLUPART_URL, &url, 0);
+								
+								char value[intlen(segment_number) + 1];
+								snprintf(value, sizeof(value), "%i", segment_number);
+								
+								char* filename = malloc(strlen(page_directory) + strlen(PATH_SEPARATOR) + strlen(value) + strlen(DOT) + strlen(TS_FILE_EXTENSION) + 1);
+								strcpy(filename, page_directory);
+								strcat(filename, PATH_SEPARATOR);
+								strcat(filename, value);
+								strcat(filename, DOT);
+								strcat(filename, TS_FILE_EXTENSION);
+								
+								tag_set_uri(tag, filename);
+								
+								CURL* handle = curl_easy_init();
+								
+								if (handle == NULL) {
+									fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+									return EXIT_FAILURE;
+								}
+								
+								curl_easy_setopt(handle, CURLOPT_FAILONERROR, 1L);
+								curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
+								curl_easy_setopt(handle, CURLOPT_DOH_SSL_VERIFYPEER, 0L);
+								curl_easy_setopt(handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+								curl_easy_setopt(handle, CURLOPT_USERAGENT, HTTP_DEFAULT_USER_AGENT);
+								curl_easy_setopt(handle, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+								curl_easy_setopt(handle, CURLOPT_CAPATH, NULL);
+								curl_easy_setopt(handle, CURLOPT_CAINFO, NULL);
+								curl_easy_setopt(handle, CURLOPT_CAINFO_BLOB, &blob);
+								curl_easy_setopt(curl, CURLOPT_DOH_URL, "https://dns.google/dns-query");
+								curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+								curl_easy_setopt(handle, CURLOPT_URL, url);
+								
+								FILE* const stream = fopen(filename, "wb");
+								
+								if (stream == NULL) {
+									fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+									return EXIT_FAILURE;
+								}
+								
+								curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void*) stream);
+								curl_multi_add_handle(multi_handle, handle);
+								
+								struct SegmentDownload download = {
+									.handle = handle,
+									.filename = filename,
+									.stream = stream
+								};
+								
+								downloads[downloads_offset++] = download;
+								
+								segment_number++;
+							}
+							
+						}
+						
+						int still_running = 1;
+						
+						while (still_running) {
+							CURLMcode mc = curl_multi_perform(multi_handle, &still_running);
+							
+							printf("\r+ Atualmente em progresso: %i%% / 100%%", (((downloads_offset - still_running) * 100) / downloads_offset));
+							
+							if (still_running) {
+								mc = curl_multi_poll(multi_handle, NULL, 0, 1000, NULL);
+							}
+							
+							if (mc) {
+								break;
+							}
+						}
+						
+						printf("\n");
+						
+						CURLMsg* msg = NULL;
+						int msgs_left = 0;
+						
+						CURLcode code = 0;
+						
+						while ((msg = curl_multi_info_read(multi_handle, &msgs_left))) {
+							if (msg->msg == CURLMSG_DONE) {
+								code = msg->data.result;
+								
+								if (code != CURLE_OK) {
+									break;
+								}
+							}
+						}
+						
+						for (size_t index = 0; index < downloads_offset; index++) {
+							struct SegmentDownload* download = &downloads[index];
+							
+							fclose(download->stream);
+							
+							curl_multi_remove_handle(multi_handle, download->handle);
+							curl_easy_cleanup(download->handle);
+						}
+						
+						if (code != CURLE_OK) {
+							for (size_t index = 0; index < downloads_offset; index++) {
+								struct SegmentDownload* download = &downloads[index];
+								
+								remove_file(download->filename);
+								free(download->filename);
+							}
+						
+							fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+							return EXIT_FAILURE;
+						}
+						
+						printf("+ Exportando lista de reprodução para '%s'\r\n", playlist_filename);
+						 
+						FILE* const stream = fopen(playlist_filename, "wb");
+						
+						if (stream == NULL) {
+							fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+							return EXIT_FAILURE;
+						}
+						
+						const int ok = tags_dumpf(&tags, stream);
+						
+						fclose(stream);
+						m3u8_free(&tags);
+						
+						if (!ok) {
+							fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+							return EXIT_FAILURE;
+						}
+						
+						char output_file[strlen(QUOTATION_MARK) * 2 + strlen(media_filename) + 1];
+						strcpy(output_file, QUOTATION_MARK);
+						strcat(output_file, media_filename);
+						strcat(output_file, QUOTATION_MARK);
+						
+						printf("+ Copiando arquivos de mídia para '%s'\r\n", media_filename);
+						
+						const char* const command[][2] = {
+							{"ffmpeg", NULL},
+							{"-loglevel", "error"},
+							{"-allowed_extensions", "ALL"},
+							{"-i", playlist_filename},
+							{"-c", "copy"},
+							{"-movflags", "+faststart"},
+							{"-map_metadata", "-1"},
+							{output_file, NULL}
+						};
+						
+						char command_line[5000];
+						memset(command_line, '\0', sizeof(command_line));
+						
+						for (size_t index = 0; index < sizeof(command) / sizeof(*command); index++) {
+							const char** const argument = (const char**) command[index];
+							
+							const char* const key = argument[0];
+							const char* const value = argument[1];
+							
+							if (key != NULL) {
+								strcat(command_line, key);
+							}
+							
+							strcat(command_line, SPACE);
+							
+							if (value != NULL) {
+								strcat(command_line, QUOTATION_MARK);
+								strcat(command_line, value);
+								strcat(command_line, QUOTATION_MARK);
+							}
+							
+							strcat(command_line, SPACE);
+						}
+						
+						const int exit_code = execute_shell_command(command_line);
+						
+						for (size_t index = 0; index < downloads_offset; index++) {
+							struct SegmentDownload* download = &downloads[index];
+							
+							remove_file(download->filename);
+							free(download->filename);
+						}
+						
+						remove_file(playlist_filename);
+						
+						if (exit_code != 0) {
+							fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+							return EXIT_FAILURE;
+						}
 					}
 				}
+				
+				curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, progress_callback);
 				
 				for (size_t index = 0; index < page->attachments.offset; index++) {
 					struct Attachment* attachment = &page->attachments.items[index];
 					
-					if (attachment->url != NULL) {
-						printf("Attachment URL: %s\n", attachment->url);
+					char attachment_filename[strlen(page_directory) + strlen(PATH_SEPARATOR) + strlen(attachment->filename) + 1];
+					strcpy(attachment_filename, page_directory);
+					strcat(attachment_filename, PATH_SEPARATOR);
+					strcat(attachment_filename, attachment->filename);
+					
+					if (!file_exists(attachment_filename)) {
+						fprintf(stderr, "- O arquivo '%s' não existe, ele será baixado\r\n", attachment_filename);
+						printf("+ Baixando de '%s' para '%s'\r\n", attachment->url, attachment_filename);
+						
+						FILE* const stream = fopen(attachment_filename, "wb");
+						
+						if (stream == NULL) {
+							fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+							return EXIT_FAILURE;
+						}
+						
+						curl_easy_setopt(curl, CURLOPT_HTTPHEADER, NULL);
+						curl_easy_setopt(curl, CURLOPT_URL, attachment->url);
+						curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, NULL);
+						curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*) stream);
+						
+						const CURLcode code = curl_easy_perform(curl);
+						
+						fclose(stream);
+						
+						if (code != CURLE_OK) {
+							remove_file(attachment_filename);
+							return UERR_CURL_FAILURE;
+						}
 					}
 				}
+				
+				curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, NULL);
 			}
 			
 		}
 	}
 	
 	return 0;
-}
-
-int main() {
-	printf("%i\n", b());
 }

@@ -2,10 +2,8 @@
 #include <string.h>
 
 #include "query.h"
+#include "symbols.h"
 #include "errors.h"
-
-static const char AND[] = "&";
-static const char EQUAL[] = "=";
 
 static int put_parameter(struct Query* obj, const struct Parameter parameter) {
 	
@@ -81,11 +79,8 @@ int query_stringify(const struct Query obj, char** dst) {
 	
 	memset(buffer, '\0', 1);
 	
-	for (int index = 0; index < obj.position; index++) {
+	for (size_t index = 0; index < obj.position; index++) {
 		const struct Parameter parameter = obj.parameters[index];
-		
-		const char* key = parameter.key;
-		const char* value = parameter.value;
 		
 		if (*buffer != '\0') {
 			strcat(buffer, AND);

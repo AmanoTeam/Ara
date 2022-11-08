@@ -1,0 +1,1 @@
+int vimeo_parse(const char* const content, struct Media* media);

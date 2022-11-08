@@ -7,7 +7,13 @@ struct Credentials {
 	int expires_in;
 };
 
+enum MediaType {
+	MEDIA_SINGLE,
+	MEDIA_M3U8
+};
+
 struct Media {
+	enum MediaType type;
 	char* filename;
 	char* url;
 };

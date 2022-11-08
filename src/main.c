@@ -25,6 +25,8 @@
 #include "symbols.h"
 #include "cacert.h"
 #include "m3u8.h"
+#include "embed_stream.h"
+#include "vimeo.h"
 
 struct SegmentDownload {
 	CURL* handle;
@@ -128,11 +130,7 @@ static size_t progress_callback(void *clientp, curl_off_t dltotal, curl_off_t dl
 	(void) (ultotal);
 	(void) (ulnow);
 	
-	printf("\r+ Atualmente em progresso: %lli%% / 100%%", ((dlnow * 100) / dltotal));
-	
-	if (((dlnow * 100) / dltotal) == 100) {
-		printf("\n");
-	}
+	printf("\r+ Atualmente em progresso: %lli%% / 100%%\r", ((dlnow * 100) / dltotal));
 	
 	return 0;
 	
@@ -824,6 +822,7 @@ static int get_page(
 			}
 			
 			struct Media media = {
+				.type = MEDIA_M3U8,
 				.filename = malloc(strlen(media_name) + 1),
 				.url = malloc(strlen(url) + 1)
 			};
@@ -998,10 +997,72 @@ static int get_page(
 		}
 	}
 	
+	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, NULL);
+	
+	if (page->medias.offset < 1) {
+		const json_t* obj = json_object_get(tree, "content");
+		
+		if (obj == NULL) {
+			return UERR_JSON_MISSING_REQUIRED_KEY;
+		}
+		
+		if (!json_is_string(obj)) {
+			return UERR_JSON_NON_MATCHING_TYPE;
+		}
+		
+		const char* const content = json_string_value(obj);
+		
+		struct EmbedStream embed_stream __attribute__((__cleanup__(embed_stream_free))) = {0};
+		const int code = embed_stream_find(content, &embed_stream);
+		
+		if (code == UERR_SUCCESS) {
+			switch (embed_stream.type) {
+				case EMBED_STREAM_VIMEO: {
+					curl_easy_setopt(curl, CURLOPT_URL, embed_stream.uri);
+					
+					struct String string __attribute__((__cleanup__(string_free))) = {0};
+					
+					curl_easy_setopt(curl, CURLOPT_WRITEDATA, &string);
+					
+					char referrer[strlen(HTTPS_SCHEME) + strlen(resource->subdomain) + strlen(HOTMART_CLUB_SUFFIX) + 1];
+					strcpy(referrer, HTTPS_SCHEME);
+					strcat(referrer, resource->subdomain);
+					strcat(referrer, HOTMART_CLUB_SUFFIX);
+					
+					curl_easy_setopt(curl, CURLOPT_REFERER, referrer);
+					
+					if (curl_easy_perform(curl) != CURLE_OK) {
+						return UERR_CURL_FAILURE;
+					}
+					
+					page->medias.size = sizeof(struct Media) * 1;
+					page->medias.items = malloc(page->medias.size);
+					
+					if (page->medias.items == NULL) {
+						return UERR_MEMORY_ALLOCATE_FAILURE;
+					}
+					
+					struct Media media = {0};
+					const int code = vimeo_parse(string.s, &media);
+					
+					if (code != UERR_SUCCESS) {
+						return code;
+					}
+					
+					page->medias.items[page->medias.offset++] = media;
+				}
+				
+				break;
+			}
+		} else if (code != UERR_NO_STREAMS_AVAILABLE) {
+			return code;
+		}
+	}
+	
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, NULL);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, NULL);
-	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, NULL);
 	curl_easy_setopt(curl, CURLOPT_URL, NULL);
+	curl_easy_setopt(curl, CURLOPT_REFERER, NULL);
 	
 	return UERR_SUCCESS;
 	
@@ -1122,7 +1183,7 @@ int main() {
 		return EXIT_FAILURE;
 	}
 	
-	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
+	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 60L);
 	curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
 	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
 	curl_easy_setopt(curl, CURLOPT_DOH_SSL_VERIFYPEER, 0L);
@@ -1500,342 +1561,387 @@ int main() {
 						fprintf(stderr, "- O arquivo '%s' não existe, ele será baixado\r\n", media_filename);
 						printf("+ Baixando de '%s' para '%s'\r\n", media->url, media_filename);
 						
-						struct String string __attribute__((__cleanup__(string_free))) = {0};
-						
-						curl_easy_setopt(curl, CURLOPT_HTTPHEADER, NULL);
-						curl_easy_setopt(curl, CURLOPT_URL, media->url);
-						curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_cb);
-						curl_easy_setopt(curl, CURLOPT_WRITEDATA, &string);
-						
-						if (curl_easy_perform(curl) != CURLE_OK) {
-							fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
-							return EXIT_FAILURE;
-						}
-						
-						struct Tags tags = {0};
-						
-						if (m3u8_parse(&tags, string.s) != UERR_SUCCESS) {
-							fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
-							return EXIT_FAILURE;
-						}
-						
-						int last_width = 0;
-						const char* playlist_uri = NULL;
-						
-						for (size_t index = 0; index < tags.offset; index++) {
-							struct Tag* tag = &tags.items[index];
-							
-							if (tag->type != EXT_X_STREAM_INF) {
-								continue;
-							}
-							
-							const struct Attribute* const attribute = attributes_get(&tag->attributes, "RESOLUTION");
-							
-							const char* const start = attribute->value;
-							const char* const end = strstr(start, "x");
-							
-							const size_t size = (size_t) (end - start);
-							
-							char value[size + 1];
-							memcpy(value, start, size);
-							value[size] = '\0';
-							
-							const int width = atoi(value);
-							
-							if (last_width < width) {
-								last_width = width;
-								playlist_uri = tag->uri;
-							}
-						}
-						
-						CURLU* cu __attribute__((__cleanup__(curlupp_free))) = curl_url();
-						curl_url_set(cu, CURLUPART_URL, media->url, 0);
-						curl_url_set(cu, CURLUPART_URL, playlist_uri, 0);
-						
-						char* playlist_full_url __attribute__((__cleanup__(curlcharpp_free))) = NULL;	
-						curl_url_get(cu, CURLUPART_URL, &playlist_full_url, 0);
-						
-						m3u8_free(&tags);
-						string_free(&string);
-						
-						curl_easy_setopt(curl, CURLOPT_URL, playlist_full_url);
-						
-						if (curl_easy_perform(curl) != CURLE_OK) {
-							fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
-							return EXIT_FAILURE;
-						}
-						
-						if (m3u8_parse(&tags, string.s) != UERR_SUCCESS) {
-							fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
-							return EXIT_FAILURE;
-						}
-						
-						int segment_number = 1;
-						
-						struct SegmentDownload downloads[tags.offset];
-						size_t downloads_offset = 0;
-						
-						char playlist_filename[strlen(page_directory) + strlen(PATH_SEPARATOR) + strlen(LOCAL_PLAYLIST_FILENAME) + 1];
-						strcpy(playlist_filename, page_directory);
-						strcat(playlist_filename, PATH_SEPARATOR);
-						strcat(playlist_filename, LOCAL_PLAYLIST_FILENAME);
-						
-						for (size_t index = 0; index < tags.offset; index++) {
-							struct Tag* tag = &tags.items[index];
-							
-							if (tag->type == EXT_X_KEY) {
-								struct Attribute* attribute = attributes_get(&tag->attributes, "URI");
+						switch (media->type) {
+							case MEDIA_M3U8: {
+								struct String string __attribute__((__cleanup__(string_free))) = {0};
 								
-								curl_url_set(cu, CURLUPART_URL, attribute->value, 0);
+								curl_easy_setopt(curl, CURLOPT_HTTPHEADER, NULL);
+								curl_easy_setopt(curl, CURLOPT_URL, media->url);
+								curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_cb);
+								curl_easy_setopt(curl, CURLOPT_WRITEDATA, &string);
 								
-								char* url __attribute__((__cleanup__(curlcharpp_free))) = NULL;
-								curl_url_get(cu, CURLUPART_URL, &url, 0);
-								
-								char* filename = malloc(strlen(page_directory) + strlen(PATH_SEPARATOR) + strlen(KEY_FILE_EXTENSION) + strlen(DOT) + strlen(KEY_FILE_EXTENSION) + 1);
-								strcpy(filename, page_directory);
-								
-								strcat(filename, PATH_SEPARATOR);
-								strcat(filename, KEY_FILE_EXTENSION);
-								strcat(filename, DOT);
-								strcat(filename, KEY_FILE_EXTENSION);
-								
-								attribute_set_value(attribute, filename);
-								tag_set_uri(tag, filename);
-								
-								CURL* handle = curl_easy_init();
-								
-								if (handle == NULL) {
+								if (curl_easy_perform(curl) != CURLE_OK) {
 									fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
 									return EXIT_FAILURE;
 								}
 								
-								curl_easy_setopt(handle, CURLOPT_FAILONERROR, 1L);
-								curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
-								curl_easy_setopt(handle, CURLOPT_DOH_SSL_VERIFYPEER, 0L);
-								curl_easy_setopt(handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-								curl_easy_setopt(handle, CURLOPT_USERAGENT, HTTP_DEFAULT_USER_AGENT);
-								curl_easy_setopt(handle, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-								curl_easy_setopt(handle, CURLOPT_CAPATH, NULL);
-								curl_easy_setopt(handle, CURLOPT_CAINFO, NULL);
-								curl_easy_setopt(handle, CURLOPT_CAINFO_BLOB, &blob);
-								curl_easy_setopt(handle, CURLOPT_RESOLVE, resolve_list);
-								curl_easy_setopt(curl, CURLOPT_DOH_URL, "https://dns.google/dns-query");
-								curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-								curl_easy_setopt(handle, CURLOPT_URL, url);
+								struct Tags tags = {0};
 								
-								FILE* const stream = fopen(filename, "wb");
-								
-								if (stream == NULL) {
+								if (m3u8_parse(&tags, string.s) != UERR_SUCCESS) {
 									fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
 									return EXIT_FAILURE;
 								}
 								
-								curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void*) stream);
-								curl_multi_add_handle(multi_handle, handle);
+								int last_width = 0;
+								const char* playlist_uri = NULL;
 								
-								struct SegmentDownload download = {
-									.handle = handle,
-									.filename = filename,
-									.stream = stream
-								};
+								for (size_t index = 0; index < tags.offset; index++) {
+									struct Tag* tag = &tags.items[index];
+									
+									if (tag->type != EXT_X_STREAM_INF) {
+										continue;
+									}
+									
+									const struct Attribute* const attribute = attributes_get(&tag->attributes, "RESOLUTION");
+									
+									const char* const start = attribute->value;
+									const char* const end = strstr(start, "x");
+									
+									const size_t size = (size_t) (end - start);
+									
+									char value[size + 1];
+									memcpy(value, start, size);
+									value[size] = '\0';
+									
+									const int width = atoi(value);
+									
+									if (last_width < width) {
+										last_width = width;
+										playlist_uri = tag->uri;
+									}
+								}
 								
-								downloads[downloads_offset++] = download;
+								CURLU* cu __attribute__((__cleanup__(curlupp_free))) = curl_url();
+								curl_url_set(cu, CURLUPART_URL, media->url, 0);
+								curl_url_set(cu, CURLUPART_URL, playlist_uri, 0);
 								
-								curl_url_set(cu, CURLUPART_URL, playlist_full_url, 0);
-							} else if (tag->type == EXTINF && tag->uri != NULL) {
-								curl_url_set(cu, CURLUPART_URL, tag->uri, 0);
+								char* playlist_full_url __attribute__((__cleanup__(curlcharpp_free))) = NULL;	
+								curl_url_get(cu, CURLUPART_URL, &playlist_full_url, 0);
 								
-								char* url __attribute__((__cleanup__(curlcharpp_free))) = NULL;
-								curl_url_get(cu, CURLUPART_URL, &url, 0);
+								m3u8_free(&tags);
+								string_free(&string);
 								
-								char value[intlen(segment_number) + 1];
-								snprintf(value, sizeof(value), "%i", segment_number);
+								curl_easy_setopt(curl, CURLOPT_URL, playlist_full_url);
 								
-								char* filename = malloc(strlen(page_directory) + strlen(PATH_SEPARATOR) + strlen(value) + strlen(DOT) + strlen(TS_FILE_EXTENSION) + 1);
-								strcpy(filename, page_directory);
-								strcat(filename, PATH_SEPARATOR);
-								strcat(filename, value);
-								strcat(filename, DOT);
-								strcat(filename, TS_FILE_EXTENSION);
-								
-								tag_set_uri(tag, filename);
-								
-								CURL* handle = curl_easy_init();
-								
-								if (handle == NULL) {
+								if (curl_easy_perform(curl) != CURLE_OK) {
 									fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
 									return EXIT_FAILURE;
 								}
 								
-								curl_easy_setopt(handle, CURLOPT_FAILONERROR, 1L);
-								curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
-								curl_easy_setopt(handle, CURLOPT_DOH_SSL_VERIFYPEER, 0L);
-								curl_easy_setopt(handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-								curl_easy_setopt(handle, CURLOPT_USERAGENT, HTTP_DEFAULT_USER_AGENT);
-								curl_easy_setopt(handle, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-								curl_easy_setopt(handle, CURLOPT_CAPATH, NULL);
-								curl_easy_setopt(handle, CURLOPT_CAINFO, NULL);
-								curl_easy_setopt(handle, CURLOPT_CAINFO_BLOB, &blob);
-								curl_easy_setopt(curl, CURLOPT_DOH_URL, "https://dns.google/dns-query");
-								curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-								curl_easy_setopt(handle, CURLOPT_URL, url);
-								
-								FILE* const stream = fopen(filename, "wb");
-								
-								if (stream == NULL) {
+								if (m3u8_parse(&tags, string.s) != UERR_SUCCESS) {
 									fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
 									return EXIT_FAILURE;
 								}
 								
-								curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void*) stream);
-								curl_multi_add_handle(multi_handle, handle);
+								int segment_number = 1;
 								
-								struct SegmentDownload download = {
-									.handle = handle,
-									.filename = filename,
-									.stream = stream
-								};
+								struct SegmentDownload downloads[tags.offset];
+								size_t downloads_offset = 0;
 								
-								downloads[downloads_offset++] = download;
+								char playlist_filename[strlen(page_directory) + strlen(PATH_SEPARATOR) + strlen(LOCAL_PLAYLIST_FILENAME) + 1];
+								strcpy(playlist_filename, page_directory);
+								strcat(playlist_filename, PATH_SEPARATOR);
+								strcat(playlist_filename, LOCAL_PLAYLIST_FILENAME);
 								
-								segment_number++;
-							}
-							
-						}
-						
-						int still_running = 1;
-						
-						while (still_running) {
-							CURLMcode mc = curl_multi_perform(multi_handle, &still_running);
-							
-							printf("\r+ Atualmente em progresso: %i%% / 100%%", (((downloads_offset - still_running) * 100) / downloads_offset));
-							
-							if (still_running) {
-								mc = curl_multi_poll(multi_handle, NULL, 0, 1000, NULL);
-							}
-							
-							if (mc) {
-								break;
-							}
-						}
-						
-						printf("\n");
-						
-						CURLMsg* msg = NULL;
-						int msgs_left = 0;
-						
-						CURLcode code = 0;
-						
-						while ((msg = curl_multi_info_read(multi_handle, &msgs_left))) {
-							if (msg->msg == CURLMSG_DONE) {
-								code = msg->data.result;
+								if (strstr(media_filename, ".mp4") != NULL) {
+									continue;
+								}
+								
+								for (size_t index = 0; index < tags.offset; index++) {
+									struct Tag* tag = &tags.items[index];
+									
+									if (tag->type == EXT_X_KEY) {
+										struct Attribute* attribute = attributes_get(&tag->attributes, "URI");
+										
+										curl_url_set(cu, CURLUPART_URL, attribute->value, 0);
+										
+										char* url __attribute__((__cleanup__(curlcharpp_free))) = NULL;
+										curl_url_get(cu, CURLUPART_URL, &url, 0);
+										
+										char* filename = malloc(strlen(page_directory) + strlen(PATH_SEPARATOR) + strlen(KEY_FILE_EXTENSION) + strlen(DOT) + strlen(KEY_FILE_EXTENSION) + 1);
+										strcpy(filename, page_directory);
+										
+										strcat(filename, PATH_SEPARATOR);
+										strcat(filename, KEY_FILE_EXTENSION);
+										strcat(filename, DOT);
+										strcat(filename, KEY_FILE_EXTENSION);
+										
+										attribute_set_value(attribute, filename);
+										tag_set_uri(tag, filename);
+										
+										CURL* handle = curl_easy_init();
+										
+										if (handle == NULL) {
+											fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+											return EXIT_FAILURE;
+										}
+										
+										curl_easy_setopt(handle, CURLOPT_FAILONERROR, 1L);
+										curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
+										curl_easy_setopt(handle, CURLOPT_DOH_SSL_VERIFYPEER, 0L);
+										curl_easy_setopt(handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+										curl_easy_setopt(handle, CURLOPT_USERAGENT, HTTP_DEFAULT_USER_AGENT);
+										curl_easy_setopt(handle, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+										curl_easy_setopt(handle, CURLOPT_CAPATH, NULL);
+										curl_easy_setopt(handle, CURLOPT_CAINFO, NULL);
+										curl_easy_setopt(handle, CURLOPT_CAINFO_BLOB, &blob);
+										curl_easy_setopt(handle, CURLOPT_RESOLVE, resolve_list);
+										curl_easy_setopt(curl, CURLOPT_DOH_URL, "https://dns.google/dns-query");
+										curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+										curl_easy_setopt(handle, CURLOPT_URL, url);
+										
+										FILE* const stream = fopen(filename, "wb");
+										
+										if (stream == NULL) {
+											fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+											return EXIT_FAILURE;
+										}
+										
+										curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void*) stream);
+										curl_multi_add_handle(multi_handle, handle);
+										
+										struct SegmentDownload download = {
+											.handle = handle,
+											.filename = filename,
+											.stream = stream
+										};
+										
+										downloads[downloads_offset++] = download;
+										
+										curl_url_set(cu, CURLUPART_URL, playlist_full_url, 0);
+									} else if (tag->type == EXTINF && tag->uri != NULL) {
+										curl_url_set(cu, CURLUPART_URL, tag->uri, 0);
+										
+										char* url __attribute__((__cleanup__(curlcharpp_free))) = NULL;
+										curl_url_get(cu, CURLUPART_URL, &url, 0);
+										
+										char value[intlen(segment_number) + 1];
+										snprintf(value, sizeof(value), "%i", segment_number);
+										
+										char* filename = malloc(strlen(page_directory) + strlen(PATH_SEPARATOR) + strlen(value) + strlen(DOT) + strlen(TS_FILE_EXTENSION) + 1);
+										strcpy(filename, page_directory);
+										strcat(filename, PATH_SEPARATOR);
+										strcat(filename, value);
+										strcat(filename, DOT);
+										strcat(filename, TS_FILE_EXTENSION);
+										
+										tag_set_uri(tag, filename);
+										
+										CURL* handle = curl_easy_init();
+										
+										if (handle == NULL) {
+											fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+											return EXIT_FAILURE;
+										}
+										
+										curl_easy_setopt(handle, CURLOPT_FAILONERROR, 1L);
+										curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
+										curl_easy_setopt(handle, CURLOPT_DOH_SSL_VERIFYPEER, 0L);
+										curl_easy_setopt(handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+										curl_easy_setopt(handle, CURLOPT_USERAGENT, HTTP_DEFAULT_USER_AGENT);
+										curl_easy_setopt(handle, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+										curl_easy_setopt(handle, CURLOPT_CAPATH, NULL);
+										curl_easy_setopt(handle, CURLOPT_CAINFO, NULL);
+										curl_easy_setopt(handle, CURLOPT_CAINFO_BLOB, &blob);
+										curl_easy_setopt(curl, CURLOPT_DOH_URL, "https://dns.google/dns-query");
+										curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+										curl_easy_setopt(handle, CURLOPT_URL, url);
+										
+										FILE* const stream = fopen(filename, "wb");
+										
+										if (stream == NULL) {
+											fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+											return EXIT_FAILURE;
+										}
+										
+										curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void*) stream);
+										curl_multi_add_handle(multi_handle, handle);
+										
+										struct SegmentDownload download = {
+											.handle = handle,
+											.filename = filename,
+											.stream = stream
+										};
+										
+										downloads[downloads_offset++] = download;
+										
+										segment_number++;
+									}
+									
+								}
+								
+								int still_running = 1;
+								
+								while (still_running) {
+									CURLMcode mc = curl_multi_perform(multi_handle, &still_running);
+									
+									printf("\r+ Atualmente em progresso: %i%% / 100%%", (((downloads_offset - still_running) * 100) / downloads_offset));
+									
+									if (still_running) {
+										mc = curl_multi_poll(multi_handle, NULL, 0, 1000, NULL);
+									}
+									
+									if (mc) {
+										break;
+									}
+								}
+								
+								printf("\n");
+								
+								CURLMsg* msg = NULL;
+								int msgs_left = 0;
+								
+								CURLcode code = 0;
+								
+								while ((msg = curl_multi_info_read(multi_handle, &msgs_left))) {
+									if (msg->msg == CURLMSG_DONE) {
+										code = msg->data.result;
+										
+										if (code != CURLE_OK) {
+											break;
+										}
+									}
+								}
+								
+								for (size_t index = 0; index < downloads_offset; index++) {
+									struct SegmentDownload* download = &downloads[index];
+									
+									fclose(download->stream);
+									
+									curl_multi_remove_handle(multi_handle, download->handle);
+									curl_easy_cleanup(download->handle);
+								}
 								
 								if (code != CURLE_OK) {
-									break;
+									for (size_t index = 0; index < downloads_offset; index++) {
+										struct SegmentDownload* download = &downloads[index];
+										
+										remove_file(download->filename);
+										free(download->filename);
+									}
+								
+									fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+									return EXIT_FAILURE;
+								}
+								
+								printf("+ Exportando lista de reprodução para '%s'\r\n", playlist_filename);
+								 
+								FILE* const stream = fopen(playlist_filename, "wb");
+								
+								if (stream == NULL) {
+									fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+									return EXIT_FAILURE;
+								}
+								
+								const int ok = tags_dumpf(&tags, stream);
+								
+								fclose(stream);
+								m3u8_free(&tags);
+								
+								if (!ok) {
+									fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+									return EXIT_FAILURE;
+								}
+								
+								char output_file[strlen(QUOTATION_MARK) * 2 + strlen(media_filename) + 1];
+								strcpy(output_file, QUOTATION_MARK);
+								strcat(output_file, media_filename);
+								strcat(output_file, QUOTATION_MARK);
+								
+								printf("+ Copiando arquivos de mídia para '%s'\r\n", media_filename);
+								
+								const char* const command[][2] = {
+									{"ffmpeg", NULL},
+									{"-loglevel", "error"},
+									{"-allowed_extensions", "ALL"},
+									{"-i", playlist_filename},
+									{"-c", "copy"},
+									{"-movflags", "+faststart"},
+									{"-map_metadata", "-1"},
+									{output_file, NULL}
+								};
+								
+								char command_line[5000];
+								memset(command_line, '\0', sizeof(command_line));
+								
+								for (size_t index = 0; index < sizeof(command) / sizeof(*command); index++) {
+									const char** const argument = (const char**) command[index];
+									
+									const char* const key = argument[0];
+									const char* const value = argument[1];
+									
+									if (key != NULL) {
+										strcat(command_line, key);
+									}
+									
+									strcat(command_line, SPACE);
+									
+									if (value != NULL) {
+										strcat(command_line, QUOTATION_MARK);
+										strcat(command_line, value);
+										strcat(command_line, QUOTATION_MARK);
+									}
+									
+									strcat(command_line, SPACE);
+								}
+								
+								const int exit_code = execute_shell_command(command_line);
+								
+								for (size_t index = 0; index < downloads_offset; index++) {
+									struct SegmentDownload* download = &downloads[index];
+									
+									remove_file(download->filename);
+									free(download->filename);
+								}
+								
+								remove_file(playlist_filename);
+								
+								if (exit_code != 0) {
+									fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+									return EXIT_FAILURE;
 								}
 							}
-						}
-						
-						for (size_t index = 0; index < downloads_offset; index++) {
-							struct SegmentDownload* download = &downloads[index];
 							
-							fclose(download->stream);
+							break;
 							
-							curl_multi_remove_handle(multi_handle, download->handle);
-							curl_easy_cleanup(download->handle);
-						}
-						
-						if (code != CURLE_OK) {
-							for (size_t index = 0; index < downloads_offset; index++) {
-								struct SegmentDownload* download = &downloads[index];
+							case MEDIA_SINGLE: {
+								FILE* const stream = fopen(media_filename, "wb");
 								
-								remove_file(download->filename);
-								free(download->filename);
-							}
-						
-							fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
-							return EXIT_FAILURE;
-						}
-						
-						printf("+ Exportando lista de reprodução para '%s'\r\n", playlist_filename);
-						 
-						FILE* const stream = fopen(playlist_filename, "wb");
-						
-						if (stream == NULL) {
-							fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
-							return EXIT_FAILURE;
-						}
-						
-						const int ok = tags_dumpf(&tags, stream);
-						
-						fclose(stream);
-						m3u8_free(&tags);
-						
-						if (!ok) {
-							fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
-							return EXIT_FAILURE;
-						}
-						
-						char output_file[strlen(QUOTATION_MARK) * 2 + strlen(media_filename) + 1];
-						strcpy(output_file, QUOTATION_MARK);
-						strcat(output_file, media_filename);
-						strcat(output_file, QUOTATION_MARK);
-						
-						printf("+ Copiando arquivos de mídia para '%s'\r\n", media_filename);
-						
-						const char* const command[][2] = {
-							{"ffmpeg", NULL},
-							{"-loglevel", "error"},
-							{"-allowed_extensions", "ALL"},
-							{"-i", playlist_filename},
-							{"-c", "copy"},
-							{"-movflags", "+faststart"},
-							{"-map_metadata", "-1"},
-							{output_file, NULL}
-						};
-						
-						char command_line[5000];
-						memset(command_line, '\0', sizeof(command_line));
-						
-						for (size_t index = 0; index < sizeof(command) / sizeof(*command); index++) {
-							const char** const argument = (const char**) command[index];
-							
-							const char* const key = argument[0];
-							const char* const value = argument[1];
-							
-							if (key != NULL) {
-								strcat(command_line, key);
+								if (stream == NULL) {
+									fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+									return EXIT_FAILURE;
+								}
+								
+								curl_easy_setopt(curl, CURLOPT_TIMEOUT, 0L);
+								curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, progress_callback);
+								curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+								curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*) stream);
+								curl_easy_setopt(curl, CURLOPT_URL, media->url);
+								
+								const CURLcode code = curl_easy_perform(curl);
+								
+								fclose(stream);
+								curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, NULL);
+								
+								curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, NULL);
+								curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
+								curl_easy_setopt(curl, CURLOPT_TIMEOUT, 60L);
+								
+								printf("\r\n");
+								
+								if (code != CURLE_OK) {
+									remove_file(media_filename);
+									fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+									return EXIT_FAILURE;
+								}
 							}
 							
-							strcat(command_line, SPACE);
-							
-							if (value != NULL) {
-								strcat(command_line, QUOTATION_MARK);
-								strcat(command_line, value);
-								strcat(command_line, QUOTATION_MARK);
-							}
-							
-							strcat(command_line, SPACE);
-						}
-						
-						const int exit_code = execute_shell_command(command_line);
-						
-						for (size_t index = 0; index < downloads_offset; index++) {
-							struct SegmentDownload* download = &downloads[index];
-							
-							remove_file(download->filename);
-							free(download->filename);
-						}
-						
-						remove_file(playlist_filename);
-						
-						if (exit_code != 0) {
-							fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
-							return EXIT_FAILURE;
+							break;
 						}
 					}
 				}
 				
+				curl_easy_setopt(curl, CURLOPT_TIMEOUT, 0L);
 				curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, progress_callback);
 				
 				for (size_t index = 0; index < page->attachments.offset; index++) {
@@ -1857,22 +1963,28 @@ int main() {
 							return EXIT_FAILURE;
 						}
 						
-						curl_easy_setopt(curl, CURLOPT_HTTPHEADER, NULL);
+						curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
 						curl_easy_setopt(curl, CURLOPT_URL, attachment->url);
-						curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, NULL);
 						curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*) stream);
 						
 						const CURLcode code = curl_easy_perform(curl);
 						
 						fclose(stream);
 						
+						printf("\r\n");
+						
 						if (code != CURLE_OK) {
 							remove_file(attachment_filename);
-							return UERR_CURL_FAILURE;
+							fprintf(stderr, "\r\n- Ocorreu uma falha inesperada!\r\n");
+							return EXIT_FAILURE;
 						}
 					}
 				}
 				
+				curl_easy_setopt(curl, CURLOPT_URL, NULL);
+				curl_easy_setopt(curl, CURLOPT_WRITEDATA, NULL);
+				curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
+				curl_easy_setopt(curl, CURLOPT_TIMEOUT, 60L);
 				curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, NULL);
 			}
 			

@@ -13,3 +13,4 @@
 #define UERR_JSON_NON_MATCHING_TYPE -9 /* JSON object does not match the required type */
 
 #define UERR_ATTACHMENT_DRM_FAILURE -10
+#define UERR_NO_STREAMS_AVAILABLE -11

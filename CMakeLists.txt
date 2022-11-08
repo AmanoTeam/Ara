@@ -367,6 +367,8 @@ add_executable(
 	src/types.c
 	src/utils.c
 	src/m3u8.c
+	src/embed_stream.c
+	src/vimeo.c
 )
 
 if (APPLE)

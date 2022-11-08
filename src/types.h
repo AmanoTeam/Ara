@@ -35,9 +35,15 @@ struct Attachments {
 	struct Attachment* items;
 };
 
+struct HTMLDocument {
+	char* filename;
+	char* content;
+};
+
 struct Page {
 	char* id;
 	char* name;
+	struct HTMLDocument document;
 	struct Medias medias;
 	struct Attachments attachments;
 };

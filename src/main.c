@@ -130,6 +130,10 @@ static size_t progress_callback(void *clientp, curl_off_t dltotal, curl_off_t dl
 	(void) (ultotal);
 	(void) (ulnow);
 	
+	if (dltotal < 1) {
+		return 0;
+	}
+	
 	printf("\r+ Atualmente em progresso: %lli%% / 100%%\r", ((dlnow * 100) / dltotal));
 	
 	return 0;
@@ -138,6 +142,7 @@ static size_t progress_callback(void *clientp, curl_off_t dltotal, curl_off_t dl
 
 static const char TS_FILE_EXTENSION[] = "ts";
 static const char KEY_FILE_EXTENSION[] = "key";
+static const char HTML_FILE_EXTENSION[] = "html";
 
 static const char LOCAL_PLAYLIST_FILENAME[] = "playlist.m3u8";
 static const char LOCAL_ACCOUNTS_FILENAME[] = "accounts.json";
@@ -153,15 +158,13 @@ static const char HTTP_AUTHENTICATION_BEARER[] = "Bearer";
 
 static const char HTTP_HEADER_SEPARATOR[] = ": ";
 
-static const char* const HOSTNAMES[] = {
-	"dns.google:443:8.8.8.8"
-};
-
 static const char HOTMART_CLUB_SUFFIX[] = ".club.hotmart.com";
 
 #define HOTMART_API_CLUB_PREFIX "https://api-club.hotmart.com/hot-club-api/rest/v3"
 #define HOTMART_API_SEC_PREFIX "https://api-sec-vlc.hotmart.com"
 #define SPARKLEAPP_API_PREFIX "https://api.sparkleapp.com.br"
+
+static const char HOTMART_HOMEPAGE[] = "https://hotmart.com";
 
 static const char HOTMART_NAVIGATION_ENDPOINT[] = 
 	HOTMART_API_CLUB_PREFIX
@@ -186,6 +189,21 @@ static const char HOTMART_TOKEN_ENDPOINT[] =
 static const char HOTMART_TOKEN_CHECK_ENDPOINT[] = 
 	HOTMART_API_SEC_PREFIX
 	"/security/oauth/check_token";
+
+static const char HTML_HEADER_START[] = 
+	"<!DOCTYPE html>"
+	"<html lang=\"pt-BR\">"
+	"<head>"
+	"<title>Hotmart content</title>"
+	"<meta charset=\"utf-8\">"
+	"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">"
+	"<meta http-equiv=\"Referrer-Policy\" content=\"no-referrer\">"
+	"</head>"
+	"<body>";
+
+static const char HTML_HEADER_END[] = 
+	"</body>"
+	"</html>";
 
 #define MAX_INPUT_SIZE 1024
 
@@ -689,7 +707,7 @@ static int get_page(
 	const char* const headers[][2] = {
 		{HTTP_HEADER_AUTHORIZATION, authorization},
 		{HTTP_HEADER_CLUB, resource->subdomain},
-		{HTTP_HEADER_REFERER, "https://hotmart.com"}
+		{HTTP_HEADER_REFERER, HOTMART_HOMEPAGE}
 	};
 	
 	struct curl_slist* list __attribute__((__cleanup__(curl_slistp_free_all))) = NULL;
@@ -999,13 +1017,9 @@ static int get_page(
 	
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, NULL);
 	
-	if (page->medias.offset < 1) {
-		const json_t* obj = json_object_get(tree, "content");
-		
-		if (obj == NULL) {
-			return UERR_JSON_MISSING_REQUIRED_KEY;
-		}
-		
+	obj = json_object_get(tree, "content");
+	
+	if (obj != NULL) {
 		if (!json_is_string(obj)) {
 			return UERR_JSON_NON_MATCHING_TYPE;
 		}
@@ -1024,19 +1038,21 @@ static int get_page(
 					
 					curl_easy_setopt(curl, CURLOPT_WRITEDATA, &string);
 					
-					char referrer[strlen(HTTPS_SCHEME) + strlen(resource->subdomain) + strlen(HOTMART_CLUB_SUFFIX) + 1];
-					strcpy(referrer, HTTPS_SCHEME);
-					strcat(referrer, resource->subdomain);
-					strcat(referrer, HOTMART_CLUB_SUFFIX);
-					
-					curl_easy_setopt(curl, CURLOPT_REFERER, referrer);
+					curl_easy_setopt(curl, CURLOPT_REFERER, HOTMART_HOMEPAGE);
 					
 					if (curl_easy_perform(curl) != CURLE_OK) {
 						return UERR_CURL_FAILURE;
 					}
 					
-					page->medias.size = sizeof(struct Media) * 1;
-					page->medias.items = malloc(page->medias.size);
+					const size_t size = page->medias.size + sizeof(struct Media) * 1;
+					struct Media* items = (struct Media*) realloc(page->medias.items, size);
+					
+					if (items == NULL) {
+						return UERR_MEMORY_ALLOCATE_FAILURE;
+					}
+					
+					page->medias.size = size;
+					page->medias.items = items;
 					
 					if (page->medias.items == NULL) {
 						return UERR_MEMORY_ALLOCATE_FAILURE;
@@ -1057,6 +1073,23 @@ static int get_page(
 		} else if (code != UERR_NO_STREAMS_AVAILABLE) {
 			return code;
 		}
+		
+		page->document.filename = malloc(strlen(page->name) + strlen(DOT) + strlen(HTML_FILE_EXTENSION) + 1);
+		page->document.content = malloc(strlen(HTML_HEADER_START) + strlen(content) + strlen(HTML_HEADER_END) + 1);
+		
+		if (page->document.filename == NULL || page->document.content == NULL) {
+			return UERR_MEMORY_ALLOCATE_FAILURE;
+		}
+		
+		strcpy(page->document.filename, page->name);
+		strcat(page->document.filename, DOT);
+		strcat(page->document.filename, HTML_FILE_EXTENSION);
+		
+		normalize_filename(page->document.filename);
+		
+		strcpy(page->document.content, HTML_HEADER_START);
+		strcat(page->document.content, content);
+		strcat(page->document.content, HTML_HEADER_END);
 	}
 	
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, NULL);
@@ -1186,10 +1219,8 @@ int main() {
 	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 60L);
 	curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
 	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-	curl_easy_setopt(curl, CURLOPT_DOH_SSL_VERIFYPEER, 0L);
 	//curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 	curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-	curl_easy_setopt(curl, CURLOPT_DOH_URL, "https://dns.google/dns-query");
 	curl_easy_setopt(curl, CURLOPT_USERAGENT, HTTP_DEFAULT_USER_AGENT);
 	curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 	
@@ -1200,23 +1231,6 @@ int main() {
 	};
 	
 	curl_easy_setopt(curl, CURLOPT_CAINFO_BLOB, &blob);
-	
-	struct curl_slist* resolve_list __attribute__((__cleanup__(curl_slistp_free_all))) = NULL;
-	
-	for (size_t index = 0; index < sizeof(HOSTNAMES) / sizeof(*HOSTNAMES); index++) {
-		const char* const hostname = HOSTNAMES[index];
-		
-		struct curl_slist* tmp = curl_slist_append(resolve_list, hostname);
-		
-		if (tmp == NULL) {
-			fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
-			return EXIT_FAILURE;
-		}
-		
-		resolve_list = tmp;
-	}
-	
-	curl_easy_setopt(curl, CURLOPT_RESOLVE, resolve_list);
 	
 	struct Credentials credentials = {0};
 	
@@ -1549,6 +1563,35 @@ int main() {
 					}
 				}
 				
+				if (page->document.content != NULL) {
+					char document_filename[strlen(page_directory) + strlen(PATH_SEPARATOR) + strlen(page->document.filename) + 1];
+					strcpy(document_filename, page_directory);
+					strcat(document_filename, PATH_SEPARATOR);
+					strcat(document_filename, page->document.filename);
+					
+					if (!file_exists(document_filename)) {
+						fprintf(stderr, "- O arquivo '%s' não existe, salvando-o\r\n", document_filename);
+						
+						FILE* const stream = fopen(document_filename, "wb");
+						
+						if (stream == NULL) {
+							fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+							return EXIT_FAILURE;
+						}
+						
+						const size_t size = strlen(page->document.content);
+						const size_t written = fwrite(page->document.content, sizeof(*page->document.content), size, stream);
+						
+						fclose(stream);
+						
+						if (written != size) {
+							remove_file(document_filename);
+							fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+							return EXIT_FAILURE;
+						}
+					}
+				}
+				
 				for (size_t index = 0; index < page->medias.offset; index++) {
 					struct Media* media = &page->medias.items[index];
 					
@@ -1643,10 +1686,6 @@ int main() {
 								strcat(playlist_filename, PATH_SEPARATOR);
 								strcat(playlist_filename, LOCAL_PLAYLIST_FILENAME);
 								
-								if (strstr(media_filename, ".mp4") != NULL) {
-									continue;
-								}
-								
 								for (size_t index = 0; index < tags.offset; index++) {
 									struct Tag* tag = &tags.items[index];
 									
@@ -1678,16 +1717,12 @@ int main() {
 										
 										curl_easy_setopt(handle, CURLOPT_FAILONERROR, 1L);
 										curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
-										curl_easy_setopt(handle, CURLOPT_DOH_SSL_VERIFYPEER, 0L);
 										curl_easy_setopt(handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
 										curl_easy_setopt(handle, CURLOPT_USERAGENT, HTTP_DEFAULT_USER_AGENT);
 										curl_easy_setopt(handle, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 										curl_easy_setopt(handle, CURLOPT_CAPATH, NULL);
 										curl_easy_setopt(handle, CURLOPT_CAINFO, NULL);
 										curl_easy_setopt(handle, CURLOPT_CAINFO_BLOB, &blob);
-										curl_easy_setopt(handle, CURLOPT_RESOLVE, resolve_list);
-										curl_easy_setopt(curl, CURLOPT_DOH_URL, "https://dns.google/dns-query");
-										curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 										curl_easy_setopt(handle, CURLOPT_URL, url);
 										
 										FILE* const stream = fopen(filename, "wb");
@@ -1736,15 +1771,12 @@ int main() {
 										
 										curl_easy_setopt(handle, CURLOPT_FAILONERROR, 1L);
 										curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
-										curl_easy_setopt(handle, CURLOPT_DOH_SSL_VERIFYPEER, 0L);
 										curl_easy_setopt(handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
 										curl_easy_setopt(handle, CURLOPT_USERAGENT, HTTP_DEFAULT_USER_AGENT);
 										curl_easy_setopt(handle, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 										curl_easy_setopt(handle, CURLOPT_CAPATH, NULL);
 										curl_easy_setopt(handle, CURLOPT_CAINFO, NULL);
 										curl_easy_setopt(handle, CURLOPT_CAINFO_BLOB, &blob);
-										curl_easy_setopt(curl, CURLOPT_DOH_URL, "https://dns.google/dns-query");
-										curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 										curl_easy_setopt(handle, CURLOPT_URL, url);
 										
 										FILE* const stream = fopen(filename, "wb");
@@ -1926,6 +1958,8 @@ int main() {
 								curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, NULL);
 								curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
 								curl_easy_setopt(curl, CURLOPT_TIMEOUT, 60L);
+								curl_easy_setopt(curl, CURLOPT_WRITEDATA, NULL);
+								curl_easy_setopt(curl, CURLOPT_URL, NULL);
 								
 								printf("\r\n");
 								

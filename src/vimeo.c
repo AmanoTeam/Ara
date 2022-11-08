@@ -9,17 +9,17 @@
 #include "types.h"
 #include "vimeo.h"
 
-static const char PATTERN[] = "window.playerConfig = ";
+static const char JSON_TREE_PATTERN[] = "window.playerConfig = ";
 
 int vimeo_parse(const char* const content, struct Media* media) {
 	
-	const char* start = strstr(content, PATTERN);
+	const char* start = strstr(content, JSON_TREE_PATTERN);
 	
 	if (start == NULL) {
 		return UERR_STRSTR_FAILURE;
 	}
 	
-	start += strlen(PATTERN);
+	start += strlen(JSON_TREE_PATTERN);
 	
 	const char* end = strstr(start, "}; ");
 	
@@ -152,6 +152,8 @@ int vimeo_parse(const char* const content, struct Media* media) {
 	strcpy(media->filename, title);
 	strcat(media->filename, DOT);
 	strcat(media->filename, file_extension);
+	
+	normalize_filename(media->filename);
 	
 	media->url = malloc(strlen(stream_uri) + 1);
 	

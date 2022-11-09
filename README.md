@@ -16,7 +16,7 @@ Note que o programa precisa de uma versão igual ou superior ao Windows 7 para f
 
 Abaixo estão os links para download do SparkleC para diversas arquiteturas. Você precisa baixar a versão que [corresponde a arquitetura do seu processador](https://support.microsoft.com/pt-br/windows/versões-de-32-bits-e-64-bits-do-windows-perguntas-frequentes-c6ca9541-8dce-4d48-0415-94a3faa2e13d), do contrário poderá acabar enfrentando problemas para executar o programa.
 
-A grande maioria dos computadores atuais são fabricados com processadores x86_64.
+A grande maioria dos computadores atuais são fabricados com processadores `x86_64`.
 
 - [SparkleC para Windows x86_64](https://github.com/Kartatz/SparkleC/releases/download/v0.1/x86_64-w64-mingw32.zip)
 - [SparkleC para Windows x86](https://github.com/Kartatz/SparkleC/releases/download/v0.1/i686-w64-mingw32.zip)
@@ -41,7 +41,7 @@ Versões para MacOS:
 - [SparkleC para MacOS X x86_64](https://github.com/Kartatz/SparkleC/releases/download/v0.1/x86_64-apple-darwin.tar.xz)
 - [SparkleC para MacOS X x86](https://github.com/Kartatz/SparkleC/releases/download/v0.1/i386-apple-darwin.tar.xz)
 
-É esperado que você já saiba como usar o SparkleC nessas plataformas.
+Assumo você já sabe como usar o SparkleC nessas plataformas.
 
 ## Instalando no Android
 
@@ -61,5 +61,3 @@ Se a instalação correu bem, você verá essa mensagem após a conclusão:
 ```
 Instalação concluída! Execute o comando "sparklec" sempre que quiser usar a ferramenta.
 ```
-
-Se não a vir, eu fiz (ou muito mais você possivelmente você fez) algo de errado :(

@@ -140,6 +140,7 @@ static size_t progress_callback(void *clientp, curl_off_t dltotal, curl_off_t dl
 	
 }
 
+static const char MP4_FILE_EXTENSION[] = "mp4";
 static const char TS_FILE_EXTENSION[] = "ts";
 static const char KEY_FILE_EXTENSION[] = "key";
 static const char HTML_FILE_EXTENSION[] = "html";
@@ -839,9 +840,11 @@ static int get_page(
 				}
 			}
 			
+			const char* const file_extension = get_file_extension(media_name);
+			
 			struct Media media = {
 				.type = MEDIA_M3U8,
-				.filename = malloc(strlen(media_name) + 1),
+				.filename = malloc(strlen(media_name) + (file_extension == NULL ? strlen(DOT) + strlen(MP4_FILE_EXTENSION) : 0) + 1),
 				.url = malloc(strlen(url) + 1)
 			};
 			
@@ -851,6 +854,11 @@ static int get_page(
 			
 			strcpy(media.url, url);
 			strcpy(media.filename, media_name);
+			
+			if (file_extension == NULL) {
+				strcat(media.filename, DOT);
+				strcat(media.filename, MP4_FILE_EXTENSION);
+			}
 			
 			normalize_filename(media.filename);
 			
@@ -1818,7 +1826,7 @@ int main() {
 									}
 								}
 								
-								printf("\n");
+								printf("\r\n");
 								
 								CURLMsg* msg = NULL;
 								int msgs_left = 0;

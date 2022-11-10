@@ -17,6 +17,7 @@
 #include <curl/curl.h>
 #include <jansson.h>
 
+#include "cleanup.h"
 #include "errors.h"
 #include "query.h"
 #include "callbacks.h"
@@ -27,6 +28,7 @@
 #include "m3u8.h"
 #include "embed_stream.h"
 #include "vimeo.h"
+#include "youtube.h"
 
 struct SegmentDownload {
 	CURL* handle;
@@ -109,22 +111,6 @@ struct SegmentDownload {
 	#define fgets __fgets
 #endif
 
-static void curl_slistp_free_all(struct curl_slist** ptr) {
-	curl_slist_free_all(*ptr);
-}
-
-static void charpp_free(char** ptr) {
-	free(*ptr);
-}
-
-static void curlupp_free(CURLU** ptr) {
-	curl_url_cleanup(*ptr);
-}
-
-static void curlcharpp_free(char** ptr) {
-	curl_free(*ptr);
-}
-
 static size_t progress_callback(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow) {
 	(void) (clientp);
 	(void) (ultotal);
@@ -156,8 +142,6 @@ static const char HTTP_HEADER_TOKEN[] = "Token";
 static const char HTTP_HEADER_CLUB[] = "Club";
 static const char HTTP_DEFAULT_USER_AGENT[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36";
 static const char HTTP_AUTHENTICATION_BEARER[] = "Bearer";
-
-static const char HTTP_HEADER_SEPARATOR[] = ": ";
 
 static const char HOTMART_CLUB_SUFFIX[] = ".club.hotmart.com";
 
@@ -1077,6 +1061,31 @@ static int get_page(
 				}
 				
 				break;
+				case EMBED_STREAM_YOUTUBE: {
+					const size_t size = page->medias.size + sizeof(struct Media) * 1;
+					struct Media* items = (struct Media*) realloc(page->medias.items, size);
+					
+					if (items == NULL) {
+						return UERR_MEMORY_ALLOCATE_FAILURE;
+					}
+					
+					page->medias.size = size;
+					page->medias.items = items;
+					
+					if (page->medias.items == NULL) {
+						return UERR_MEMORY_ALLOCATE_FAILURE;
+					}
+					
+					struct Media media = {0};
+					const int code = youtube_parse(curl, embed_stream.uri, &media);
+					
+					if (code != UERR_SUCCESS) {
+						return code;
+					}
+					
+					page->medias.items[page->medias.offset++] = media;
+				};
+				break;
 			}
 		} else if (code != UERR_NO_STREAMS_AVAILABLE) {
 			return code;
@@ -1224,9 +1233,11 @@ int main() {
 		return EXIT_FAILURE;
 	}
 	
-	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 60L);
 	curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
 	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+	curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
+	curl_easy_setopt(curl, CURLOPT_TCP_KEEPIDLE, 30L);
+	curl_easy_setopt(curl, CURLOPT_TCP_KEEPINTVL, 15L);
 	//curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 	curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
 	curl_easy_setopt(curl, CURLOPT_USERAGENT, HTTP_DEFAULT_USER_AGENT);
@@ -1732,6 +1743,8 @@ int main() {
 										curl_easy_setopt(handle, CURLOPT_CAINFO, NULL);
 										curl_easy_setopt(handle, CURLOPT_CAINFO_BLOB, &blob);
 										curl_easy_setopt(handle, CURLOPT_URL, url);
+										curl_easy_setopt(handle, CURLOPT_RANGE, "0-");
+										
 										
 										FILE* const stream = fopen(filename, "wb");
 										
@@ -1786,6 +1799,7 @@ int main() {
 										curl_easy_setopt(handle, CURLOPT_CAINFO, NULL);
 										curl_easy_setopt(handle, CURLOPT_CAINFO_BLOB, &blob);
 										curl_easy_setopt(handle, CURLOPT_URL, url);
+										curl_easy_setopt(handle, CURLOPT_RANGE, "0-");
 										
 										FILE* const stream = fopen(filename, "wb");
 										
@@ -1815,10 +1829,52 @@ int main() {
 								while (still_running) {
 									CURLMcode mc = curl_multi_perform(multi_handle, &still_running);
 									
-									printf("\r+ Atualmente em progresso: %i%% / 100%%", (((downloads_offset - still_running) * 100) / downloads_offset));
+									printf("\r+ Atualmente em progresso: 0%% / 100%%");
 									
 									if (still_running) {
 										mc = curl_multi_poll(multi_handle, NULL, 0, 1000, NULL);
+									}
+										
+									CURLMsg* msg = NULL;
+									int msgs_left = 0;
+									
+									while ((msg = curl_multi_info_read(multi_handle, &msgs_left))) {
+										if (msg->msg == CURLMSG_DONE) {
+											struct SegmentDownload* download = NULL;
+											
+											for (size_t index = 0; index < downloads_offset; index++) {
+												struct SegmentDownload* subdownload = &downloads[index];
+												
+												if (subdownload->handle == msg->easy_handle) {
+													download = subdownload;
+													break;
+												}
+											}
+											
+											curl_multi_remove_handle(multi_handle, msg->easy_handle);
+											
+											if (msg->data.result == CURLE_OK) {
+												curl_easy_cleanup(msg->easy_handle);
+												fclose(download->stream);
+												download->stream = NULL;
+											} else {
+												long status_code = 0;
+												curl_easy_getinfo(msg->easy_handle, CURLINFO_RESPONSE_CODE, &status_code);
+												
+												if (status_code == 206) {
+													const long int position = ftell(download->stream);
+													
+													char range[intlen(position) + 1 + 1];
+													snprintf(range, sizeof(range), "%ld-", position);
+													
+													curl_easy_setopt(msg->easy_handle, CURLOPT_RANGE, range);
+												} else {
+													fseek(download->stream, 0, SEEK_SET);
+												}
+												
+												curl_multi_add_handle(multi_handle, msg->easy_handle);
+											}
+										}
 									}
 									
 									if (mc) {
@@ -1828,40 +1884,15 @@ int main() {
 								
 								printf("\r\n");
 								
-								CURLMsg* msg = NULL;
-								int msgs_left = 0;
-								
-								CURLcode code = 0;
-								
-								while ((msg = curl_multi_info_read(multi_handle, &msgs_left))) {
-									if (msg->msg == CURLMSG_DONE) {
-										code = msg->data.result;
-										
-										if (code != CURLE_OK) {
-											break;
-										}
-									}
-								}
-								
 								for (size_t index = 0; index < downloads_offset; index++) {
 									struct SegmentDownload* download = &downloads[index];
 									
-									fclose(download->stream);
+									if (download->stream != NULL) {
+										fclose(download->stream);
+									}
 									
 									curl_multi_remove_handle(multi_handle, download->handle);
 									curl_easy_cleanup(download->handle);
-								}
-								
-								if (code != CURLE_OK) {
-									for (size_t index = 0; index < downloads_offset; index++) {
-										struct SegmentDownload* download = &downloads[index];
-										
-										remove_file(download->filename);
-										free(download->filename);
-									}
-								
-									fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
-									return EXIT_FAILURE;
 								}
 								
 								printf("+ Exportando lista de reprodução para '%s'\r\n", playlist_filename);

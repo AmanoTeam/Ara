@@ -22,7 +22,7 @@ static const char INVALID_FILENAME_CHARS[] = {
 	'"', ' ', '/', '\\', ':', '*', '?', '\"', '<', '>', '|', '^', '\x00'
 };
 
-static const char* basename(const char* const path) {
+const char* basename(const char* const path) {
 	/*
 	Returns the final component of a pathname.
 	*/

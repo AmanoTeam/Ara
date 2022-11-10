@@ -1,5 +1,6 @@
 enum EmbedStreamType {
-	EMBED_STREAM_VIMEO
+	EMBED_STREAM_VIMEO,
+	EMBED_STREAM_YOUTUBE
 };
 
 struct EmbedStream {

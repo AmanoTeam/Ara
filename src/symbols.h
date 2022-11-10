@@ -15,3 +15,5 @@ static const char HASHTAG[] = "#";
 #else
 	static const char PATH_SEPARATOR[] = "/";
 #endif
+
+static const char HTTP_HEADER_SEPARATOR[] = ": ";

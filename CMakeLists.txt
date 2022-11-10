@@ -369,6 +369,8 @@ add_executable(
 	src/m3u8.c
 	src/embed_stream.c
 	src/vimeo.c
+	src/youtube.c
+	src/cleanup.c
 )
 
 if (APPLE)

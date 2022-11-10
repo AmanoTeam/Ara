@@ -5,11 +5,34 @@
 #include "embed_stream.h"
 #include "errors.h"
 
-static const char VIMEO_URL_PATTERN[] = "https://player.vimeo.com";
+static const char VIMEO_URL_PATTERN[] = "//player.vimeo.com";
+static const char YOUTUBE_URL_PATTERN[] = "//www.youtube.com";
+
+static const char URL_PREFIX[] = "https:";
+
+static int alloc_url(const char* const start, const size_t size, char** dst) {
+	
+	const size_t buffer_size = strlen(URL_PREFIX) + size + 1;
+	char* uri = malloc(buffer_size);
+	
+	if (uri == NULL) {
+		return UERR_MEMORY_ALLOCATE_FAILURE;
+	}
+	
+	strcpy(uri, URL_PREFIX);
+	
+	memcpy(uri + strlen(URL_PREFIX), start, size);
+	uri[buffer_size - 1] = '\0';
+	
+	*dst = uri;
+	
+	return UERR_SUCCESS;
+	
+}
 
 int embed_stream_find(const char* const content, struct EmbedStream* const info) {
 	
-	const char* const start = strstr(content, VIMEO_URL_PATTERN);
+	const char* start = strstr(content, VIMEO_URL_PATTERN);
 	
 	if (start != NULL) {
 		const char* const end = strstr(start, QUOTATION_MARK);
@@ -18,18 +41,33 @@ int embed_stream_find(const char* const content, struct EmbedStream* const info)
 			return UERR_STRSTR_FAILURE;
 		}
 		
-		const size_t size = (size_t) (end - start);
+		const int code = alloc_url(start, (size_t) (end - start), &info->uri);
 		
-		info->uri = malloc(size + 1);
-		
-		if (info->uri == NULL) {
-			return UERR_MEMORY_ALLOCATE_FAILURE;
+		if (code != UERR_SUCCESS) {
+			return code;
 		}
 		
-		memcpy(info->uri, start, size);
-		info->uri[size] = '\0';
-		
 		info->type = EMBED_STREAM_VIMEO;
+		
+		return UERR_SUCCESS;
+	}
+	
+	start = strstr(content, YOUTUBE_URL_PATTERN);
+	
+	if (start != NULL) {
+		const char* const end = strstr(start, QUOTATION_MARK);
+		
+		if (end == NULL) {
+			return UERR_STRSTR_FAILURE;
+		}
+		
+		const int code = alloc_url(start, (size_t) (end - start), &info->uri);
+		
+		if (code != UERR_SUCCESS) {
+			return code;
+		}
+		
+		info->type = EMBED_STREAM_YOUTUBE;
 		
 		return UERR_SUCCESS;
 	}

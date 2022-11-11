@@ -34,6 +34,11 @@ static const char MP4_FILE_EXTENSION[] = "mp4";
 int youtube_parse(CURL* curl, const char* const uri, struct Media* media) {
 	
 	const char* const start = basename(uri);
+	char* nonalnum = strstr(start, "?");
+	
+	if (nonalnum != NULL) {
+		*nonalnum = '\0';
+	}
 	
 	char video_id[strlen(start) + 1];
 	strcpy(video_id, start);

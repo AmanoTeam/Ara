@@ -44,7 +44,7 @@ struct SegmentDownload {
 		va_list list;
 		va_start(list, format);
 		
-		const int size = _vscprintf(format, list);
+		const int size = vsnprintf(NULL, 0, format, list);
 		char value[size + 1];
 		vsnprintf(value, sizeof(value), format, list);
 		
@@ -63,7 +63,7 @@ struct SegmentDownload {
 		va_list list;
 		va_start(list, format);
 		
-		const int size = _vscprintf(format, list);
+		const int size = vsnprintf(NULL, 0, format, list);
 		char value[size + 1];
 		vsnprintf(value, sizeof(value), format, list);
 		
@@ -83,11 +83,11 @@ struct SegmentDownload {
 		
 		wcsize = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
 		wchar_t wfilename[wcsize];
-		MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfilename, wcsize);
+		MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfilename, sizeof(wfilename) / sizeof(*wfilename));
 		
 		wcsize = MultiByteToWideChar(CP_UTF8, 0, mode, -1, NULL, 0);
 		wchar_t wmode[wcsize];
-		MultiByteToWideChar(CP_UTF8, 0, mode, -1, wmode, wcsize);
+		MultiByteToWideChar(CP_UTF8, 0, mode, -1, wmode, sizeof(wmode) / sizeof(*wmode));
 		
 		return _wfopen(wfilename, wmode);
 		
@@ -1179,10 +1179,12 @@ int main() {
 	#ifdef WIN32
 		_setmaxstdio(2048);
 		
-		setlocale(LC_ALL, ".UTF8");
-		
-		_setmode(_fileno(stdout), _O_WTEXT);
-		_setmode(_fileno(stderr), _O_WTEXT);
+		#ifdef UNICODE
+			_setmode(_fileno(stdout), _O_WTEXT);
+			_setmode(_fileno(stderr), _O_WTEXT);
+			
+			setlocale(LC_ALL, ".UTF8");
+		#endif
 	#else
 		struct rlimit rlim = {0};
 		getrlimit(RLIMIT_NOFILE, &rlim);
@@ -1454,8 +1456,7 @@ int main() {
 	
 	for (size_t index = 0; index < resources.offset; index++) {
 		const struct Resource* resource = &resources.items[index];
-		
-		printf("%zu. \r\nNome: %s\r\nHomepage: https://%s%s\r\n\r\n", index + 1, resource->name, resource->subdomain, HOTMART_CLUB_SUFFIX);
+		printf("%zu. \r\nNome: %s\r\nhttps://%s%s\r\n\r\n", index + 1, resource->name, resource->subdomain, HOTMART_CLUB_SUFFIX);
 	}
 	
 	char answer[4 + 1];
@@ -1750,7 +1751,6 @@ int main() {
 										curl_easy_setopt(handle, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 										curl_easy_setopt(handle, CURLOPT_CAINFO_BLOB, &blob);
 										curl_easy_setopt(handle, CURLOPT_URL, url);
-										//curl_easy_setopt(handle, CURLOPT_RANGE, "0-");
 										curl_easy_setopt(handle, CURLOPT_TCP_KEEPALIVE, 1L);
 										curl_easy_setopt(handle, CURLOPT_TCP_KEEPIDLE, 30L);
 										curl_easy_setopt(handle, CURLOPT_TCP_KEEPINTVL, 15L);
@@ -2037,17 +2037,19 @@ int main() {
 								curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
 								curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*) stream);
 								curl_easy_setopt(curl, CURLOPT_URL, media->url);
+								curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 								
 								const CURLcode code = curl_easy_perform(curl);
 								
 								fclose(stream);
-								curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, NULL);
 								
+								curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, NULL);
 								curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, NULL);
 								curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
 								curl_easy_setopt(curl, CURLOPT_TIMEOUT, 60L);
 								curl_easy_setopt(curl, CURLOPT_WRITEDATA, NULL);
 								curl_easy_setopt(curl, CURLOPT_URL, NULL);
+								curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0L);
 								
 								printf("\r\n");
 								
@@ -2097,7 +2099,7 @@ int main() {
 						
 						if (code != CURLE_OK) {
 							remove_file(attachment_filename);
-							fprintf(stderr, "\r\n- Ocorreu uma falha inesperada!\r\n");
+							fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
 							return EXIT_FAILURE;
 						}
 					}
@@ -2108,9 +2110,11 @@ int main() {
 				curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
 				curl_easy_setopt(curl, CURLOPT_TIMEOUT, 60L);
 				curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, NULL);
+				
 			}
 			
 		}
+		
 	}
 	
 	return 0;

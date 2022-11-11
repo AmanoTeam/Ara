@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-#include <locale.h>
 
 #define A "SparkleC"
 
@@ -8,10 +7,13 @@
 	#include <stdio.h>
 	#include <fcntl.h>
 	#include <io.h>
+	#include <locale.h>
 	
 	#ifdef UNICODE
 		#include <stdarg.h>
 	#endif
+#else
+	#include <sys/resource.h>
 #endif
 
 #include <curl/curl.h>
@@ -121,6 +123,8 @@ static size_t progress_callback(void *clientp, curl_off_t dltotal, curl_off_t dl
 	}
 	
 	printf("\r+ Atualmente em progresso: %lli%% / 100%%\r", ((dlnow * 100) / dltotal));
+	
+	fflush(stdout);
 	
 	return 0;
 	
@@ -1179,6 +1183,12 @@ int main() {
 		
 		_setmode(_fileno(stdout), _O_WTEXT);
 		_setmode(_fileno(stderr), _O_WTEXT);
+	#else
+		struct rlimit rlim = {0};
+		getrlimit(RLIMIT_NOFILE, &rlim);
+		
+		rlim.rlim_cur = rlim.rlim_max;
+		setrlimit(RLIMIT_NOFILE, &rlim);
 	#endif
 	
 	/*
@@ -1725,7 +1735,6 @@ int main() {
 										strcat(filename, KEY_FILE_EXTENSION);
 										
 										attribute_set_value(attribute, filename);
-										tag_set_uri(tag, filename);
 										
 										CURL* handle = curl_easy_init();
 										
@@ -1739,14 +1748,14 @@ int main() {
 										curl_easy_setopt(handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
 										curl_easy_setopt(handle, CURLOPT_USERAGENT, HTTP_DEFAULT_USER_AGENT);
 										curl_easy_setopt(handle, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-										curl_easy_setopt(handle, CURLOPT_CAPATH, NULL);
-										curl_easy_setopt(handle, CURLOPT_CAINFO, NULL);
 										curl_easy_setopt(handle, CURLOPT_CAINFO_BLOB, &blob);
 										curl_easy_setopt(handle, CURLOPT_URL, url);
-										curl_easy_setopt(handle, CURLOPT_RANGE, "0-");
+										//curl_easy_setopt(handle, CURLOPT_RANGE, "0-");
+										curl_easy_setopt(handle, CURLOPT_TCP_KEEPALIVE, 1L);
+										curl_easy_setopt(handle, CURLOPT_TCP_KEEPIDLE, 30L);
+										curl_easy_setopt(handle, CURLOPT_TCP_KEEPINTVL, 15L);
 										
-										
-										FILE* const stream = fopen(filename, "wb");
+										FILE* stream = fopen(filename, "wb");
 										
 										if (stream == NULL) {
 											fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
@@ -1765,6 +1774,60 @@ int main() {
 										downloads[downloads_offset++] = download;
 										
 										curl_url_set(cu, CURLUPART_URL, playlist_full_url, 0);
+										curl_url_set(cu, CURLUPART_URL, tag->uri, 0);
+										
+										char* segment_url __attribute__((__cleanup__(curlcharpp_free))) = NULL;
+										curl_url_get(cu, CURLUPART_URL, &segment_url, 0);
+										
+										handle = curl_easy_init();
+										
+										if (handle == NULL) {
+											fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+											return EXIT_FAILURE;
+										}
+										
+										curl_easy_setopt(handle, CURLOPT_FAILONERROR, 1L);
+										curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
+										curl_easy_setopt(handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+										curl_easy_setopt(handle, CURLOPT_USERAGENT, HTTP_DEFAULT_USER_AGENT);
+										curl_easy_setopt(handle, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+										curl_easy_setopt(handle, CURLOPT_CAINFO_BLOB, &blob);
+										curl_easy_setopt(handle, CURLOPT_URL, segment_url);
+										curl_easy_setopt(handle, CURLOPT_TCP_KEEPALIVE, 1L);
+										curl_easy_setopt(handle, CURLOPT_TCP_KEEPIDLE, 30L);
+										curl_easy_setopt(handle, CURLOPT_TCP_KEEPINTVL, 15L);
+										
+										char value[intlen(segment_number) + 1];
+										snprintf(value, sizeof(value), "%i", segment_number);
+										
+										char* segment_filename = malloc(strlen(page_directory) + strlen(PATH_SEPARATOR) + strlen(value) + strlen(DOT) + strlen(TS_FILE_EXTENSION) + 1);
+										strcpy(segment_filename, page_directory);
+										strcat(segment_filename, PATH_SEPARATOR);
+										strcat(segment_filename, value);
+										strcat(segment_filename, DOT);
+										strcat(segment_filename, TS_FILE_EXTENSION);
+										
+										tag_set_uri(tag, segment_filename);
+										
+										stream = fopen(segment_filename, "wb");
+										
+										if (stream == NULL) {
+											fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
+											return EXIT_FAILURE;
+										}
+										
+										curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void*) stream);
+										curl_multi_add_handle(multi_handle, handle);
+										
+										download = (struct SegmentDownload) {
+											.handle = handle,
+											.filename = segment_filename,
+											.stream = stream
+										};
+										
+										downloads[downloads_offset++] = download;
+										
+										segment_number++;
 									} else if (tag->type == EXTINF && tag->uri != NULL) {
 										curl_url_set(cu, CURLUPART_URL, tag->uri, 0);
 										
@@ -1799,7 +1862,9 @@ int main() {
 										curl_easy_setopt(handle, CURLOPT_CAINFO, NULL);
 										curl_easy_setopt(handle, CURLOPT_CAINFO_BLOB, &blob);
 										curl_easy_setopt(handle, CURLOPT_URL, url);
-										curl_easy_setopt(handle, CURLOPT_RANGE, "0-");
+										curl_easy_setopt(handle, CURLOPT_TCP_KEEPALIVE, 1L);
+										curl_easy_setopt(handle, CURLOPT_TCP_KEEPIDLE, 30L);
+										curl_easy_setopt(handle, CURLOPT_TCP_KEEPINTVL, 15L);
 										
 										FILE* const stream = fopen(filename, "wb");
 										
@@ -1825,11 +1890,12 @@ int main() {
 								}
 								
 								int still_running = 1;
+								int done = 0;
+								
+								progress_callback(NULL, downloads_offset, done, 0, 0);
 								
 								while (still_running) {
 									CURLMcode mc = curl_multi_perform(multi_handle, &still_running);
-									
-									printf("\r+ Atualmente em progresso: 0%% / 100%%");
 									
 									if (still_running) {
 										mc = curl_multi_poll(multi_handle, NULL, 0, 1000, NULL);
@@ -1857,21 +1923,11 @@ int main() {
 												curl_easy_cleanup(msg->easy_handle);
 												fclose(download->stream);
 												download->stream = NULL;
+												
+												done++;
+												progress_callback(NULL, downloads_offset, done, 0, 0);
 											} else {
-												long status_code = 0;
-												curl_easy_getinfo(msg->easy_handle, CURLINFO_RESPONSE_CODE, &status_code);
-												
-												if (status_code == 206) {
-													const long int position = ftell(download->stream);
-													
-													char range[intlen(position) + 1 + 1];
-													snprintf(range, sizeof(range), "%ld-", position);
-													
-													curl_easy_setopt(msg->easy_handle, CURLOPT_RANGE, range);
-												} else {
-													fseek(download->stream, 0, SEEK_SET);
-												}
-												
+												fseek(download->stream, 0, SEEK_SET);
 												curl_multi_add_handle(multi_handle, msg->easy_handle);
 											}
 										}
@@ -1883,17 +1939,6 @@ int main() {
 								}
 								
 								printf("\r\n");
-								
-								for (size_t index = 0; index < downloads_offset; index++) {
-									struct SegmentDownload* download = &downloads[index];
-									
-									if (download->stream != NULL) {
-										fclose(download->stream);
-									}
-									
-									curl_multi_remove_handle(multi_handle, download->handle);
-									curl_easy_cleanup(download->handle);
-								}
 								
 								printf("+ Exportando lista de reprodução para '%s'\r\n", playlist_filename);
 								 
@@ -1972,6 +2017,10 @@ int main() {
 									return EXIT_FAILURE;
 								}
 							}
+							
+							curl_easy_setopt(curl, CURLOPT_URL, NULL);
+							curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, NULL);
+							curl_easy_setopt(curl, CURLOPT_WRITEDATA, NULL);
 							
 							break;
 							

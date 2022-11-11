@@ -5,8 +5,8 @@
 #include "embed_stream.h"
 #include "errors.h"
 
-static const char VIMEO_URL_PATTERN[] = "//player.vimeo.com";
-static const char YOUTUBE_URL_PATTERN[] = "//www.youtube.com";
+static const char VIMEO_URL_PATTERN[] = "//player.vimeo.com/embed";
+static const char YOUTUBE_URL_PATTERN[] = "//www.youtube.com/embed";
 
 static const char URL_PREFIX[] = "https:";
 

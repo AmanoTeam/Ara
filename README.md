@@ -1,12 +1,12 @@
 # SparkleC
 
-SparkleC é um programa escrito em C que usufruí das APIs da plataforma de cursos Hotmart para possibilitar que usuários baixem cursos que tenham comprado diretamente para o armazenamento local de seu computador ou smartphone.
+SparkleC é um programa escrito em C que usufruí das APIs da plataforma de cursos Hotmart para possibilitar que usuários baixem cursos que tenham previamente comprado diretamente para o armazenamento local de seu computador ou smartphone.
 
 # Instalação
 
 O programa está disponível para Android, Windows, Linux e MacOS.
 
-Note que, embora versões para MacOS estejam disponíveis, as mesmas não chegaram a ser testadas. Caso encontre (ou não) problemas ao executar o SparkleC nessa plataforma, [reporte-nos](https://github.com/Kartatz/SparkleC/issues) através do GitHub.
+Note que, embora versões para MacOS estejam disponíveis, as mesmas não foram testadas. Caso encontre (ou não) problemas ao executar o SparkleC nessa plataforma, [reporte-nos](https://github.com/Kartatz/SparkleC/issues).
 
 A ferramenta depende do [ffmpeg](https://ffmpeg.org/download.html) para decodificar e desencriptar os arquivos de vídeo baixados. Ele não funcionará sem ela, portanto instale-o em sua máquina antes de tudo.
 
@@ -45,9 +45,9 @@ Assumo você já sabe como usar o SparkleC nessas plataformas.
 
 ## Instalando no Android
 
-O programa em si funciona no Android 5 ou superior, mas para seguir as instruções abaixo você precisará de no mínimo um smartphone com Android 7 ou superior.
+O programa em si funciona no Android 5 ou superior, mas para seguir as instruções abaixo você precisará de no mínimo um smartphone com Android 7.
 
-Baixe o Termux através do F-Droid e instale-o. Você pode obtê-lo [clicando aqui](https://f-droid.org/repo/com.termux_118.apk). Após a instalação, abra-o e insira as seguintes linhas de comando:
+Baixe o Termux através do F-Droid e instale-o. Você pode obtê-lo [clicando aqui](https://f-droid.org/repo/com.termux_118.apk). Após a instalação, abra-o e insira as seguintes linhas de comando no terminal:
 
 ```bash
 apt update --assume-yes
@@ -60,4 +60,30 @@ Se a instalação correu bem, você verá essa mensagem após a conclusão:
 
 ```
 Instalação concluída! Execute o comando "sparklec" sempre que quiser usar a ferramenta.
+```
+
+## Compilando
+
+Você pode compilar o SparkleC localmente em sua máquina. Basta ter um compilador C compatível com a especificação do C99 e o CMake, versão 3.13 ou superior.
+
+O projeto atualmente usa características específicas que não fazem parte da especificação oficial do C, as quais só não reconhecidas pelos compiladores Clang e GCC. Você pode vir a encontrar erros ao tentar compilar o código em outros compiladores fora os que foram mencionados. Isso é intencional e eu não pretendo adicionar suporte a qualquer outro.
+
+O SparkleC inclui todas as suas dependências como submódulos no git. Para clonar o repositório junto com todas as suas dependências, você precisa específicar a flag `--resursive`:
+
+```bash
+git clone --recursive 'https://github.com/Kartatz/SparkleC.git'
+```
+
+Execute os comandos abaixo para compilar o projeto:
+
+```bash
+mkdir SparkleC/build && cd SparkleC/build
+cmake ../
+cmake --build ./
+```
+
+Após a compilação, você pode executar o SparkleC através do diretório no qual você já está ou realizar a instalação usando o comando abaixo:
+
+```bash
+cmake --install ./
 ```

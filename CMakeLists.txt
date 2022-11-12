@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.13)
 
 project(
 	SparkleC
-	VERSION 0.1
+	VERSION 0.2
 	DESCRIPTION "Tiny CLI tool to download courses from Hotmart"
 	HOMEPAGE_URL "https://github.com/Kartatz/SparkleC"
 	LANGUAGES C

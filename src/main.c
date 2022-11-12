@@ -1193,12 +1193,11 @@ int main() {
 		setrlimit(RLIMIT_NOFILE, &rlim);
 	#endif
 	
-	/*
 	if (is_administrator()) {
 		fprintf(stderr, "- Você não precisa e nem deve executar este programa com privilégios elevados!\r\n");
 		return EXIT_FAILURE;
 	}
-	*/
+	
 	char* const directory = get_configuration_directory();
 	
 	if (directory == NULL) {

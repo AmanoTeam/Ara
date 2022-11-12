@@ -18,10 +18,10 @@ Abaixo estão os links para download do SparkleC para diversas arquiteturas. Voc
 
 A grande maioria dos computadores atuais são fabricados com processadores `x86_64`.
 
-- [SparkleC para Windows x86_64](https://github.com/Kartatz/SparkleC/releases/download/v0.1/x86_64-w64-mingw32.zip)
-- [SparkleC para Windows x86](https://github.com/Kartatz/SparkleC/releases/download/v0.1/i686-w64-mingw32.zip)
-- [SparkleC para Windows arm](https://github.com/Kartatz/SparkleC/releases/download/v0.1/armv7-w64-mingw32.zip)
-- [SparkleC para Windows arm64](https://github.com/Kartatz/SparkleC/releases/download/v0.1/aarch64-w64-mingw32.zip)
+- [SparkleC para Windows x86_64](https://github.com/Kartatz/SparkleC/releases/download/v0.2/x86_64-w64-mingw32.zip)
+- [SparkleC para Windows x86](https://github.com/Kartatz/SparkleC/releases/download/v0.2/i686-w64-mingw32.zip)
+- [SparkleC para Windows arm](https://github.com/Kartatz/SparkleC/releases/download/v0.2/armv7-w64-mingw32.zip)
+- [SparkleC para Windows arm64](https://github.com/Kartatz/SparkleC/releases/download/v0.2/aarch64-w64-mingw32.zip)
 
 Após baixar o arquivo compactado correspondente, extraía-io usando o WinRAR. Após isso, navegue através das pastas que foram criadas até encontrar um arquivo nomeado `sparklec.exe`.
 
@@ -31,15 +31,15 @@ Dê um duplo clique nele. Se tudo correu bem, isso fará com que uma janela do p
 
 Versões para Linux:
 
-- [SparkleC para Linux x86_64](https://github.com/Kartatz/SparkleC/releases/download/v0.1/x86_64-linux-gnu.tar.xz)
-- [SparkleC para Linux x86](https://github.com/Kartatz/SparkleC/releases/download/v0.1/i686-linux-gnu.tar.xz)
-- [SparkleC para Linux arm](https://github.com/Kartatz/SparkleC/releases/download/v0.1/arm-linux-gnueabi.tar.xz)
-- [SparkleC para Linux arm64](https://github.com/Kartatz/SparkleC/releases/download/v0.1/aarch64-linux-gnu.tar.xz)
+- [SparkleC para Linux x86_64](https://github.com/Kartatz/SparkleC/releases/download/v0.2/x86_64-linux-gnu.tar.xz)
+- [SparkleC para Linux x86](https://github.com/Kartatz/SparkleC/releases/download/v0.2/i686-linux-gnu.tar.xz)
+- [SparkleC para Linux arm](https://github.com/Kartatz/SparkleC/releases/download/v0.2/arm-linux-gnueabi.tar.xz)
+- [SparkleC para Linux arm64](https://github.com/Kartatz/SparkleC/releases/download/v0.2/aarch64-linux-gnu.tar.xz)
 
 Versões para MacOS:
 
-- [SparkleC para MacOS X x86_64](https://github.com/Kartatz/SparkleC/releases/download/v0.1/x86_64-apple-darwin.tar.xz)
-- [SparkleC para MacOS X x86](https://github.com/Kartatz/SparkleC/releases/download/v0.1/i386-apple-darwin.tar.xz)
+- [SparkleC para MacOS X x86_64](https://github.com/Kartatz/SparkleC/releases/download/v0.2/x86_64-apple-darwin.tar.xz)
+- [SparkleC para MacOS X x86](https://github.com/Kartatz/SparkleC/releases/download/v0.2/i386-apple-darwin.tar.xz)
 
 Assumo você já sabe como usar o SparkleC nessas plataformas.
 

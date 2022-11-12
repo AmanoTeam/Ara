@@ -25,7 +25,7 @@ case "$(dpkg --print-architecture)" in
 		exit 1;;
 esac
 
-declare -r url="https://github.com/Kartatz/SparkleC/releases/download/v0.1/${host}.tar.xz"
+declare -r url="https://github.com/Kartatz/SparkleC/releases/download/v0.2/${host}.tar.xz"
 declare -r filename="${TMPDIR}/binary.tar.xz"
 
 wget "${url}" --output-document="${filename}"

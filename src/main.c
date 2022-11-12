@@ -1066,28 +1066,28 @@ static int get_page(
 				
 				break;
 				case EMBED_STREAM_YOUTUBE: {
-					const size_t size = page->medias.size + sizeof(struct Media) * 1;
-					struct Media* items = (struct Media*) realloc(page->medias.items, size);
-					
-					if (items == NULL) {
-						return UERR_MEMORY_ALLOCATE_FAILURE;
-					}
-					
-					page->medias.size = size;
-					page->medias.items = items;
-					
-					if (page->medias.items == NULL) {
-						return UERR_MEMORY_ALLOCATE_FAILURE;
-					}
-					
 					struct Media media = {0};
 					const int code = youtube_parse(curl, embed_stream.uri, &media);
 					
-					if (code != UERR_SUCCESS) {
+					if (code == UERR_SUCCESS) {
+						const size_t size = page->medias.size + sizeof(struct Media) * 1;
+						struct Media* items = (struct Media*) realloc(page->medias.items, size);
+						
+						if (items == NULL) {
+							return UERR_MEMORY_ALLOCATE_FAILURE;
+						}
+						
+						page->medias.size = size;
+						page->medias.items = items;
+						
+						if (page->medias.items == NULL) {
+							return UERR_MEMORY_ALLOCATE_FAILURE;
+						}
+						
+						page->medias.items[page->medias.offset++] = media;
+					} else if (code != UERR_NO_STREAMS_AVAILABLE) {
 						return code;
 					}
-					
-					page->medias.items[page->medias.offset++] = media;
 				};
 				break;
 			}

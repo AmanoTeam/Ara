@@ -129,13 +129,46 @@ int youtube_parse(CURL* curl, const char* const uri, struct Media* media) {
 		return UERR_CURL_FAILURE;
 	}
 	
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, NULL);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, NULL);
+	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, NULL);
+	curl_easy_setopt(curl, CURLOPT_COPYPOSTFIELDS, NULL);
+	curl_easy_setopt(curl, CURLOPT_URL, NULL);
+	curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
+	
 	json_auto_t* tree = json_loads(string.s, 0, NULL);
 	
 	if (tree == NULL) {
 		return UERR_JSON_CANNOT_PARSE;
 	}
 	
-	const json_t* obj = json_object_get(tree, "streamingData");
+	const json_t* obj = json_object_get(tree, "playabilityStatus");
+	
+	if (obj == NULL) {
+		return UERR_JSON_MISSING_REQUIRED_KEY;
+	}
+	
+	if (!json_is_object(obj)) {
+		return UERR_JSON_NON_MATCHING_TYPE;
+	}
+	
+	obj = json_object_get(obj, "status");
+	
+	if (obj == NULL) {
+		return UERR_JSON_MISSING_REQUIRED_KEY;
+	}
+	
+	if (!json_is_string(obj)) {
+		return UERR_JSON_NON_MATCHING_TYPE;
+	}
+	
+	const char* const status = json_string_value(obj);
+	
+	if (strcmp(status, "OK") != 0) {
+		return UERR_NO_STREAMS_AVAILABLE;
+	}
+	
+	obj = json_object_get(tree, "streamingData");
 	
 	if (obj == NULL) {
 		return UERR_JSON_MISSING_REQUIRED_KEY;
@@ -243,13 +276,6 @@ int youtube_parse(CURL* curl, const char* const uri, struct Media* media) {
 	strcpy(media->url, stream_uri);
 	
 	media->type = MEDIA_SINGLE;
-	
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, NULL);
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, NULL);
-	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, NULL);
-	curl_easy_setopt(curl, CURLOPT_COPYPOSTFIELDS, NULL);
-	curl_easy_setopt(curl, CURLOPT_URL, NULL);
-	curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
 	
 	return UERR_SUCCESS;
 	

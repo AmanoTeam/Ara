@@ -122,7 +122,7 @@ static size_t progress_callback(void *clientp, curl_off_t dltotal, curl_off_t dl
 		return 0;
 	}
 	
-	printf("\r+ Atualmente em progresso: %lli%% / 100%%\r", ((dlnow * 100) / dltotal));
+	printf("\r+ Atualmente em progresso: %" CURL_FORMAT_CURL_OFF_T "%% / 100%%\r", ((dlnow * 100) / dltotal));
 	
 	fflush(stdout);
 	

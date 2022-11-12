@@ -75,10 +75,12 @@ jobs:
             
             if [ "${target}" == "${MACHINE_HOST}" ]; then
                 cmake -Wno-dev \
+                    -DSPARKLEC_ENABLE_LTO=ON \
                     -DCMAKE_INSTALL_PREFIX="${target}" \
                     -DCMAKE_BUILD_TYPE=MinSizeRel ../ 1>/dev/null
             else
                 cmake -Wno-dev \
+                    -DSPARKLEC_ENABLE_LTO=ON \
                     -DCMAKE_TOOLCHAIN_FILE="./.github/workflows/cmake_toolchains/${target}.cmake" \
                     -DCMAKE_INSTALL_PREFIX="${target}" \
                     -DCMAKE_BUILD_TYPE=MinSizeRel ../ 1>/dev/null
@@ -88,7 +90,7 @@ jobs:
             cmake --install ./ 1>/dev/null
             
             if [[ "${target}" == *'mingw32' ]]; then
-                zip --recurse-paths -9 "${OUTPUT_DIRECTORY}/${target}.zip" "${target}"
+                zip --recurse-paths -9 "${OUTPUT_DIRECTORY}/${target}.zip" "${target}" 1>/dev/null
             else
                 tar --create --file=- "${target}" |  xz --compress -9 > "${OUTPUT_DIRECTORY}/${target}.tar.xz"
             fi

@@ -189,11 +189,12 @@ int is_administrator(void) {
 		BOOL is_member = 0;
 		status = CheckTokenMembership(0, group, &is_member);
 		
-		FreeSid(&group);
+		FreeSid(group);
 		
 		if (!status) {
 			return 0;
 		}
+		
 		
 		return (int) is_member;
 	#else

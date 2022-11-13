@@ -5,6 +5,7 @@
 #include "m3u8.h"
 #include "errors.h"
 #include "symbols.h"
+#include "fstream.h"
 
 static const enum Type TYPES[] = {
 	EXTM3U,
@@ -78,10 +79,10 @@ const char* tag_stringify(const enum Type type) {
 			return "EXT-X-INDEPENDENT-SEGMENTS";
 		case EXT_X_START:
 			return "EXT-X-START";
-		default:
-			return NULL;
 	}
-
+	
+	return NULL;
+	
 }
 
 static enum Type get_tag(const char* const name) {
@@ -173,7 +174,7 @@ int m3u8_parse(struct Tags* tags, const char* const s) {
 								attribute_end = line_end;
 							}
 							
-							const size_t attribute_size = attribute_end - attribute_start;
+							const size_t attribute_size = (size_t) (attribute_end - attribute_start);
 							
 							if (attribute_size > 0) {
 								char attribute[attribute_size + 1];
@@ -339,45 +340,45 @@ void m3u8_free(struct Tags* tags) {
 	
 }
 
-int tags_dumpf(const struct Tags* const tags, FILE* const stream) {
+int tags_dumpf(const struct Tags* const tags, struct FStream* stream) {
 	
 	for (size_t index = 0; index < tags->offset; index++) {
 		struct Tag* tag = &tags->items[index];
 		
-		if (fwrite(HASHTAG, sizeof(*HASHTAG), strlen(HASHTAG), stream) != strlen(HASHTAG)) {
+		if (!fstream_write(stream, HASHTAG, strlen(HASHTAG))) {
 			return 0;
 		}
 		
 		const char* const name = tag_stringify(tag->type);
 		
-		if (fwrite(name, sizeof(*name), strlen(name), stream) != strlen(name)) {
+		if (!fstream_write(stream, name, strlen(name))) {
 			return 0;
 		}
 		
 		if (tag->value == NULL) {
 			for (size_t index = 0; index < tag->attributes.offset; index++) {
 				if (index == 0) {
-					if (fwrite(COLON, sizeof(*COLON), strlen(COLON), stream) != strlen(COLON)) {
+					if (!fstream_write(stream, COLON, strlen(COLON))) {
 						return 0;
 					}
 				} else {
-					if (fwrite(COMMA, sizeof(*COMMA), strlen(COMMA), stream) != strlen(COMMA)) {
+					if (!fstream_write(stream, COMMA, strlen(COMMA))) {
 						return 0;
 					}
 				}
 				
 				const struct Attribute* const attribute = &tag->attributes.items[index];
 				
-				if (fwrite(attribute->key, sizeof(*attribute->key), strlen(attribute->key), stream) != strlen(attribute->key)) {
+				if (!fstream_write(stream, attribute->key, strlen(attribute->key))) {
 					return 0;
 				}
 				
-				if (fwrite(EQUAL, sizeof(*EQUAL), strlen(EQUAL), stream) != strlen(EQUAL)) {
+				if (!fstream_write(stream, EQUAL, strlen(EQUAL))) {
 					return 0;
 				}
 				
 				if (attribute->is_quoted) {
-					if (fwrite(QUOTATION_MARK, sizeof(*QUOTATION_MARK), strlen(QUOTATION_MARK), stream) != strlen(QUOTATION_MARK)) {
+					if (!fstream_write(stream, QUOTATION_MARK, strlen(QUOTATION_MARK))) {
 						return 0;
 					}
 				}
@@ -394,33 +395,33 @@ int tags_dumpf(const struct Tags* const tags, FILE* const stream) {
 						}
 					}
 					
-					if (fwrite(value, sizeof(*value), strlen(value), stream) != strlen(value)) {
+					if (!fstream_write(stream, value, strlen(value))) {
 						return 0;
 					}
 				} else {
-					if (fwrite(attribute->value, sizeof(*attribute->value), strlen(attribute->value), stream) != strlen(attribute->value)) {
+					if (!fstream_write(stream, attribute->value, strlen(attribute->value))) {
 						return 0;
 					}
 				}
 				
 				if (attribute->is_quoted) {
-					if (fwrite(QUOTATION_MARK, sizeof(*QUOTATION_MARK), strlen(QUOTATION_MARK), stream) != strlen(QUOTATION_MARK)) {
+					if (!fstream_write(stream, QUOTATION_MARK, strlen(QUOTATION_MARK))) {
 						return 0;
 					}
 				}
 			}
 		} else {
-			if (fwrite(COLON, sizeof(*COLON), strlen(COLON), stream) != strlen(COMMA)) {
+			if (!fstream_write(stream, COLON, strlen(COLON))) {
 				return 0;
 			}
 			
-			if (fwrite(tag->value, sizeof(*tag->value), strlen(tag->value), stream) != strlen(tag->value)) {
+			if (!fstream_write(stream, tag->value, strlen(tag->value))) {
 				return 0;
 			}
 		}
 		
 		if (tag->uri != NULL) {
-			if (fwrite(LF, sizeof(*LF), strlen(LF), stream) != strlen(LF)) {
+			if (!fstream_write(stream, LF, strlen(LF))) {
 				return 0;
 			}
 			
@@ -435,12 +436,12 @@ int tags_dumpf(const struct Tags* const tags, FILE* const stream) {
 				}
 			}
 			
-			if (fwrite(uri, sizeof(*uri), strlen(uri), stream) != strlen(uri)) {
+			if (!fstream_write(stream, uri, strlen(uri))) {
 				return 0;
 			}
 		}
 		
-		if (fwrite(LF, sizeof(*LF), strlen(LF), stream) != strlen(LF)) {
+		if (!fstream_write(stream, LF, strlen(LF))) {
 			return 0;
 		}
 	}

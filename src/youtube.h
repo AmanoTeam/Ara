@@ -1,3 +1,3 @@
-#include <curl/curl.h>
+#include "hotmart.h"
 
-int youtube_parse(CURL* curl, const char* const uri, struct Media* media);
+int youtube_parse(const char* const uri, struct Media* media);

@@ -16,10 +16,11 @@
 	#include <errno.h>
 	
 	#define PATH_MAX 4096
+	#define FILERW_MAX_CHUNK_SIZE 8192
 #endif
 
 static const char INVALID_FILENAME_CHARS[] = {
-	'"', ' ', '/', '\\', ':', '*', '?', '\"', '<', '>', '|', '^', '\x00'
+	'\'', '%', '"', ' ', '/', '\\', ':', '*', '?', '\"', '<', '>', '|', '^', '\x00'
 };
 
 const char* basename(const char* const path) {
@@ -43,7 +44,7 @@ const char* basename(const char* const path) {
 	
 }
 
-const char* get_file_extension(const char* const filename) {
+char* get_file_extension(const char* const filename) {
 	
 	if (*filename == '\0') {
 		return NULL;
@@ -51,14 +52,14 @@ const char* get_file_extension(const char* const filename) {
 	
 	const char* const last_part = basename(filename);
 	
-	const char* start = strstr(last_part, DOT);
+	char* start = strstr(last_part, DOT);
 	
 	if (start == NULL) {
 		return NULL;
 	}
 	
 	while (1) {
-		const char* const tmp = strstr(start + 1, DOT);
+		char* const tmp = strstr(start + 1, DOT);
 		
 		if (tmp == NULL) {
 			break;
@@ -250,14 +251,17 @@ char* get_configuration_directory(void) {
 	
 }
 
-void normalize_filename(char* filename) {
+char* normalize_filename(char* filename) {
 	
-	char* ptr = strpbrk(filename, INVALID_FILENAME_CHARS);
-	
-	while (ptr != NULL) {
-		*ptr = '_';
-		ptr = strpbrk(ptr, INVALID_FILENAME_CHARS);
+	for (size_t index = 0; index < strlen(filename); index++) {
+		char* ch = &filename[index];
+		
+		if (iscntrl(*ch) || strchr(INVALID_FILENAME_CHARS, *ch) != NULL) {
+			*ch = '_';
+		}
 	}
+	
+	return filename;
 	
 }
 
@@ -449,16 +453,6 @@ int file_exists(const char* const filename) {
 	
 }
 
-int is_absolute(const char* const path) {
-	
-	#ifdef WIN32
-		return (*path == *PATH_SEPARATOR || (strlen(path) > 1 && isalpha(*path) && path[1] == *COLON));
-	#else
-		return (*path == *PATH_SEPARATOR);
-	#endif
-	
-}
-
 static int raw_create_dir(const char* const directory) {
 	
 	#ifdef WIN32
@@ -475,6 +469,16 @@ static int raw_create_dir(const char* const directory) {
 		return (code == 1 || GetLastError() == ERROR_ALREADY_EXISTS);
 	#else
 		return (mkdir(directory, 0777) == 0 || errno == EEXIST);
+	#endif
+	
+}
+
+int is_absolute(const char* const path) {
+	
+	#ifdef WIN32
+		return (*path == *PATH_SEPARATOR || (strlen(path) > 1 && isalpha(*path) && path[1] == *COLON));
+	#else
+		return (*path == *PATH_SEPARATOR);
 	#endif
 	
 }
@@ -499,7 +503,7 @@ int create_directory(const char* const directory) {
 		if (omit_next) {
 			omit_next = 0;
 		} else {
-			const size_t size = ch - start;
+			const size_t size = (size_t) (ch - start);
 			
 			char directory[size + 1];
 			memcpy(directory, start, size);
@@ -513,4 +517,131 @@ int create_directory(const char* const directory) {
 	
 	return 1;
 	
+}
+
+static int copy_file(const char* const source, const char* const destination) {
+	/*
+	Copies a file from source to destination.
+	*/
+	
+	#ifdef WIN32
+		#ifdef UNICODE
+			int wcsize = MultiByteToWideChar(CP_UTF8, 0, source, -1, NULL, 0);
+			wchar_t wsource[wcsize];
+			MultiByteToWideChar(CP_UTF8, 0, source, -1, wsource, sizeof(wsource) / sizeof(*wsource));
+			
+			wcsize = MultiByteToWideChar(CP_UTF8, 0, destination, -1, NULL, 0);
+			wchar_t wdestination[wcsize];
+			MultiByteToWideChar(CP_UTF8, 0, destination, -1, wdestination, sizeof(wdestination) / sizeof(*wdestination));
+			
+			return CopyFileW(wsource, wdestination, FALSE) == 1;
+		#else
+			return CopyFileA(source, destination, FALSE) == 1;
+		#endif
+	#else
+		// Generic version which works for any platform
+		FILE* sfile = fopen(source, "r");
+		
+		if (sfile == NULL) {
+			return 0;
+		}
+		
+		FILE* dfile = fopen(destination, "wb");
+		
+		if (dfile == NULL) {
+			return 0;
+		}
+		
+		while (1) {
+			char chunk[FILERW_MAX_CHUNK_SIZE];
+			const size_t rsize = fread(chunk, sizeof(*chunk), sizeof(chunk), sfile);
+			
+			if (rsize == 0) {
+				fclose(sfile);
+				fclose(dfile);
+				
+				if (ferror(sfile) != 0) {
+					return 0;
+				}
+				
+				break;
+			}
+			
+			const size_t wsize = fwrite(chunk, sizeof(*chunk), rsize, dfile);
+			
+			if (wsize != rsize) {
+				fclose(sfile);
+				fclose(dfile);
+				
+				return 0;
+			}
+		}
+		
+		return 1;
+	#endif
+
+}
+
+int move_file(const char* const source, const char* const destination) {
+	/*
+	Moves a file from source to destination. Symlinks are not followed: if source is a symlink, it is itself moved, not it's target.
+	If destination already exists, it will be overwritten.
+	*/
+	
+	#ifdef WIN32
+		#ifdef UNICODE
+			int wcsize = MultiByteToWideChar(CP_UTF8, 0, source, -1, NULL, 0);
+			wchar_t wsource[wcsize];
+			MultiByteToWideChar(CP_UTF8, 0, source, -1, wsource, sizeof(wsource) / sizeof(*wsource));
+			
+			wcsize = MultiByteToWideChar(CP_UTF8, 0, destination, -1, NULL, 0);
+			wchar_t wdestination[wcsize];
+			MultiByteToWideChar(CP_UTF8, 0, destination, -1, wdestination, sizeof(wdestination) / sizeof(*wdestination));
+			
+			return MoveFileExW(wsource, wdestination, MOVEFILE_COPY_ALLOWED|MOVEFILE_REPLACE_EXISTING) == 1;
+		#else
+			return MoveFileExA(source, destination, MOVEFILE_COPY_ALLOWED|MOVEFILE_REPLACE_EXISTING) == 1;
+		#endif
+	#else
+		const int code = rename(source, destination);
+		
+		if (code == 0) {
+			return 1;
+		}
+		
+		if (errno == EXDEV) {
+			const int code = copy_file(source, destination);
+			
+			if (code) {
+				remove_file(source);
+			}
+			
+			return code;
+		}
+		
+		return code;
+	#endif
+	
+}
+
+const char* get_error_message(void) {
+	
+	#ifdef WIN32
+		char* message = NULL;
+		
+		FormatMessage(
+			FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+			NULL,
+			GetLastError(),
+			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+			(LPTSTR) &message,
+			0,
+			NULL
+		);
+		
+		return message;
+	#else
+		return strerror(errno);
+	#endif
+		
 }

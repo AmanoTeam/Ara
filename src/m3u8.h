@@ -1,5 +1,7 @@
 #include <stdio.h>
 
+#include "fstream.h"
+
 enum Type {
 	EXTM3U,
 	EXT_X_VERSION,
@@ -53,7 +55,7 @@ struct Tags {
 int m3u8_parse(struct Tags* tags, const char* const s);
 void m3u8_free(struct Tags* tags);
 
-int tags_dumpf(const struct Tags* const tags, FILE* const stream);
+int tags_dumpf(const struct Tags* const tags, struct FStream* stream);
 
 const char* tag_stringify(const enum Type type);
 int tag_set_value(struct Tag* tag, const char* const value);

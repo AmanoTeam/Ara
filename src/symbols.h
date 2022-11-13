@@ -17,3 +17,12 @@ static const char HASHTAG[] = "#";
 #endif
 
 static const char HTTP_HEADER_SEPARATOR[] = ": ";
+static const char HTTPS_SCHEME[] = "https://";
+
+static const char M3U8_FILE_EXTENSION[] = "m3u8";
+static const char MP4_FILE_EXTENSION[] = "mp4";
+static const char AAC_FILE_EXTENSION[] = "aac";
+static const char TS_FILE_EXTENSION[] = "ts";
+static const char KEY_FILE_EXTENSION[] = "key";
+static const char HTML_FILE_EXTENSION[] = "html";
+

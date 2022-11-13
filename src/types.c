@@ -10,14 +10,19 @@ void string_free(struct String* obj) {
 	
 }
 
-void credentials_free(struct Credentials* obj) {
+void string_array_free(string_array_t* obj) {
 	
-	free(obj->access_token);
-	obj->access_token = NULL;
+	for (size_t index = 0; index < obj->offset; index++) {
+		char* item = obj->items[index];
+		free(item);
+	}
 	
-	free(obj->refresh_token);
-	obj->refresh_token = NULL;
+	if (obj->items != NULL) {
+		free(obj->items);
+		obj->items = NULL;
+	}
 	
-	obj->expires_in = 0;
+	obj->offset = 0;
+	obj->size = 0;
 	
 }

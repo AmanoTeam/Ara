@@ -13,6 +13,9 @@
 #include "query.h"
 #include "string.h"
 #include "youtube.h"
+#include "hotmart.h"
+#include "curl.h"
+#include "cleanup.h"
 
 static const char YOUTUBE_PLAYER_ENDPOINT[] = "https://www.youtube.com/youtubei/v1/player";
 static const char YOUTUBE_PLAYER_KEY[] = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
@@ -29,16 +32,27 @@ static const char* const YOUTUBE_PLAYER_HEADERS[][2] = {
 	{"User-Agent", YOUTUBE_CLIENT_USER_AGENT}
 };
 
-static const char MP4_FILE_EXTENSION[] = "mp4";
-
-int youtube_parse(CURL* curl, const char* const uri, struct Media* media) {
+int youtube_parse(const char* const uri, struct Media* media) {
 	
-	const char* const start = basename(uri);
-	char* nonalnum = strstr(start, "?");
+	CURL* curl_easy = curl_easy_global();
 	
-	if (nonalnum != NULL) {
-		*nonalnum = '\0';
+	CURLU* cu __attribute__((__cleanup__(curlupp_free))) = curl_url();
+	
+	if (cu == NULL) {
+		return UERR_CURL_FAILURE;
 	}
+	
+	if (curl_url_set(cu, CURLUPART_URL, uri, 0) != CURLUE_OK) {
+		return UERR_CURL_FAILURE;
+	}
+	
+	char* path __attribute__((__cleanup__(curlcharpp_free))) = NULL;
+	
+	if (curl_url_get(cu, CURLUPART_PATH, &path, 0) != CURLUE_OK) {
+		return UERR_CURL_FAILURE;
+	}
+	
+	const char* const start = basename(path);
 	
 	char video_id[strlen(start) + 1];
 	strcpy(video_id, start);
@@ -46,7 +60,8 @@ int youtube_parse(CURL* curl, const char* const uri, struct Media* media) {
 	struct curl_slist* list __attribute__((__cleanup__(curl_slistp_free_all))) = NULL;
 	
 	for (size_t index = 0; index < sizeof(YOUTUBE_PLAYER_HEADERS) / sizeof(*YOUTUBE_PLAYER_HEADERS); index++) {
-		const char** const header = (const char**) YOUTUBE_PLAYER_HEADERS[index];
+		const char* const* const header = YOUTUBE_PLAYER_HEADERS[index];
+		
 		const char* const key = header[0];
 		const char* const value = header[1];
 		
@@ -66,9 +81,9 @@ int youtube_parse(CURL* curl, const char* const uri, struct Media* media) {
 	
 	struct String string __attribute__((__cleanup__(string_free))) = {0};
 	
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_cb);
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &string);
-	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
+	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
+	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
+	curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, list);
 	
 	struct Query uquery __attribute__((__cleanup__(query_free))) = {0};
 	
@@ -82,14 +97,13 @@ int youtube_parse(CURL* curl, const char* const uri, struct Media* media) {
 		return code;
 	}
 	
-	CURLU* cu __attribute__((__cleanup__(curlupp_free))) = curl_url();
 	curl_url_set(cu, CURLUPART_URL, YOUTUBE_PLAYER_ENDPOINT, 0);
 	curl_url_set(cu, CURLUPART_QUERY, query, 0);
 	
 	char* url __attribute__((__cleanup__(curlcharpp_free))) = NULL;
 	curl_url_get(cu, CURLUPART_URL, &url, 0);
 	
-	curl_easy_setopt(curl, CURLOPT_URL, url);
+	curl_easy_setopt(curl_easy, CURLOPT_URL, url);
 	
 	json_auto_t* subtree = json_object();
 	
@@ -123,18 +137,18 @@ int youtube_parse(CURL* curl, const char* const uri, struct Media* media) {
 		return UERR_MEMORY_ALLOCATE_FAILURE;
 	}
 	
-	curl_easy_setopt(curl, CURLOPT_COPYPOSTFIELDS, post_fields);
+	curl_easy_setopt(curl_easy, CURLOPT_COPYPOSTFIELDS, post_fields);
 	
-	if (curl_easy_perform(curl) != CURLE_OK) {
+	if (curl_easy_perform(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, NULL);
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, NULL);
-	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, NULL);
-	curl_easy_setopt(curl, CURLOPT_COPYPOSTFIELDS, NULL);
-	curl_easy_setopt(curl, CURLOPT_URL, NULL);
-	curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
+	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, NULL);
+	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, NULL);
+	curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, NULL);
+	curl_easy_setopt(curl_easy, CURLOPT_COPYPOSTFIELDS, NULL);
+	curl_easy_setopt(curl_easy, CURLOPT_URL, NULL);
+	curl_easy_setopt(curl_easy, CURLOPT_HTTPGET, 1L);
 	
 	json_auto_t* tree = json_loads(string.s, 0, NULL);
 	
@@ -188,7 +202,7 @@ int youtube_parse(CURL* curl, const char* const uri, struct Media* media) {
 		return UERR_JSON_NON_MATCHING_TYPE;
 	}
 	
-	int last_itag = 0;
+	json_int_t last_itag = 0;
 	const char* stream_uri = NULL;
 	
 	size_t index = 0;
@@ -209,7 +223,7 @@ int youtube_parse(CURL* curl, const char* const uri, struct Media* media) {
 			return UERR_JSON_NON_MATCHING_TYPE;
 		}
 		
-		const int itag = json_integer_value(obj);
+		const json_int_t itag = json_integer_value(obj);
 		
 		if (last_itag < itag) {
 			const json_t* obj = json_object_get(item, "url");
@@ -255,25 +269,25 @@ int youtube_parse(CURL* curl, const char* const uri, struct Media* media) {
 	
 	const char* const title = json_string_value(obj);
 	
-	media->filename = malloc(strlen(title) + strlen(DOT) + strlen(MP4_FILE_EXTENSION) + 1);
+	media->video.filename = malloc(strlen(title) + strlen(DOT) + strlen(MP4_FILE_EXTENSION) + 1);
 	
-	if (media->filename == NULL) {
+	if (media->video.filename == NULL) {
 		return UERR_MEMORY_ALLOCATE_FAILURE;
 	}
 	
-	strcpy(media->filename, title);
-	strcat(media->filename, DOT);
-	strcat(media->filename, MP4_FILE_EXTENSION);
+	strcpy(media->video.filename, title);
+	strcat(media->video.filename, DOT);
+	strcat(media->video.filename, MP4_FILE_EXTENSION);
 	
-	normalize_filename(media->filename);
+	normalize_filename(media->video.filename);
 	
-	media->url = malloc(strlen(stream_uri) + 1);
+	media->video.url = malloc(strlen(stream_uri) + 1);
 	
-	if (media->url == NULL) {
+	if (media->video.url == NULL) {
 		return UERR_MEMORY_ALLOCATE_FAILURE;
 	}
 	
-	strcpy(media->url, stream_uri);
+	strcpy(media->video.url, stream_uri);
 	
 	media->type = MEDIA_SINGLE;
 	

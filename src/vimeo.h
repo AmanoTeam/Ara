@@ -1,1 +1,8 @@
-int vimeo_parse(const char* const content, struct Media* media);
+#include "hotmart.h"
+
+int vimeo_parse(
+	const char* const url,
+	const struct Resource* const resource,
+	const struct Page* const page,
+	struct Media* media
+);

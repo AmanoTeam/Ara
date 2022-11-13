@@ -32,6 +32,7 @@ set(CURL_USE_LIBSSH2 OFF)
 set(CURL_CA_BUNDLE "none")
 set(CURL_CA_PATH "none")
 set(CURL_WERROR OFF)
+set(CURL_DISABLE_DOH ON)
 
 # jansson
 option(JANSSON_BUILD_DOCS OFF)
@@ -45,6 +46,15 @@ endif()
 
 if (CMAKE_C_COMPILER_ID STREQUAL "Clang" AND CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
 	add_compile_options(-Oz)
+endif()
+
+# Workaround for build issues of Tidy on MacOS
+if (APPLE)
+	file(READ "${CMAKE_SOURCE_DIR}/submodules/tidy/include/tidyplatform.h" FILE_CONTENTS)
+	string(REPLACE "TIDY_THREAD_LOCAL __thread" "TIDY_THREAD_LOCAL" FILE_CONTENTS "${FILE_CONTENTS}")
+	file(WRITE "${CMAKE_SOURCE_DIR}/submodules/tidy/include/tidyplatform.h" "${FILE_CONTENTS}")
+	
+	add_compile_options(-Wno-undef-prefix)
 endif()
 
 include_directories(
@@ -358,19 +368,24 @@ set(BEARSSL_LIBRARY $<TARGET_FILE:bearssl>)
 
 add_subdirectory(submodules/curl EXCLUDE_FROM_ALL)
 add_subdirectory(submodules/jansson EXCLUDE_FROM_ALL)
+add_subdirectory(submodules/tidy EXCLUDE_FROM_ALL)
 
 add_executable(
 	sparklec
 	src/callbacks.c
+	src/cleanup.c
+	src/curl.c
+	src/errors.c
+	src/hotmart.c
+	src/html.c
+	src/m3u8.c
 	src/main.c
 	src/query.c
 	src/types.c
 	src/utils.c
-	src/m3u8.c
-	src/embed_stream.c
 	src/vimeo.c
 	src/youtube.c
-	src/cleanup.c
+	src/fstream.c
 )
 
 if (APPLE)
@@ -416,7 +431,7 @@ elseif (UNIX)
 endif()
 
 foreach(property RUNTIME_OUTPUT_DIRECTORY LIBRARY_OUTPUT_DIRECTORY)
-	foreach(target jansson libcurl)
+	foreach(target jansson libcurl tidy-share)
 		set_target_properties(
 			${target}
 			PROPERTIES
@@ -438,6 +453,12 @@ if (WIN32)
 		PRIVATE
 		-municode
 	)
+	
+	target_sources(
+		sparklec
+		PRIVATE
+		src/wio.c
+	)
 endif()
 
 if (SPARKLEC_ENABLE_LTO)
@@ -447,7 +468,7 @@ if (SPARKLEC_ENABLE_LTO)
 	check_ipo_supported(RESULT SPARKLEC_HAS_LTO LANGUAGES C)
 	
 	if (SPARKLEC_HAS_LTO)
-		foreach(target sparklec bearssl jansson libcurl)
+		foreach(target sparklec bearssl jansson libcurl tidy-share)
 			set_target_properties(
 				${target}
 				PROPERTIES
@@ -461,9 +482,10 @@ target_link_libraries(
 	sparklec
 	jansson
 	libcurl
+	tidy-share
 )
 
-foreach(target sparklec bearssl jansson libcurl)
+foreach(target sparklec bearssl jansson libcurl tidy-share)
 	install(
 		TARGETS ${target}
 		RUNTIME DESTINATION bin

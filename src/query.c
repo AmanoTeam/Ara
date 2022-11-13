@@ -39,7 +39,7 @@ static int put_parameter(struct Query* obj, const struct Parameter parameter) {
 
 int add_parameter(struct Query* obj, const char* key, const char* value) {
 	
-	struct Parameter parameter = {};
+	struct Parameter parameter = {0};
 	
 	const size_t key_size = strlen(key);
 	

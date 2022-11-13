@@ -7,3 +7,6 @@
 [submodule "submodules/curl"]
 	path = submodules/curl
 	url = http://github.com/curl/curl
+[submodule "submodules/tidy"]
+	path = submodules/tidy
+	url = https://github.com/htacg/tidy-html5

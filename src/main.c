@@ -211,7 +211,7 @@ static int m3u8_download(const char* const url, const char* const output) {
 			}
 			
 			if (stream == NULL) {
-				fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", filename, get_error_message());
+				fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", filename, strerror(errno));
 				return UERR_FAILURE;
 			}
 			
@@ -262,7 +262,7 @@ static int m3u8_download(const char* const url, const char* const output) {
 			}
 			
 			if (stream == NULL) {
-				fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", filename, get_error_message());
+				fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", filename, strerror(errno));
 				return UERR_FAILURE;
 			}
 			
@@ -315,7 +315,7 @@ static int m3u8_download(const char* const url, const char* const output) {
 			}
 			
 			if (stream == NULL) {
-				fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", filename, get_error_message());
+				fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", filename, strerror(errno));
 				return UERR_FAILURE;
 			}
 			
@@ -345,7 +345,7 @@ static int m3u8_download(const char* const url, const char* const output) {
 	struct FStream* stream = fstream_open(playlist_filename, "wb");
 	
 	if (stream == NULL) {
-		fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", playlist_filename, get_error_message());
+		fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", playlist_filename, strerror(errno));
 		return UERR_FAILURE;
 	}
 			
@@ -560,7 +560,7 @@ int main(void) {
 			FILE* const file = fopen(accounts_file, "wb");
 			
 			if (file == NULL) {
-				fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", accounts_file, get_error_message());
+				fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", accounts_file, strerror(errno));
 				return EXIT_FAILURE;
 			}
 			
@@ -601,7 +601,7 @@ int main(void) {
 		FILE* const stream = fopen(accounts_file, "wb");
 		
 		if (stream == NULL) {
-			fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", accounts_file, get_error_message());
+			fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", accounts_file, strerror(errno));
 			return EXIT_FAILURE;
 		}
 		
@@ -686,6 +686,32 @@ int main(void) {
 		fprintf(stderr, "- Opção inválida ou não reconhecida!\r\n");
 	}
 	
+	int kof = 0;
+	
+	while (1) {
+		printf("> Manter o nome original de arquivos e diretórios? (S/n) ");
+		
+		if (fgets(answer, sizeof(answer), stdin) != NULL && *answer != '\n') {
+			*strchr(answer, '\n') = '\0';
+			
+			switch (*answer) {
+				case 's':
+				case 'y':
+					kof = 1;
+					break;
+				case 'n':
+					kof = 0;
+					break;
+				default:
+					fprintf(stderr, "- Opção inválida ou não reconhecida!\r\n");
+					continue;
+			}
+			
+			break;
+		}
+	}
+	
+	
 	fclose(stdin);
 	
 	struct Resource download_queue[resources.offset];
@@ -725,8 +751,8 @@ int main(void) {
 			return EXIT_FAILURE;
 		}
 		
-		char directory[strlen(resource->name) + 1];
-		strcpy(directory, resource->name);
+		char directory[(kof ? strlen(resource->name) : strlen(resource->subdomain)) + 1];
+		strcpy(directory, (kof ? resource->name : resource->subdomain));
 		normalize_filename(directory);
 		
 		char resource_directory[strlen(cwd) + strlen(PATH_SEPARATOR) + strlen(directory) + 1];
@@ -753,8 +779,8 @@ int main(void) {
 				continue;
 			}
 			
-			char directory[strlen(module->name) + 1];
-			strcpy(directory, module->name);
+			char directory[(kof ? strlen(module->name) : strlen(module->id)) + 1];
+			strcpy(directory, (kof ? module->name : module->id));
 			normalize_filename(directory);
 			
 			char module_directory[strlen(resource_directory) + strlen(PATH_SEPARATOR) + strlen(directory) + 1];
@@ -792,8 +818,8 @@ int main(void) {
 				
 				printf("+ Verificando estado da página '%s'\r\n", page->name);
 				
-				char directory[strlen(page->name) + 1];
-				strcpy(directory, page->name);
+				char directory[(kof ? strlen(page->name) : strlen(page->id)) + 1];
+				strcpy(directory, (kof ? page->name : page->id));
 				normalize_filename(directory);
 				
 				char page_directory[strlen(module_directory) + strlen(PATH_SEPARATOR) + strlen(directory) + 1];
@@ -810,11 +836,30 @@ int main(void) {
 					}
 				}
 				
+				int suffix = 0;
+				
 				if (page->document.content != NULL) {
-					char document_filename[strlen(page_directory) + strlen(PATH_SEPARATOR) + strlen(page->document.filename) + 1];
+					const char* const extension = get_file_extension(page->document.filename);
+					suffix++;
+					
+					char document_filename[strlen(page_directory) + strlen(PATH_SEPARATOR) + (kof ? strlen(page->document.filename) : strlen(page->id) + intlen(suffix) + strlen(DOT) + strlen(extension)) + 1];
 					strcpy(document_filename, page_directory);
 					strcat(document_filename, PATH_SEPARATOR);
-					strcat(document_filename, page->document.filename);
+					
+					if (kof) {
+						strcat(document_filename, page->document.filename);
+					} else {
+						strcat(document_filename, page->id);
+						
+						char value[intlen(suffix) + 1];
+						snprintf(value, sizeof(value), "%i", suffix);
+						
+						strcat(document_filename, value);
+						strcat(document_filename, DOT);
+						strcat(document_filename, extension);
+						
+						normalize_filename(basename(document_filename));
+					}
 					
 					if (!file_exists(document_filename)) {
 						fprintf(stderr, "- O arquivo '%s' não existe, salvando-o\r\n", document_filename);
@@ -822,12 +867,11 @@ int main(void) {
 						struct FStream* stream = fstream_open(document_filename, "wb");
 						
 						if (stream == NULL) {
-							fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", document_filename, get_error_message());
+							fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", document_filename, strerror(errno));
 							return EXIT_FAILURE;
 						}
 						
 						const int status = fstream_write(stream, page->document.content, strlen(page->document.content));
-						
 						const int cerrno = errno;
 						
 						fstream_close(stream);
@@ -843,10 +887,27 @@ int main(void) {
 				for (size_t index = 0; index < page->medias.offset; index++) {
 					struct Media* media = &page->medias.items[index];
 					
-					char media_filename[strlen(page_directory) + strlen(PATH_SEPARATOR) + strlen(media->video.filename) + 1];
+					const char* const extension = get_file_extension(media->video.filename);
+					suffix++;
+					
+					char media_filename[strlen(page_directory) + strlen(PATH_SEPARATOR) + (kof ? strlen(media->video.filename) : strlen(page->id) + intlen(suffix) + strlen(DOT) + strlen(extension)) + 1];
 					strcpy(media_filename, page_directory);
 					strcat(media_filename, PATH_SEPARATOR);
-					strcat(media_filename, media->video.filename);
+					
+					if (kof) {
+						strcat(media_filename, media->video.filename);
+					} else {
+						strcat(media_filename, page->id);
+						
+						char value[intlen(suffix) + 1];
+						snprintf(value, sizeof(value), "%i", suffix);
+						
+						strcat(media_filename, value);
+						strcat(media_filename, DOT);
+						strcat(media_filename, extension);
+						
+						normalize_filename(basename(media_filename));
+					}
 					
 					if (!file_exists(media_filename)) {
 						fprintf(stderr, "- O arquivo '%s' não existe, baixando-o\r\n", media_filename);
@@ -857,7 +918,10 @@ int main(void) {
 								const char* video_filename = NULL;
 								
 								if (media->audio.url != NULL) {
-									audio_filename = malloc(strlen(page_directory) + strlen(PATH_SEPARATOR) + strlen(media->audio.filename) + 1);
+									const char* const extension = get_file_extension(media->audio.filename);
+									suffix++;
+									
+									audio_filename = malloc(strlen(page_directory) + strlen(PATH_SEPARATOR) + (kof ? strlen(media->audio.filename) : strlen(page->id) + intlen(suffix) + strlen(DOT) + strlen(extension)) + 1);
 									
 									if (audio_filename == NULL) {
 										fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar alocar memória do sistema!\r\n");
@@ -866,7 +930,21 @@ int main(void) {
 									
 									strcpy(audio_filename, page_directory);
 									strcat(audio_filename, PATH_SEPARATOR);
-									strcat(audio_filename, media->audio.filename);
+									
+									if (kof) {
+										strcat(audio_filename, media->audio.filename);
+									} else {
+										strcat(audio_filename, page->id);
+										
+										char value[intlen(suffix) + 1];
+										snprintf(value, sizeof(value), "%i", suffix);
+										
+										strcat(audio_filename, value);
+										strcat(audio_filename, DOT);
+										strcat(audio_filename, extension);
+										
+										normalize_filename(basename(audio_filename));
+									}
 					
 									printf("+ Baixando de '%s' para '%s'\r\n", media->audio.url, audio_filename);
 									
@@ -932,7 +1010,7 @@ int main(void) {
 								struct FStream* stream = fstream_open(media_filename, "wb");
 								
 								if (stream == NULL) {
-									fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", media_filename, get_error_message());
+									fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", media_filename, strerror(errno));
 									return EXIT_FAILURE;
 								}
 								
@@ -977,10 +1055,27 @@ int main(void) {
 				for (size_t index = 0; index < page->attachments.offset; index++) {
 					struct Attachment* attachment = &page->attachments.items[index];
 					
-					char attachment_filename[strlen(page_directory) + strlen(PATH_SEPARATOR) + strlen(attachment->filename) + 1];
+					const char* const extension = get_file_extension(attachment->filename);
+					suffix++;
+					
+					char attachment_filename[strlen(page_directory) + strlen(PATH_SEPARATOR) + (kof ? strlen(attachment->filename) : strlen(page->id) + intlen(suffix) + strlen(DOT) + strlen(extension)) + 1];
 					strcpy(attachment_filename, page_directory);
 					strcat(attachment_filename, PATH_SEPARATOR);
-					strcat(attachment_filename, attachment->filename);
+					
+					if (kof) {
+						strcat(attachment_filename, attachment->filename);
+					} else {
+						strcat(attachment_filename, page->id);
+						
+						char value[intlen(suffix) + 1];
+						snprintf(value, sizeof(value), "%i", suffix);
+						
+						strcat(attachment_filename, value);
+						strcat(attachment_filename, DOT);
+						strcat(attachment_filename, extension);
+						
+						normalize_filename(basename(attachment_filename));
+					}
 					
 					if (!file_exists(attachment_filename)) {
 						fprintf(stderr, "- O arquivo '%s' não existe, ele será baixado\r\n", attachment_filename);
@@ -989,7 +1084,7 @@ int main(void) {
 						struct FStream* stream = fstream_open(attachment_filename, "wb");
 						
 						if (stream == NULL) {
-							fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", attachment_filename, get_error_message());
+							fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", attachment_filename, strerror(errno));
 							return EXIT_FAILURE;
 						}
 						

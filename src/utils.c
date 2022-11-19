@@ -23,12 +23,12 @@ static const char INVALID_FILENAME_CHARS[] = {
 	'\'', '%', '"', ' ', '/', '\\', ':', '*', '?', '\"', '<', '>', '|', '^', '\x00'
 };
 
-const char* basename(const char* const path) {
+char* basename(const char* const path) {
 	/*
 	Returns the final component of a pathname.
 	*/
 	
-	const char* last_comp = path;
+	char* last_comp = (char*) path;
 	
 	while (1) {
 		char* slash_at = strchr(last_comp, *SLASH);
@@ -622,26 +622,4 @@ int move_file(const char* const source, const char* const destination) {
 		return code;
 	#endif
 	
-}
-
-const char* get_error_message(void) {
-	
-	#ifdef WIN32
-		char* message = NULL;
-		
-		FormatMessage(
-			FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-			NULL,
-			GetLastError(),
-			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-			(LPTSTR) &message,
-			0,
-			NULL
-		);
-		
-		return message;
-	#else
-		return strerror(errno);
-	#endif
-		
 }

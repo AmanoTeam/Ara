@@ -54,13 +54,13 @@ struct FStream* fstream_open(const char* const filename, const char* const mode)
 		#endif
 		
 		if (handle == INVALID_HANDLE_VALUE) {
-			return 0;
+			return NULL;
 		}
 	#else
 		FILE* handle = fopen(filename, mode);
 		
 		if (handle == NULL) {
-			return 0;
+			return NULL;
 		}
 	#endif
 	

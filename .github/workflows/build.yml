@@ -37,11 +37,13 @@ jobs:
         echo "LLVM_MINGW_HOME=$(dirname "${LLVM_MINGW_TARBALL}")/$(basename "${LLVM_MINGW_URL}" '.tar.xz')" >> "${GITHUB_ENV}"
     - name: Setup MacOS X cross compiler
       run: |
-        git clone --depth='1' 'https://github.com/Kartatz/MacOSXCross.git'
-        cd './MacOSXCross'
+        git clone --depth='1' 'https://github.com/tpoechtrager/osxcross.git'
         
-        tar --strip='1' --extract --file='OSXCross.tar.gz'
-        SDK_VERSION='10.10' OSX_VERSION_MIN='10.6' ./build.sh <<< ''
+        curl --silent --location --url 'https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.3.sdk.tar.xz' --output './osxcross/tarballs/MacOSX11.3.sdk.tar.xz'
+        
+        cd './osxcross'
+        
+        CMAKE_BUILD_PARALLEL_LEVEL='30' SDK_VERSION='11.3' OSX_VERSION_MIN='10.6' ./build.sh <<< ''
         
         echo "OSXCROSS_HOME=$(realpath './target')" >> "${GITHUB_ENV}"
     - name: Build with CMake
@@ -52,14 +54,15 @@ jobs:
             aarch64-linux-android
             aarch64-linux-gnu
             aarch64-w64-mingw32
+            aarch64-apple-darwin
             arm-linux-gnueabi
             armv7-w64-mingw32
             armv7a-linux-androideabi
-            i386-apple-darwin
             i686-linux-android
             i686-linux-gnu
             i686-w64-mingw32
             x86_64-apple-darwin
+            x86_64h-apple-darwin
             x86_64-linux-android
             x86_64-w64-mingw32
             "${MACHINE_HOST}"

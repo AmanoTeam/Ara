@@ -711,7 +711,6 @@ int main(void) {
 		}
 	}
 	
-	
 	fclose(stdin);
 	
 	struct Resource download_queue[resources.offset];
@@ -764,7 +763,7 @@ int main(void) {
 			fprintf(stderr, "- O diretório '%s' não existe, criando-o\r\n", resource_directory);
 			
 			if (!create_directory(resource_directory)) {
-				fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o diretório em '%s'\r\n", resource_directory);
+				fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o diretório em '%s': %s\r\n", resource_directory, strerror(errno));
 				return EXIT_FAILURE;
 			}
 		}
@@ -792,7 +791,7 @@ int main(void) {
 				fprintf(stderr, "- O diretório '%s' não existe, criando-o\r\n", module_directory);
 				
 				if (!create_directory(module_directory)) {
-					fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o diretório em '%s'\r\n", module_directory);
+					fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o diretório em '%s': %s\r\n", module_directory, strerror(errno));
 					return EXIT_FAILURE;
 				}
 			}
@@ -831,7 +830,7 @@ int main(void) {
 					fprintf(stderr, "- O diretório '%s' não existe, criando-o\r\n", page_directory);
 					
 					if (!create_directory(page_directory)) {
-						fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o diretório em '%s'\r\n", page_directory);
+						fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o diretório em '%s': %s\r\n", page_directory, strerror(errno));
 						return EXIT_FAILURE;
 					}
 				}
@@ -1113,12 +1112,10 @@ int main(void) {
 				curl_easy_setopt(curl_easy, CURLOPT_NOPROGRESS, 1L);
 				curl_easy_setopt(curl_easy, CURLOPT_TIMEOUT, 60L);
 				curl_easy_setopt(curl_easy, CURLOPT_XFERINFOFUNCTION, NULL);
-				
 			}
-			
 		}
-		
 	}
 	
-	return 0;
+	return EXIT_SUCCESS;
+	
 }

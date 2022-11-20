@@ -277,6 +277,7 @@ int vimeo_parse(
 		}
 		
 		int last_width = 0;
+		
 		const char* video_stream = NULL;
 		const char* audio_stream = NULL;
 		
@@ -334,8 +335,9 @@ int vimeo_parse(
 					
 					break;
 				}
-				default:
+				default: {
 					break;
+				}
 			}
 		}
 		

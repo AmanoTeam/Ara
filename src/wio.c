@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#include <windows.h>
+
 #include "wio.h"
 
 int __printf(const char* const format, ...) {
@@ -58,22 +60,6 @@ int __fprintf(FILE* const stream, const char* const format, ...) {
 	return fwprintf(stream, L"%ls", wvalue);
 	
 }
-
-FILE* __fopen(const char* const filename, const char* const mode) {
-	
-	int wcsize = 0;
-	
-	wcsize = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
-	wchar_t wfilename[wcsize];
-	MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfilename, sizeof(wfilename) / sizeof(*wfilename));
-	
-	wcsize = MultiByteToWideChar(CP_UTF8, 0, mode, -1, NULL, 0);
-	wchar_t wmode[wcsize];
-	MultiByteToWideChar(CP_UTF8, 0, mode, -1, wmode, sizeof(wmode) / sizeof(*wmode));
-	
-	return _wfopen(wfilename, wmode);
-	
-};
 
 char* __fgets(char* const s, const int n, FILE* const stream) {
 	

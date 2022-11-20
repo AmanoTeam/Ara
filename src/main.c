@@ -413,12 +413,12 @@ int main(void) {
 		rlim.rlim_cur = rlim.rlim_max;
 		setrlimit(RLIMIT_NOFILE, &rlim);
 	#endif
-	/*
+	
 	if (is_administrator()) {
 		fprintf(stderr, "- Você não precisa e nem deve executar este programa com privilégios elevados!\r\n");
 		return EXIT_FAILURE;
 	}
-	*/
+	
 	char* const directory = get_configuration_directory();
 	
 	if (directory == NULL) {
@@ -741,6 +741,8 @@ int main(void) {
 	for (size_t index = 0; index < queue_count; index++) {
 		struct Resource* resource = &download_queue[index];
 		
+		json_auto_t* modules = json_array();
+		
 		printf("+ Obtendo lista de módulos do produto '%s'\r\n", resource->name);
 		
 		const int code = get_modules(&credentials, resource);
@@ -787,6 +789,8 @@ int main(void) {
 			strcat(module_directory, PATH_SEPARATOR);
 			strcat(module_directory, directory);
 			
+			json_t* pages = json_array();
+			
 			if (!directory_exists(module_directory)) {
 				fprintf(stderr, "- O diretório '%s' não existe, criando-o\r\n", module_directory);
 				
@@ -826,6 +830,8 @@ int main(void) {
 				strcat(page_directory, PATH_SEPARATOR);
 				strcat(page_directory, directory);
 				
+				json_t* items = json_array();
+				
 				if (!directory_exists(page_directory)) {
 					fprintf(stderr, "- O diretório '%s' não existe, criando-o\r\n", page_directory);
 					
@@ -859,6 +865,12 @@ int main(void) {
 						
 						normalize_filename(basename(document_filename));
 					}
+					
+					json_t* content = json_object();
+					json_object_set_new(content, "name", json_string(page->document.filename));
+					json_object_set_new(content, "path", json_string(document_filename));
+					
+					json_array_append_new(items, content);
 					
 					if (!file_exists(document_filename)) {
 						fprintf(stderr, "- O arquivo '%s' não existe, salvando-o\r\n", document_filename);
@@ -907,6 +919,12 @@ int main(void) {
 						
 						normalize_filename(basename(media_filename));
 					}
+					
+					json_t* content = json_object();
+					json_object_set_new(content, "name", json_string(media->video.filename));
+					json_object_set_new(content, "path", json_string(media_filename));
+					
+					json_array_append_new(items, content);
 					
 					if (!file_exists(media_filename)) {
 						fprintf(stderr, "- O arquivo '%s' não existe, baixando-o\r\n", media_filename);
@@ -1076,6 +1094,12 @@ int main(void) {
 						normalize_filename(basename(attachment_filename));
 					}
 					
+					json_t* content = json_object();
+					json_object_set_new(content, "name", json_string(attachment->filename));
+					json_object_set_new(content, "path", json_string(attachment_filename));
+					
+					json_array_append_new(items, content);
+					
 					if (!file_exists(attachment_filename)) {
 						fprintf(stderr, "- O arquivo '%s' não existe, ele será baixado\r\n", attachment_filename);
 						printf("+ Baixando de '%s' para '%s'\r\n", attachment->url, attachment_filename);
@@ -1112,8 +1136,176 @@ int main(void) {
 				curl_easy_setopt(curl_easy, CURLOPT_NOPROGRESS, 1L);
 				curl_easy_setopt(curl_easy, CURLOPT_TIMEOUT, 60L);
 				curl_easy_setopt(curl_easy, CURLOPT_XFERINFOFUNCTION, NULL);
+				
+				json_t* tree = json_object();
+				json_object_set_new(tree, "name", json_string(page->name));
+				json_object_set_new(tree, "path", json_string(page_directory));
+				json_object_set_new(tree, "items", items);
+				
+				json_array_append_new(pages, tree);
 			}
+			
+			json_auto_t* tree = json_object();
+			json_object_set_new(tree, "name", json_string(module->name));
+			json_object_set_new(tree, "path", json_string(module_directory));
+			json_object_set_new(tree, "items", pages);
+			
+			json_array_append(modules, tree);
 		}
+		
+		char* const buffer = json_dumps(modules, JSON_COMPACT);
+		
+		if (buffer == NULL) {
+			fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar gerar a árvore de objetos!\r\n");
+			return EXIT_FAILURE;
+		}
+		
+		char json_tree_filename[strlen(resource_directory) + strlen(DOT) + strlen(JSON_FILE_EXTENSION) + 1];
+		strcpy(json_tree_filename, resource_directory);
+		strcat(json_tree_filename, DOT);
+		strcat(json_tree_filename, JSON_FILE_EXTENSION);
+		
+		printf("+ Exportando árvore de objetos para '%s'\r\n", json_tree_filename);
+		
+		struct FStream* stream = fstream_open(json_tree_filename, "wb");
+		
+		if (stream == NULL) {
+			fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", json_tree_filename, strerror(errno));
+			return UERR_FAILURE;
+		}
+		
+		const int status = fstream_write(stream, buffer, strlen(buffer));
+		const int cerrno = errno;
+		
+		fstream_close(stream);
+		
+		if (!status) {
+			remove_file(json_tree_filename);
+			fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar salvar o documento em '%s': %s\r\n", json_tree_filename, strerror(cerrno));
+			return EXIT_FAILURE;
+		}
+		
+		char html_tree_filename[strlen(resource_directory) + strlen(DOT) + strlen(HTML_FILE_EXTENSION) + 1];
+		strcpy(html_tree_filename, resource_directory);
+		strcat(html_tree_filename, DOT);
+		strcat(html_tree_filename, HTML_FILE_EXTENSION);
+		
+		size_t index = 0;
+		json_t *item = NULL;
+		
+		printf("+ Exportando árvore de objetos para '%s'\r\n", html_tree_filename);
+		
+		stream = fstream_open(html_tree_filename, "wb");
+		
+		if (stream == NULL) {
+			fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", html_tree_filename, strerror(errno));
+			return UERR_FAILURE;
+		}
+		
+		fstream_write(stream, HTML_HEADER_START, strlen(HTML_HEADER_START));
+		fstream_write(stream, HTML_UL_START, strlen(HTML_UL_START));
+		
+		json_array_foreach(modules, index, item) {
+			const json_t* obj = json_object_get(item, "name");
+			const char* const name = json_string_value(obj);
+			
+			obj = json_object_get(item, "path");
+			const char* const path = json_string_value(obj);
+			
+			char uri[strlen(FILE_SCHEME) + strlen(directory) + 1];
+			strcpy(uri, FILE_SCHEME);
+			strcat(uri, path);
+			
+			fstream_write(stream, HTML_LI_START, strlen(HTML_LI_START));
+			
+			fstream_write(stream, HTML_A_START, strlen(HTML_A_START));
+			fstream_write(stream, SPACE, strlen(SPACE));
+			fstream_write(stream, HTML_HREF_ATTRIBUTE, strlen(HTML_HREF_ATTRIBUTE));
+			fstream_write(stream, EQUAL, strlen(EQUAL));
+			fstream_write(stream, QUOTATION_MARK, strlen(QUOTATION_MARK));
+			fstream_write(stream, uri, strlen(uri));
+			fstream_write(stream, QUOTATION_MARK, strlen(QUOTATION_MARK));
+			fstream_write(stream, GREATER_THAN, strlen(GREATER_THAN));
+			fstream_write(stream, name, strlen(name));
+			fstream_write(stream, HTML_A_END, strlen(HTML_A_END));
+			
+			fstream_write(stream, HTML_UL_START, strlen(HTML_UL_START));
+			
+			size_t index = 0;
+			json_t *page = NULL;
+			
+			const json_t* pages = json_object_get(item, "items");
+			
+			json_array_foreach(pages, index, page) {
+				const json_t* obj = json_object_get(page, "name");
+				const char* const name = json_string_value(obj);
+				
+				obj = json_object_get(page, "path");
+				const char* const path = json_string_value(obj);
+				
+				char uri[strlen(FILE_SCHEME) + strlen(directory) + 1];
+				strcpy(uri, FILE_SCHEME);
+				strcat(uri, path);
+				
+				fstream_write(stream, HTML_LI_START, strlen(HTML_LI_START));
+				
+				fstream_write(stream, HTML_A_START, strlen(HTML_A_START));
+				fstream_write(stream, SPACE, strlen(SPACE));
+				fstream_write(stream, HTML_HREF_ATTRIBUTE, strlen(HTML_HREF_ATTRIBUTE));
+				fstream_write(stream, EQUAL, strlen(EQUAL));
+				fstream_write(stream, QUOTATION_MARK, strlen(QUOTATION_MARK));
+				fstream_write(stream, uri, strlen(uri));
+				fstream_write(stream, QUOTATION_MARK, strlen(QUOTATION_MARK));
+				fstream_write(stream, GREATER_THAN, strlen(GREATER_THAN));
+				fstream_write(stream, name, strlen(name));
+				fstream_write(stream, HTML_A_END, strlen(HTML_A_END));
+				
+				fstream_write(stream, HTML_UL_START, strlen(HTML_UL_START));
+				
+				size_t index = 0;
+				json_t *content = NULL;
+				
+				const json_t* contents = json_object_get(page, "items");
+				
+				json_array_foreach(contents, index, content) {
+					const json_t* obj = json_object_get(content, "name");
+					const char* const name = json_string_value(obj);
+					
+					obj = json_object_get(content, "path");
+					const char* const path = json_string_value(obj);
+					
+					char uri[strlen(FILE_SCHEME) + strlen(directory) + 1];
+					strcpy(uri, FILE_SCHEME);
+					strcat(uri, path);
+					
+					fstream_write(stream, HTML_LI_START, strlen(HTML_LI_START));
+					
+					fstream_write(stream, HTML_A_START, strlen(HTML_A_START));
+					fstream_write(stream, SPACE, strlen(SPACE));
+					fstream_write(stream, HTML_HREF_ATTRIBUTE, strlen(HTML_HREF_ATTRIBUTE));
+					fstream_write(stream, EQUAL, strlen(EQUAL));
+					fstream_write(stream, QUOTATION_MARK, strlen(QUOTATION_MARK));
+					fstream_write(stream, uri, strlen(uri));
+					fstream_write(stream, QUOTATION_MARK, strlen(QUOTATION_MARK));
+					fstream_write(stream, GREATER_THAN, strlen(GREATER_THAN));
+					fstream_write(stream, name, strlen(name));
+					fstream_write(stream, HTML_A_END, strlen(HTML_A_END));
+					
+					fstream_write(stream, HTML_LI_END, strlen(HTML_LI_END));
+				}
+				
+				fstream_write(stream, HTML_LI_END, strlen(HTML_LI_END));
+				fstream_write(stream, HTML_UL_END, strlen(HTML_UL_END));
+			}
+			
+			fstream_write(stream, HTML_LI_END, strlen(HTML_LI_END));
+			fstream_write(stream, HTML_UL_END, strlen(HTML_UL_END));
+		}
+		
+		fstream_write(stream, HTML_UL_END, strlen(HTML_UL_END));
+		fstream_write(stream, HTML_HEADER_END, strlen(HTML_HEADER_END));
+		
+		fstream_close(stream);
 	}
 	
 	return EXIT_SUCCESS;

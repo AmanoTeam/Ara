@@ -59,21 +59,6 @@ static const char HOTMART_TOKEN_CHECK_ENDPOINT[] =
 	HOTMART_API_SEC_PREFIX
 	"/security/oauth/check_token";
 
-static const char HTML_HEADER_START[] = 
-	"<!DOCTYPE html>"
-	"<html lang=\"pt-BR\">"
-	"<head>"
-	"<title>Hotmart content</title>"
-	"<meta charset=\"utf-8\">"
-	"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">"
-	"<meta http-equiv=\"Referrer-Policy\" content=\"no-referrer\">"
-	"</head>"
-	"<body>";
-
-static const char HTML_HEADER_END[] = 
-	"</body>"
-	"</html>";
-
 static const char VIMEO_URL_PATTERN[] = "https://player.vimeo.com/video";
 static const char YOUTUBE_URL_PATTERN[] = "https://www.youtube.com/embed";
 

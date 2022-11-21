@@ -107,7 +107,7 @@ int youtube_parse(const char* const uri, struct Media* media) {
 	
 	json_auto_t* subtree = json_object();
 	
-	json_auto_t* client = json_object();
+	json_t* client = json_object();
 	
 	json_object_set_new(client, "clientName", json_string("ANDROID"));
 	json_object_set_new(client, "clientVersion", json_string(YOUTUBE_CLIENT_VERSION));
@@ -117,14 +117,14 @@ int youtube_parse(const char* const uri, struct Media* media) {
 	json_object_set_new(client, "timeZone", json_string("UTC"));
 	json_object_set_new(client, "utcOffsetMinutes", json_integer(0));
 	
-	json_auto_t* context = json_object();
+	json_t* context = json_object();
 	json_object_set_new(context, "client", client);
 	json_object_set_new(subtree, "context", context);
 	
-	json_auto_t* content_playback_context = json_object();
+	json_t* content_playback_context = json_object();
 	json_object_set_new(content_playback_context, "html5Preference", json_string("HTML5_PREF_WANTS"));
 	
-	json_auto_t* playback_context = json_object();
+	json_t* playback_context = json_object();
 	json_object_set_new(playback_context, "contentPlaybackContext", content_playback_context);
 	
 	json_object_set_new(subtree, "playbackContext", playback_context);

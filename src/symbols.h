@@ -12,9 +12,9 @@ static const char HASHTAG[] = "#";
 static const char GREATER_THAN[] = ">";
 
 #ifdef WIN32
-	static const char PATH_SEPARATOR[] = "\\";
+	#define PATH_SEPARATOR "\\"
 #else
-	static const char PATH_SEPARATOR[] = "/";
+	#define PATH_SEPARATOR "/"
 #endif
 
 static const char HTTP_HEADER_SEPARATOR[] = ": ";

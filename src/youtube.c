@@ -34,7 +34,7 @@ static const char* const YOUTUBE_PLAYER_HEADERS[][2] = {
 
 int youtube_parse(const char* const uri, struct Media* media) {
 	
-	CURL* curl_easy = curl_easy_global();
+	CURL* curl_easy = get_global_curl_easy();
 	
 	CURLU* cu __attribute__((__cleanup__(curlupp_free))) = curl_url();
 	

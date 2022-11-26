@@ -89,7 +89,8 @@ jobs:
                     -DCMAKE_BUILD_TYPE=MinSizeRel ../ 1>/dev/null
             fi
             
-            cmake --build ./ -j 1 1>/dev/null
+            cmake --build ./ --target bearssl -- --jobs=50 1>/dev/null
+            cmake --build ./ -- --jobs=50 1>/dev/null
             cmake --install ./ 1>/dev/null
             
             if [[ "${target}" == *'mingw32' ]]; then

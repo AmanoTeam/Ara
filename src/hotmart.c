@@ -68,7 +68,7 @@ int authorize(
 	struct Credentials* const credentials
 ) {
 	
-	CURL* curl_easy = curl_easy_global();
+	CURL* curl_easy = get_global_curl_easy();
 	
 	char* user __attribute__((__cleanup__(curlcharpp_free))) = curl_easy_escape(NULL, username, 0);
 	
@@ -174,7 +174,7 @@ int get_resources(
 	struct Resources* const resources
 ) {
 	
-	CURL* curl_easy = curl_easy_global();
+	CURL* curl_easy = get_global_curl_easy();
 	
 	struct Query query __attribute__((__cleanup__(query_free))) = {0};
 	
@@ -354,7 +354,7 @@ int get_modules(
 	struct Resource* const resource
 ) {
 	
-	CURL* curl_easy = curl_easy_global();
+	CURL* curl_easy = get_global_curl_easy();
 	
 	char authorization[strlen(HTTP_AUTHENTICATION_BEARER) + strlen(SPACE) + strlen(credentials->access_token) + 1];
 	strcpy(authorization, HTTP_AUTHENTICATION_BEARER);
@@ -578,7 +578,7 @@ int get_page(
 	struct Page* const page
 ) {
 	
-	CURL* curl_easy = curl_easy_global();
+	CURL* curl_easy = get_global_curl_easy();
 	
 	char authorization[strlen(HTTP_AUTHENTICATION_BEARER) + strlen(SPACE) + strlen(credentials->access_token) + 1];
 	strcpy(authorization, HTTP_AUTHENTICATION_BEARER);

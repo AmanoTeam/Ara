@@ -1,6 +1,6 @@
 #include <curl/curl.h>
 
-CURL* curl_easy_global(void);
+CURL* get_global_curl_easy(void);
 CURL* curl_easy_new(void);
 
-CURLM* curl_multi_global(void);
+CURLM* get_global_curl_multi(void);

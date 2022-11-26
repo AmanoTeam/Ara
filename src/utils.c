@@ -5,6 +5,7 @@
 
 #include "utils.h"
 #include "symbols.h"
+#include "fstream.h"
 
 #ifdef WIN32
 	#include <windows.h>
@@ -15,7 +16,6 @@
 	#include <sys/stat.h>
 	#include <errno.h>
 	
-	#define PATH_MAX 4096
 	#define FILERW_MAX_CHUNK_SIZE 8192
 #endif
 
@@ -31,7 +31,7 @@ char* basename(const char* const path) {
 	char* last_comp = (char*) path;
 	
 	while (1) {
-		char* slash_at = strchr(last_comp, *SLASH);
+		char* slash_at = strchr(last_comp, *PATH_SEPARATOR);
 		
 		if (slash_at == NULL) {
 			break;
@@ -540,39 +540,40 @@ static int copy_file(const char* const source, const char* const destination) {
 		#endif
 	#else
 		// Generic version which works for any platform
-		FILE* sfile = fopen(source, "r");
+		struct FStream* const input_stream = fstream_open(source, "r");
 		
-		if (sfile == NULL) {
+		if (input_stream == NULL) {
 			return 0;
 		}
 		
-		FILE* dfile = fopen(destination, "wb");
+		struct FStream* const output_stream = fstream_open(destination, "wb");
 		
-		if (dfile == NULL) {
+		if (output_stream == NULL) {
+			fstream_close(input_stream);
 			return 0;
 		}
 		
 		while (1) {
 			char chunk[FILERW_MAX_CHUNK_SIZE];
-			const size_t rsize = fread(chunk, sizeof(*chunk), sizeof(chunk), sfile);
+			const ssize_t size = fstream_read(input_stream, chunk, sizeof(chunk));
 			
-			if (rsize == 0) {
-				fclose(sfile);
-				fclose(dfile);
-				
-				if (ferror(sfile) != 0) {
-					return 0;
-				}
-				
+			if (size == -1) {
+				fstream_close(input_stream);
+				fstream_close(output_stream);
+				return 0;
+			}
+			
+			if (size == 0) {
+				fstream_close(input_stream);
+				fstream_close(output_stream);
 				break;
 			}
 			
-			const size_t wsize = fwrite(chunk, sizeof(*chunk), rsize, dfile);
+			const int status = fstream_write(output_stream, chunk, (size_t) size);
 			
-			if (wsize != rsize) {
-				fclose(sfile);
-				fclose(dfile);
-				
+			if (!status) {
+				fstream_close(input_stream);
+				fstream_close(output_stream);
 				return 0;
 			}
 		}
@@ -620,6 +621,96 @@ int move_file(const char* const source, const char* const destination) {
 		}
 		
 		return code;
+	#endif
+	
+}
+
+int get_app_filename(char* const filename, const size_t size) {
+	
+	#ifdef WIN32
+		#ifdef UNICODE
+			wchar_t wfilename[size];
+			const DWORD code = GetModuleFileNameW(0, wfilename, sizeof(wfilename) / sizeof(*wfilename));
+			
+			if (code == 0) {
+				return 0;
+			}
+			
+			const int msize = WideCharToMultiByte(CP_UTF8, 0, wfilename, -1, NULL, 0, NULL, NULL);
+			WideCharToMultiByte(CP_UTF8, 0, wfilename, -1, filename, msize, NULL, NULL);
+		#else
+			const DWORD code = GetModuleFileNameA(0, filename, size);
+			
+			if (code == 0) {
+				return 0;
+			}
+		#endif
+	#else
+		if (readlink("/proc/self/exe", filename, size) == -1) {
+			return 0;
+		}
+	#endif
+	
+	return 1;
+	
+}
+
+char* get_parent_directory(const char* const source, char* const destination, const size_t depth) {
+	
+	const size_t len = strlen(source);
+	size_t current_depth = 1;
+	
+	for (ssize_t index = (len - 1); index >= 0; index--) {
+		const char* const ch = &source[index];
+		
+		if (*ch == *PATH_SEPARATOR && current_depth++ == depth) {
+			const size_t size = (size_t) (ch - source);
+			
+			if (size > 0) {
+				memcpy(destination, source, size);
+				destination[size] = '\0';
+			} else {
+				strcpy(destination, PATH_SEPARATOR);
+			}
+			
+			break;
+		}
+		
+		if (index == 0 && len > 2 && isalpha(*source) && source[1] == *COLON && source[2] == *PATH_SEPARATOR) {
+			memcpy(destination, source, 3);
+			destination[3] = '\0';
+		}
+	}
+	
+	return destination;
+	
+}
+
+size_t get_file_size(const char* const filename) {
+	
+	#ifdef WIN32
+		WIN32_FIND_DATA data = {0};
+		
+		#ifdef UNICODE
+			const int wcsize = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
+			wchar_t wfilename[wcsize];
+			MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfilename, sizeof(wfilename) / sizeof(*wfilename));
+			
+			const HANDLE handle = FindFirstFileW(wfilename, &data);
+		#else
+			const HANDLE handle = FindFirstFileA(filename, &data);
+		#endif
+		
+		if (handle == INVALID_HANDLE_VALUE) {
+			return 0;
+		}
+		
+		FindClose(handle);
+		
+		return (data.nFileSizeHigh * MAXDWORD) + data.nFileSizeLow;
+	#else
+		struct stat st = {0};
+		return (stat(filename, &st) >= 0 ? st.st_size : 0);
 	#endif
 	
 }

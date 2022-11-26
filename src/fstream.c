@@ -25,6 +25,8 @@ struct FStream* fstream_open(const char* const filename, const char* const mode)
 				dwDesiredAccess |= GENERIC_READ;
 				dwCreationDisposition |= OPEN_EXISTING;
 				break;
+			default:
+				return NULL;
 		}
 		
 		#ifdef UNICODE
@@ -64,7 +66,7 @@ struct FStream* fstream_open(const char* const filename, const char* const mode)
 		}
 	#endif
 	
-	struct FStream* stream = malloc(sizeof(struct FStream));
+	struct FStream* const stream = malloc(sizeof(struct FStream));
 	
 	if (stream == NULL) {
 		return NULL;
@@ -76,7 +78,39 @@ struct FStream* fstream_open(const char* const filename, const char* const mode)
 	
 }
 
-int fstream_write(struct FStream* stream, const char* const buffer, const size_t size) {
+ssize_t fstream_read(struct FStream* const stream, char* const buffer, const size_t size) {
+	/*
+	-1 Read error
+	0 EOF reached
+	1 Read success
+	*/
+	
+	#ifdef WIN32
+		DWORD rsize = 0;
+		const BOOL status = ReadFile(stream->stream, buffer, (DWORD) size, &rsize, NULL);
+		
+		if (!status) {
+			return -1;
+		}
+		
+		return (rsize > 0) ? (ssize_t) rsize : 0;
+	#else
+		const size_t rsize = fread(buffer, sizeof(*buffer), size, stream->stream);
+		
+		if (rsize == 0) {
+			if (ferror(stream->stream) != 0) {
+				return -1;
+			}
+			
+			return 0;
+		}
+		
+		return (ssize_t) rsize;
+	#endif
+	
+}
+
+int fstream_write(struct FStream* const stream, const char* const buffer, const size_t size) {
 	
 	#ifdef WIN32
 		DWORD wsize = 0;
@@ -97,7 +131,7 @@ int fstream_write(struct FStream* stream, const char* const buffer, const size_t
 	
 }
 
-int fstream_seek(struct FStream* stream, const long int offset, const enum FStreamSeek method) {
+int fstream_seek(struct FStream* const stream, const long int offset, const enum FStreamSeek method) {
 	
 	#ifdef WIN32
 		DWORD whence = 0;
@@ -141,7 +175,7 @@ int fstream_seek(struct FStream* stream, const long int offset, const enum FStre
 	
 }
 	
-int fstream_close(struct FStream* stream) {
+int fstream_close(struct FStream* const stream) {
 	
 	#ifdef WIN32
 		if (stream->stream != 0) {

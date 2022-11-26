@@ -18,5 +18,6 @@
 #define UERR_HOTMART_SESSION_EXPIRED -13
 #define UERR_M3U8_PARSE_FAILURE -14
 #define UERR_M3U8_MISSING_REQUIRED_ATTRIBUTE -14
+#define UERR_FSTREAM_FAILURE -15
 
 const char* strurr(const int code);

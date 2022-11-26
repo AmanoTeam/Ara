@@ -21,8 +21,9 @@ enum FStreamSeek {
 };
 
 struct FStream* fstream_open(const char* const filename, const char* const mode);
-int fstream_write(struct FStream* stream, const char* const buffer, const size_t size);
-int fstream_seek(struct FStream* stream, const long int offset, const enum FStreamSeek method);
-int fstream_close(struct FStream* stream);
+ssize_t fstream_read(struct FStream* const stream, char* const buffer, const size_t size);
+int fstream_write(struct FStream* const stream, const char* const buffer, const size_t size);
+int fstream_seek(struct FStream* const stream, const long int offset, const enum FStreamSeek method);
+int fstream_close(struct FStream* const stream);
 
 #pragma once

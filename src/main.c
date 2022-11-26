@@ -23,7 +23,6 @@
 #include "types.h"
 #include "utils.h"
 #include "symbols.h"
-#include "cacert.h"
 #include "curl.h"
 #include "hotmart.h"
 #include "fstream.h"
@@ -88,7 +87,7 @@ static int ask_user_credentials(struct Credentials* const obj) {
 
 static void curl_poll(struct Download* dqueue, const size_t dcount, size_t* total_done) {
 	
-	CURLM* curl_multi = curl_multi_global();
+	CURLM* curl_multi = get_global_curl_multi();
 	
 	int still_running = 1;
 	
@@ -103,6 +102,8 @@ static void curl_poll(struct Download* dqueue, const size_t dcount, size_t* tota
 			
 		CURLMsg* msg = NULL;
 		int msgs_left = 0;
+		
+		int should_continue = 0;
 		
 		while ((msg = curl_multi_info_read(curl_multi, &msgs_left))) {
 			if (msg->msg == CURLMSG_DONE) {
@@ -128,8 +129,17 @@ static void curl_poll(struct Download* dqueue, const size_t dcount, size_t* tota
 				} else {
 					fstream_seek(download->stream, 0, FSTREAM_SEEK_BEGIN);
 					curl_multi_add_handle(curl_multi, msg->easy_handle);
+					
+					if (!should_continue) {
+						should_continue = 1;
+					}
 				}
 			}
+		}
+		
+		if (should_continue) {
+			still_running = 1;
+			continue;
 		}
 		
 		if (mc) {
@@ -141,8 +151,8 @@ static void curl_poll(struct Download* dqueue, const size_t dcount, size_t* tota
 
 static int m3u8_download(const char* const url, const char* const output) {
 	
-	CURLM* curl_multi = curl_multi_global();
-	CURL* curl_easy = curl_easy_global();
+	CURLM* curl_multi = get_global_curl_multi();
+	CURL* curl_easy = get_global_curl_easy();
 	
 	struct String string __attribute__((__cleanup__(string_free))) = {0};
 	
@@ -446,14 +456,14 @@ int main(void) {
 	strcat(accounts_file, PATH_SEPARATOR);
 	strcat(accounts_file, LOCAL_ACCOUNTS_FILENAME);
 	
-	CURL* curl_easy = curl_easy_global();
+	CURL* curl_easy = get_global_curl_easy();
 	
 	if (curl_easy == NULL) {
 		fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar inicializar o cliente HTTP!\r\n");
 		return EXIT_FAILURE;
 	}
 	
-	CURLM* curl_multi = curl_multi_global();
+	CURLM* curl_multi = get_global_curl_multi();
 	
 	if (curl_multi == NULL) {
 		fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar inicializar o cliente HTTP!\r\n");

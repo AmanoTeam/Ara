@@ -24,7 +24,7 @@ int vimeo_parse(
 	struct Media* media
 ) {
 	
-	CURL* curl_easy = curl_easy_global();
+	CURL* curl_easy = get_global_curl_easy();
 	
 	struct String string __attribute__((__cleanup__(string_free))) = {0};
 	

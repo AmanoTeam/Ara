@@ -733,95 +733,120 @@ int get_page(
 				}
 			}
 			
-			curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, NULL);
-			curl_easy_setopt(curl_easy, CURLOPT_URL, url);
-			
-			string_free(&string);
-			
-			if (curl_easy_perform(curl_easy) != CURLE_OK) {
-				return UERR_CURL_FAILURE;
-			}
-			
-			curl_easy_setopt(curl_easy, CURLOPT_URL, NULL);
-			
-			struct Tags tags = {0};
-			
-			if (m3u8_parse(&tags, string.s) != UERR_SUCCESS) {
-				return UERR_M3U8_PARSE_FAILURE;
-			}
-			
-			int last_width = 0;
-			const char* playlist_uri = NULL;
-			
-			for (size_t index = 0; index < tags.offset; index++) {
-				struct Tag* tag = &tags.items[index];
+			if (strcmp(media_type, "VIDEO") == 0) {
+				curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, NULL);
+				curl_easy_setopt(curl_easy, CURLOPT_URL, url);
 				
-				if (tag->type != EXT_X_STREAM_INF) {
-					continue;
+				string_free(&string);
+				
+				if (curl_easy_perform(curl_easy) != CURLE_OK) {
+					return UERR_CURL_FAILURE;
 				}
 				
-				const struct Attribute* const attribute = attributes_get(&tag->attributes, "RESOLUTION");
+				curl_easy_setopt(curl_easy, CURLOPT_URL, NULL);
 				
-				const char* const start = attribute->value;
-				const char* const end = strstr(start, "x");
+				struct Tags tags = {0};
 				
-				const size_t size = (size_t) (end - start);
-				
-				char value[size + 1];
-				memcpy(value, start, size);
-				value[size] = '\0';
-				
-				const int width = atoi(value);
-				
-				if (last_width < width) {
-					last_width = width;
-					playlist_uri = tag->uri;
+				if (m3u8_parse(&tags, string.s) != UERR_SUCCESS) {
+					return UERR_M3U8_PARSE_FAILURE;
 				}
-			}
-			
-			CURLU* cu __attribute__((__cleanup__(curlupp_free))) = curl_url();
-			curl_url_set(cu, CURLUPART_URL, url, 0);
-			curl_url_set(cu, CURLUPART_URL, playlist_uri, 0);
-			
-			char* stream_url = NULL;	
-			curl_url_get(cu, CURLUPART_URL, &stream_url, 0);
-			
-			char* const file_extension = get_file_extension(media_name);
-			
-			if (file_extension != NULL) {
-				for (size_t index = 0; index < strlen(file_extension); index++) {
-					char* ch = &file_extension[index];
+				
+				int last_width = 0;
+				const char* playlist_uri = NULL;
+				
+				for (size_t index = 0; index < tags.offset; index++) {
+					struct Tag* tag = &tags.items[index];
 					
-					if (isupper(*ch)) {
-						*ch = *ch + 32;
+					if (tag->type != EXT_X_STREAM_INF) {
+						continue;
+					}
+					
+					const struct Attribute* const attribute = attributes_get(&tag->attributes, "RESOLUTION");
+					
+					const char* const start = attribute->value;
+					const char* const end = strstr(start, "x");
+					
+					const size_t size = (size_t) (end - start);
+					
+					char value[size + 1];
+					memcpy(value, start, size);
+					value[size] = '\0';
+					
+					const int width = atoi(value);
+					
+					if (last_width < width) {
+						last_width = width;
+						playlist_uri = tag->uri;
 					}
 				}
-			}
-			
-			struct Media media = {
-				.type = MEDIA_M3U8,
-				.audio = {0},
-				.video = {
-					.filename = malloc(strlen(media_name) + (file_extension == NULL ? strlen(DOT) + strlen(MP4_FILE_EXTENSION) : 0) + 1),
-					.url = malloc(strlen(stream_url) + 1)
+				
+				CURLU* cu __attribute__((__cleanup__(curlupp_free))) = curl_url();
+				curl_url_set(cu, CURLUPART_URL, url, 0);
+				curl_url_set(cu, CURLUPART_URL, playlist_uri, 0);
+				
+				char* stream_url = NULL;	
+				curl_url_get(cu, CURLUPART_URL, &stream_url, 0);
+				
+				char* const file_extension = get_file_extension(media_name);
+				
+				if (file_extension != NULL) {
+					for (size_t index = 0; index < strlen(file_extension); index++) {
+						char* ch = &file_extension[index];
+						
+						if (isupper(*ch)) {
+							*ch = *ch + 32;
+						}
+					}
 				}
-			};
-			
-			if (media.video.filename == NULL || media.video.url == NULL) {
-				return UERR_MEMORY_ALLOCATE_FAILURE;
+				
+				struct Media media = {
+					.type = MEDIA_M3U8,
+					.audio = {0},
+					.video = {
+						.filename = malloc(strlen(media_name) + (file_extension == NULL ? strlen(DOT) + strlen(MP4_FILE_EXTENSION) : 0) + 1),
+						.url = malloc(strlen(stream_url) + 1)
+					}
+				};
+				
+				if (media.video.filename == NULL || media.video.url == NULL) {
+					return UERR_MEMORY_ALLOCATE_FAILURE;
+				}
+				
+				strcpy(media.video.url, stream_url);
+				strcpy(media.video.filename, media_name);
+				
+				if (file_extension == NULL) {
+					strcat(media.video.filename, DOT);
+					strcat(media.video.filename, MP4_FILE_EXTENSION);
+				}
+				
+				normalize_filename(media.video.filename);
+				
+				page->medias.items[page->medias.offset++] = media;
+			} else {
+				page->attachments.size = sizeof(struct Attachment) * 1;
+				page->attachments.items = malloc(page->attachments.size);
+				
+				if (page->attachments.items == NULL) {
+					return UERR_MEMORY_ALLOCATE_FAILURE;
+				}
+				
+				struct Attachment attachment = {
+					.filename = malloc(strlen(media_name) + 1),
+					.url = malloc(strlen(url) + 1),
+				};
+				
+				if (attachment.filename == NULL || attachment.url == NULL) {
+					return UERR_MEMORY_ALLOCATE_FAILURE;
+				}
+				
+				strcpy(attachment.url, url);
+				strcpy(attachment.filename, media_name);
+				
+				normalize_filename(attachment.filename);
+				
+				page->attachments.items[page->attachments.offset++] = attachment;
 			}
-			
-			strcpy(media.video.url, stream_url);
-			strcpy(media.video.filename, media_name);
-			
-			if (file_extension == NULL) {
-				strcat(media.video.filename, DOT);
-				strcat(media.video.filename, MP4_FILE_EXTENSION);
-			}
-			
-			normalize_filename(media.video.filename);
-			
-			page->medias.items[page->medias.offset++] = media;
 			
 			curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, list);
 		}
@@ -839,12 +864,15 @@ int get_page(
 		json_t *item = NULL;
 		const size_t array_size = json_array_size(obj);
 		
-		page->attachments.size = sizeof(struct Attachment) * array_size;
-		page->attachments.items = malloc(page->attachments.size);
+		const size_t size = page->attachments.size + sizeof(struct Attachment) * array_size;
+		struct Attachment* items = realloc(page->attachments.items, size);
 		
-		if (page->attachments.items == NULL) {
+		if (items == NULL) {
 			return UERR_MEMORY_ALLOCATE_FAILURE;
 		}
+		
+		page->attachments.size = size;
+		page->attachments.items = items;
 		
 		json_array_foreach(obj, index, item) {
 			if (!json_is_object(item)) {

@@ -46,6 +46,132 @@ jobs:
         CMAKE_BUILD_PARALLEL_LEVEL='30' SDK_VERSION='11.3' OSX_VERSION_MIN='10.6' ./build.sh <<< ''
         
         echo "OSXCROSS_HOME=$(realpath './target')" >> "${GITHUB_ENV}"
+    - name: Setup NetBSD cross compiler
+      if: false
+      run: |
+        declare -r targets=(
+        	amd64
+        	i386
+        	evbarm-earmv7hf
+        )
+        
+        declare -r binutils_tarball='/tmp/binutils.tar.xz'
+        declare -r binutils_directory='/tmp/binutils-2.39'
+        
+        declare -r toolchain_directory='/tmp/unknown-unknown-netbsd'
+        
+        declare -r 
+        
+        wget 'https://ftpmirror.gnu.org/gnu/binutils/binutils-2.39.tar.xz' --output-document="${binutils_tarball}"
+        
+        tar --directory="$(dirname "${binutils_directory}")" --extract --file="${binutils_tarball}"
+        
+        mkdir "${binutils_directory}/build"
+        cd "${binutils_directory}/build"
+        
+        for target in "${targets[@]}"; do
+        	declare url="https://mirror.planetunix.net/pub/NetBSD/NetBSD-9.3/${target}/binary/sets"
+        	
+        	case "${target}" in
+        		amd64)
+        			declare triple='x86_64-unknown-netbsd'
+        			declare base_url="${url}/base.tar.xz"
+        			declare comp_url="${url}/comp.tar.xz";;
+        		i386)
+        			declare triple='i386-unknown-netbsd'
+        			declare base_url="${url}/base.tgz"
+        			declare comp_url="${url}/comp.tgz";;
+        		evbarm-earmv7hf)
+        			declare triple='arm-unknown-freebsd'
+        			declare base_url="${url}/base.tgz"
+        			declare comp_url="${url}/comp.tgz";;
+        	esac
+        	
+        	declare base_output="/tmp/$(basename ${base_url})"
+        	declare comp_output="/tmp/$(basename ${comp_url})"
+        	
+        	wget "${base_url}" --output-document="${base_output}"
+        	wget "${comp_url}" --output-document="${comp_output}"
+        	
+        	declare toolchain_prefix="${toolchain_directory}/${triple}"
+        	
+        	../configure --target="${triple}" --prefix="${toolchain_prefix}" 1>/dev/null
+        	
+        	make --jobs 1>/dev/null
+        	make install 1>/dev/null
+        	
+        	tar --directory="${toolchain_prefix}" --extract --file="${base_output}" './lib' './usr/lib' './usr/include'
+        	tar --directory="${toolchain_prefix}" --extract --file="${comp_output}" './usr/lib' './usr/include'
+        	
+        	declare wrapper="${toolchain_prefix}/bin/${triple}-clang"
+        	
+        	echo "#\!/bin/bash\n\nPATH=${toolchain_prefix}/bin:\${PATH} clang -target ${triple} --sysroot=${toolchain_prefix} -L${toolchain_prefix}/lib -Wl,-rpath-link,${toolchain_prefix}/lib:./ \${@}" > "${wrapper}"
+        	chmod 755 "${wrapper}"
+        	
+        	rm --force --recursive ./*
+        done
+        
+        echo "NETBSD_TOOLCHAIN=${toolchain_directory}" >> "${GITHUB_ENV}"
+    - name: Setup FreeBSD cross compiler
+      if: false
+      run: |
+        declare -r targets=(
+            amd64
+            arm64
+            i386
+            powerpc
+            riscv
+        )
+        
+        declare -r binutils_tarball='/tmp/binutils.tar.xz'
+        declare -r binutils_directory='/tmp/binutils-2.39'
+        
+        declare -r toolchain_directory='/tmp/unknown-unknown-freebsd'
+        
+        wget 'https://ftpmirror.gnu.org/gnu/binutils/binutils-2.39.tar.xz' --output-document="${binutils_tarball}"
+        
+        tar --directory="$(dirname "${binutils_directory}")" --extract --file="${binutils_tarball}"
+        
+        for target in "${targets[@]}"; do
+        	declare url="https://download.freebsd.org/snapshots/${target}/14.0-CURRENT/base.txz"
+        	declare output="/tmp/freebsd-${target//\//_}-base.tar.xz"
+        	
+        	wget "${url}" --output-document="${output}"
+        	
+        	cd "${binutils_directory}"
+        	
+        	case "${target}" in
+        		amd64)
+        			declare triple='x86_64-unknown-freebsd';;
+        		arm64)
+        			declare triple='aarch64-unknown-freebsd';;
+        		i386)
+        			declare triple='i386-unknown-freebsd';;
+        		powerpc)
+        			declare triple='powerpc64le-unknown-freebsd';;
+        		riscv)
+        			declare triple='riscv64-unknown-freebsd';;
+        	esac
+        	
+        	declare toolchain_prefix="${toolchain_directory}/${triple}"
+        	
+        	make distclean 1>/dev/null || true
+        	./configure --target="${triple}" --prefix="${toolchain_prefix}" 1>/dev/null
+        	
+        	make --jobs 1>/dev/null
+        	make install 1>/dev/null
+        	
+        	tar --directory="${toolchain_prefix}" --extract --file="${output}" './lib' './usr/lib' './usr/include' 1>/dev/null
+        	
+        	declare wrapper="${toolchain_prefix}/bin/${triple}-clang"
+        	
+        	echo "#\!/bin/bash\n\nPATH=${toolchain_prefix}/bin:\${PATH} clang -target ${triple} --sysroot=${toolchain_prefix} -Wl,-rpath-link,${toolchain_prefix}/lib:./ \${@}" > "${wrapper}"
+        	chmod 500 "${wrapper}"
+        	
+        	rm "${output}"
+        done
+        
+        echo "FREEBSD_TOOLCHAIN=${toolchain_directory}" >> "${GITHUB_ENV}"
     - name: Build with CMake
       run: |
         declare -r MACHINE_HOST="$(gcc -dumpmachine)"

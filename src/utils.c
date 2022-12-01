@@ -7,7 +7,7 @@
 #include "symbols.h"
 #include "fstream.h"
 
-#ifdef WIN32
+#if defined(WIN32)
 	#include <windows.h>
 	#include <fileapi.h>
 	#include <direct.h>
@@ -15,6 +15,18 @@
 	#include <unistd.h>
 	#include <sys/stat.h>
 	#include <errno.h>
+	
+	#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+		#include <sys/sysctl.h>
+	#endif
+	
+	#ifdef __linux__
+		#include <linux/limits.h>
+		
+		#ifndef PATH_MAX
+			#define 4096
+		#endif
+	#endif
 	
 	#define FILERW_MAX_CHUNK_SIZE 8192
 #endif
@@ -146,14 +158,14 @@ int execute_shell_command(const char* const command) {
 	
 	int exit_code = 0;
 	
-	#ifdef WIN32
-		exit_code = code;
-	#else
+	#ifdef __linux__
 		if (WIFSIGNALED(code)) {
 			exit_code = 128 + WTERMSIG(code);
 		} else {
 			exit_code = WEXITSTATUS(code);
 		}
+	#else
+		exit_code = code;
 	#endif
 	
 	return exit_code;
@@ -645,6 +657,29 @@ int get_app_filename(char* const filename, const size_t size) {
 				return 0;
 			}
 		#endif
+	#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+		#ifdef __NetBSD__
+			const int call[] = {
+				CTL_KERN,
+				KERN_PROC_ARGS,
+				-1,
+				KERN_PROC_PATHNAME
+			};
+		#else
+			const int call[] = {
+				CTL_KERN,
+				KERN_PROC,
+				KERN_PROC_PATHNAME,
+				-1
+			};
+		#endif
+		
+		size_t nsize = size;
+		const int code = sysctl(call, sizeof(call) / sizeof(*call), filename, &nsize, NULL, 0);
+		
+		if (code != 0) {
+			return 0;
+		}
 	#else
 		if (readlink("/proc/self/exe", filename, size) == -1) {
 			return 0;

@@ -55,7 +55,7 @@ int __fprintf(FILE* const stream, const char* const format, ...) {
 	
 	int wcsize = MultiByteToWideChar(CP_UTF8, 0, value, -1, NULL, 0);
 	wchar_t wvalue[wcsize];
-	MultiByteToWideChar(CP_UTF8, 0, value, -1, wvalue, sizeof(wvalue) / sizeof(*wvalue));
+	MultiByteToWideChar(CP_UTF8, 0, value, -1, wvalue, (int) (sizeof(wvalue) / sizeof(*wvalue)));
 	
 	return fwprintf(stream, L"%ls", wvalue);
 	
@@ -65,11 +65,11 @@ char* __fgets(char* const s, const int n, FILE* const stream) {
 	
 	wchar_t ws[n];
 	
-	if (fgetws(ws, sizeof(ws) / sizeof(*ws), stream) == NULL) {
+	if (fgetws(ws, (int) (sizeof(ws) / sizeof(*ws)), stream) == NULL) {
 		return NULL;
 	}
 	
-	WideCharToMultiByte(CP_UTF8, 0, ws, -1, s, sizeof(ws) / sizeof(*ws), NULL, NULL);
+	WideCharToMultiByte(CP_UTF8, 0, ws, -1, s, (int) (sizeof(ws) / sizeof(*ws)), NULL, NULL);
 	
 	return s;
 	

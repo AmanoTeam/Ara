@@ -21,10 +21,10 @@ int vimeo_parse(
 	const char* const url,
 	const struct Resource* const resource,
 	const struct Page* const page,
-	struct Media* media
+	struct Media* const media
 ) {
 	
-	CURL* curl_easy = get_global_curl_easy();
+	CURL* const curl_easy = get_global_curl_easy();
 	
 	struct String string __attribute__((__cleanup__(string_free))) = {0};
 	
@@ -110,7 +110,7 @@ int vimeo_parse(
 		return UERR_JSON_NON_MATCHING_TYPE;
 	}
 	
-	const json_t* files = json_object_get(obj, "files");
+	const json_t* const files = json_object_get(obj, "files");
 	
 	if (files == NULL) {
 		return UERR_JSON_MISSING_REQUIRED_KEY;
@@ -137,14 +137,14 @@ int vimeo_parse(
 		const char* stream_uri = NULL;
 		
 		size_t index = 0;
-		json_t *item = NULL;
+		const json_t* item = NULL;
 		
 		json_array_foreach(obj, index, item) {
 			if (!json_is_object(item)) {
 				return UERR_JSON_NON_MATCHING_TYPE;
 			}
 			
-			const json_t* obj = json_object_get(item, "width");
+			const json_t* const obj = json_object_get(item, "width");
 			
 			if (obj == NULL) {
 				return UERR_JSON_MISSING_REQUIRED_KEY;
@@ -157,7 +157,7 @@ int vimeo_parse(
 			const json_int_t width = json_integer_value(obj);
 			
 			if (last_width < width) {
-				const json_t* obj = json_object_get(item, "url");
+				const json_t* const obj = json_object_get(item, "url");
 				
 				if (obj == NULL) {
 					return UERR_JSON_MISSING_REQUIRED_KEY;
@@ -216,7 +216,7 @@ int vimeo_parse(
 			return UERR_JSON_NON_MATCHING_TYPE;
 		}
 		
-		const json_t* subobj = json_object_get(obj, "default_cdn");
+		const json_t* const subobj = json_object_get(obj, "default_cdn");
 		
 		if (subobj == NULL) {
 			return UERR_JSON_MISSING_REQUIRED_KEY;
@@ -282,7 +282,7 @@ int vimeo_parse(
 		const char* audio_stream = NULL;
 		
 		for (size_t index = 0; index < tags.offset; index++) {
-			struct Tag* tag = &tags.items[index];
+			const struct Tag* const tag = &tags.items[index];
 			
 			switch (tag->type) {
 				case EXT_X_STREAM_INF: {

@@ -4,5 +4,5 @@ int vimeo_parse(
 	const char* const url,
 	const struct Resource* const resource,
 	const struct Page* const page,
-	struct Media* media
+	struct Media* const media
 );

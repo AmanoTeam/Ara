@@ -6,11 +6,11 @@
 #include "callbacks.h"
 #include "fstream.h"
 
-#if defined(WIN32) && defined(UNICODE)
+#if defined(_WIN32) && defined(_UNICODE)
 	#include "wio.h"
 #endif
 
-size_t curl_write_string_cb(char *chunk, size_t size, size_t nmemb, struct String* string) {
+size_t curl_write_string_cb(char* chunk, size_t size, size_t nmemb, struct String* string) {
 	
 	const size_t chunk_size = size * nmemb;
 	const size_t slength = string->slength + chunk_size;
@@ -30,7 +30,7 @@ size_t curl_write_string_cb(char *chunk, size_t size, size_t nmemb, struct Strin
 	
 }
 
-size_t curl_progress_cb(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow) {
+size_t curl_progress_cb(void* clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow) {
 	
 	(void) (clientp);
 	(void) (ultotal);
@@ -48,7 +48,7 @@ size_t curl_progress_cb(void *clientp, curl_off_t dltotal, curl_off_t dlnow, cur
 	
 }
 
-size_t curl_write_file_cb(char *chunk, size_t size, size_t nmemb, struct FStream* stream) {
+size_t curl_write_file_cb(char* chunk, size_t size, size_t nmemb, struct FStream* stream) {
 	
 	const size_t chunk_size = size * nmemb;
 	

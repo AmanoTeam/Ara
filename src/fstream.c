@@ -11,7 +11,7 @@
 
 struct FStream* fstream_open(const char* const filename, const char* const mode) {
 	
-	#ifdef WIN32
+	#ifdef _WIN32
 		DWORD dwDesiredAccess = 0;
 		DWORD dwCreationDisposition = 0;
 		const DWORD dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL;
@@ -29,10 +29,10 @@ struct FStream* fstream_open(const char* const filename, const char* const mode)
 				return NULL;
 		}
 		
-		#ifdef UNICODE
+		#ifdef _UNICODE
 			const int wcsize = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
 			wchar_t lpFileName[wcsize];
-			MultiByteToWideChar(CP_UTF8, 0, filename, -1, lpFileName, sizeof(lpFileName) / sizeof(*lpFileName));
+			MultiByteToWideChar(CP_UTF8, 0, filename, -1, lpFileName, (int) (sizeof(lpFileName) / sizeof(*lpFileName)));
 			
 			HANDLE handle = CreateFileW(
 				lpFileName,

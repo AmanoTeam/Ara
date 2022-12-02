@@ -3,7 +3,7 @@
 #include <curl/curl.h>
 #include <jansson.h>
 
-#if defined(WIN32) && defined(UNICODE)
+#if defined(_WIN32) && defined(_UNICODE)
 	#include "wio.h"
 #endif
 
@@ -233,7 +233,7 @@ int get_resources(
 	strcat(authorization, credentials->access_token);
 	
 	size_t index = 0;
-	json_t *item = NULL;
+	const json_t* item = NULL;
 	const size_t array_size = json_array_size(obj);
 	
 	curl_easy_setopt(curl_easy, CURLOPT_URL, HOTMART_MEMBERSHIP_ENDPOINT);
@@ -416,7 +416,7 @@ int get_modules(
 	}
 	
 	size_t index = 0;
-	json_t *item = NULL;
+	const json_t* item = NULL;
 	const size_t array_size = json_array_size(obj);
 	
 	curl_easy_setopt(curl_easy, CURLOPT_URL, HOTMART_MEMBERSHIP_ENDPOINT);
@@ -644,7 +644,7 @@ int get_page(
 		}
 		
 		size_t index = 0;
-		json_t *item = NULL;
+		const json_t* item = NULL;
 		const size_t array_size = json_array_size(obj);
 		
 		page->medias.size = sizeof(struct Media) * array_size;
@@ -861,7 +861,7 @@ int get_page(
 		}
 		
 		size_t index = 0;
-		json_t *item = NULL;
+		const json_t* item = NULL;
 		const size_t array_size = json_array_size(obj);
 		
 		const size_t size = page->attachments.size + sizeof(struct Attachment) * array_size;
@@ -1033,7 +1033,7 @@ int get_page(
 		
 		tidy_buffer_t buffer __attribute__((__cleanup__(tidy_buffer_free))) = {0};
 		tidy_buffer_init(&buffer);
-		tidy_buffer_append(&buffer, (char*) content, strlen(content));
+		tidy_buffer_append(&buffer, (char*) content, (unsigned int) strlen(content));
 		
 		if (tidy_parse_buffer(document, &buffer) < 0) {
 			return UERR_TIDY_FAILURE;

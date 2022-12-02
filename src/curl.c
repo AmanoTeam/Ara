@@ -101,7 +101,7 @@ static int curl_set_options(CURL* handle) {
 		for (size_t index = 0; index < sizeof(certificate_paths) / sizeof(*certificate_paths); index++) {
 			const char* const filename = certificate_paths[index];
 			
-			const size_t file_size = get_file_size(filename);
+			const long long file_size = get_file_size(filename);
 			
 			if (file_size < 1) {
 				continue;
@@ -113,21 +113,21 @@ static int curl_set_options(CURL* handle) {
 				return UERR_FSTREAM_FAILURE;
 			}
 			
-			curl_blob_global.data = malloc(file_size);
+			curl_blob_global.data = malloc((size_t) file_size);
 			
 			if (curl_blob_global.data == NULL) {
 				return UERR_MEMORY_ALLOCATE_FAILURE;
 			}
 			
-			const ssize_t rsize = fstream_read(stream, curl_blob_global.data, file_size);
+			const ssize_t rsize = fstream_read(stream, curl_blob_global.data, (size_t) file_size);
 			
-			if (rsize != file_size) {
+			if (rsize != (ssize_t) file_size) {
 				return UERR_FSTREAM_FAILURE;
 			}
 			
 			fstream_close(stream);
 			
-			curl_blob_global.len = rsize;
+			curl_blob_global.len = (size_t) rsize;
 			
 			break;
 		}
@@ -197,4 +197,3 @@ CURLM* get_global_curl_multi(void) {
 	return curl_multi_global;
 	
 }
-	

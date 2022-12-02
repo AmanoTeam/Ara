@@ -4,7 +4,7 @@
 
 #define A "SparkleC"
 
-#ifdef WIN32
+#ifdef _WIN32
 	#include <stdio.h>
 	#include <fcntl.h>
 	#include <io.h>
@@ -27,7 +27,7 @@
 #include "hotmart.h"
 #include "fstream.h"
 
-#if defined(WIN32) && defined(UNICODE)
+#if defined(_WIN32) && defined(_UNICODE)
 	#include "wio.h"
 #endif
 
@@ -91,7 +91,7 @@ static void curl_poll(struct Download* dqueue, const size_t dcount, size_t* tota
 	
 	int still_running = 1;
 	
-	curl_progress_cb(NULL, dcount, *total_done, 0, 0);
+	curl_progress_cb(NULL, (const curl_off_t) dcount, (const curl_off_t) *total_done, 0, 0);
 	
 	while (still_running) {
 		CURLMcode mc = curl_multi_perform(curl_multi, &still_running);
@@ -125,7 +125,7 @@ static void curl_poll(struct Download* dqueue, const size_t dcount, size_t* tota
 					fstream_close(download->stream);
 					
 					(*total_done)++;
-					curl_progress_cb(NULL, dcount, *total_done, 0, 0);
+					curl_progress_cb(NULL, (const curl_off_t) dcount, (const curl_off_t) *total_done, 0, 0);
 				} else {
 					fstream_seek(download->stream, 0, FSTREAM_SEEK_BEGIN);
 					curl_multi_add_handle(curl_multi, msg->easy_handle);
@@ -352,7 +352,7 @@ static int m3u8_download(const char* const url, const char* const output) {
 	
 	printf("+ Exportando lista de reprodução para '%s'\r\n", playlist_filename);
 	 
-	struct FStream* stream = fstream_open(playlist_filename, "wb");
+	struct FStream* const stream = fstream_open(playlist_filename, "wb");
 	
 	if (stream == NULL) {
 		fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", playlist_filename, strerror(errno));
@@ -401,16 +401,17 @@ static int m3u8_download(const char* const url, const char* const output) {
 	
 }
 
-#if defined(WIN32) && defined(UNICODE)
+#if defined(_WIN32) && defined(_UNICODE)
 	#define main wmain
+	int wmain(void);
 #endif
 
 int main(void) {
 	
-	#ifdef WIN32
+	#ifdef _WIN32
 		_setmaxstdio(2048);
 		
-		#ifdef UNICODE
+		#ifdef _UNICODE
 			_setmode(_fileno(stdout), _O_WTEXT);
 			_setmode(_fileno(stderr), _O_WTEXT);
 			
@@ -490,7 +491,7 @@ int main(void) {
 		struct Credentials items[total_items];
 		
 		size_t index = 0;
-		json_t *item = NULL;
+		const json_t* item = NULL;
 		
 		printf("+ Selecione qual das suas contas você deseja usar: \r\n\r\n");
 		printf("0.\r\nAcessar uma outra conta\r\n\r\n");
@@ -840,7 +841,7 @@ int main(void) {
 				strcat(page_directory, PATH_SEPARATOR);
 				strcat(page_directory, directory);
 				
-				json_t* items = json_array();
+				json_t* const items = json_array();
 				
 				if (!directory_exists(page_directory)) {
 					fprintf(stderr, "- O diretório '%s' não existe, criando-o\r\n", page_directory);
@@ -876,7 +877,7 @@ int main(void) {
 						normalize_filename(basename(document_filename));
 					}
 					
-					json_t* content = json_object();
+					json_t* const content = json_object();
 					json_object_set_new(content, "name", json_string(page->document.filename));
 					json_object_set_new(content, "path", json_string(document_filename));
 					
@@ -885,7 +886,7 @@ int main(void) {
 					if (!file_exists(document_filename)) {
 						fprintf(stderr, "- O arquivo '%s' não existe, salvando-o\r\n", document_filename);
 						
-						struct FStream* stream = fstream_open(document_filename, "wb");
+						struct FStream* const stream = fstream_open(document_filename, "wb");
 						
 						if (stream == NULL) {
 							fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", document_filename, strerror(errno));
@@ -930,7 +931,7 @@ int main(void) {
 						normalize_filename(basename(media_filename));
 					}
 					
-					json_t* content = json_object();
+					json_t* const content = json_object();
 					json_object_set_new(content, "name", json_string(media->video.filename));
 					json_object_set_new(content, "path", json_string(media_filename));
 					
@@ -1034,7 +1035,7 @@ int main(void) {
 							case MEDIA_SINGLE: {
 								printf("+ Baixando de '%s' para '%s'\r\n", media->video.url, media_filename);
 								
-								struct FStream* stream = fstream_open(media_filename, "wb");
+								struct FStream* const stream = fstream_open(media_filename, "wb");
 								
 								if (stream == NULL) {
 									fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", media_filename, strerror(errno));
@@ -1114,7 +1115,7 @@ int main(void) {
 						fprintf(stderr, "- O arquivo '%s' não existe, ele será baixado\r\n", attachment_filename);
 						printf("+ Baixando de '%s' para '%s'\r\n", attachment->url, attachment_filename);
 						
-						struct FStream* stream = fstream_open(attachment_filename, "wb");
+						struct FStream* const stream = fstream_open(attachment_filename, "wb");
 						
 						if (stream == NULL) {
 							fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", attachment_filename, strerror(errno));
@@ -1200,9 +1201,6 @@ int main(void) {
 		strcat(html_tree_filename, DOT);
 		strcat(html_tree_filename, HTML_FILE_EXTENSION);
 		
-		size_t index = 0;
-		json_t *item = NULL;
-		
 		printf("+ Exportando árvore de objetos para '%s'\r\n", html_tree_filename);
 		
 		stream = fstream_open(html_tree_filename, "wb");
@@ -1214,6 +1212,9 @@ int main(void) {
 		
 		fstream_write(stream, HTML_HEADER_START, strlen(HTML_HEADER_START));
 		fstream_write(stream, HTML_UL_START, strlen(HTML_UL_START));
+		
+		size_t index = 0;
+		const json_t* item = NULL;
 		
 		json_array_foreach(modules, index, item) {
 			const json_t* obj = json_object_get(item, "name");
@@ -1242,9 +1243,9 @@ int main(void) {
 			fstream_write(stream, HTML_UL_START, strlen(HTML_UL_START));
 			
 			size_t index = 0;
-			json_t *page = NULL;
+			const json_t* page = NULL;
 			
-			const json_t* pages = json_object_get(item, "items");
+			const json_t* const pages = json_object_get(item, "items");
 			
 			json_array_foreach(pages, index, page) {
 				const json_t* obj = json_object_get(page, "name");
@@ -1273,7 +1274,7 @@ int main(void) {
 				fstream_write(stream, HTML_UL_START, strlen(HTML_UL_START));
 				
 				size_t index = 0;
-				json_t *content = NULL;
+				const json_t* content = NULL;
 				
 				const json_t* contents = json_object_get(page, "items");
 				

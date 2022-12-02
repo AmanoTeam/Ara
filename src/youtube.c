@@ -32,9 +32,9 @@ static const char* const YOUTUBE_PLAYER_HEADERS[][2] = {
 	{"User-Agent", YOUTUBE_CLIENT_USER_AGENT}
 };
 
-int youtube_parse(const char* const uri, struct Media* media) {
+int youtube_parse(const char* const uri, struct Media* const media) {
 	
-	CURL* curl_easy = get_global_curl_easy();
+	CURL* const curl_easy = get_global_curl_easy();
 	
 	CURLU* cu __attribute__((__cleanup__(curlupp_free))) = curl_url();
 	
@@ -107,7 +107,7 @@ int youtube_parse(const char* const uri, struct Media* media) {
 	
 	json_auto_t* subtree = json_object();
 	
-	json_t* client = json_object();
+	json_t* const client = json_object();
 	
 	json_object_set_new(client, "clientName", json_string("ANDROID"));
 	json_object_set_new(client, "clientVersion", json_string(YOUTUBE_CLIENT_VERSION));
@@ -117,14 +117,14 @@ int youtube_parse(const char* const uri, struct Media* media) {
 	json_object_set_new(client, "timeZone", json_string("UTC"));
 	json_object_set_new(client, "utcOffsetMinutes", json_integer(0));
 	
-	json_t* context = json_object();
+	json_t* const context = json_object();
 	json_object_set_new(context, "client", client);
 	json_object_set_new(subtree, "context", context);
 	
-	json_t* content_playback_context = json_object();
+	json_t* const content_playback_context = json_object();
 	json_object_set_new(content_playback_context, "html5Preference", json_string("HTML5_PREF_WANTS"));
 	
-	json_t* playback_context = json_object();
+	json_t* const playback_context = json_object();
 	json_object_set_new(playback_context, "contentPlaybackContext", content_playback_context);
 	
 	json_object_set_new(subtree, "playbackContext", playback_context);
@@ -206,7 +206,7 @@ int youtube_parse(const char* const uri, struct Media* media) {
 	const char* stream_uri = NULL;
 	
 	size_t index = 0;
-	json_t *item = NULL;
+	const json_t* item = NULL;
 	
 	json_array_foreach(obj, index, item) {
 		if (!json_is_object(item)) {

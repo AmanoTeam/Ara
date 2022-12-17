@@ -1058,7 +1058,7 @@ int get_page(
 			if (memcmp(url, VIMEO_URL_PATTERN, strlen(VIMEO_URL_PATTERN)) == 0) {
 				const int code = vimeo_parse(url, resource, page, &media);
 				
-				if (code != UERR_SUCCESS) {
+				if (!(code == UERR_SUCCESS || code == UERR_NO_STREAMS_AVAILABLE)) {
 					return code;
 				}
 			} else if (memcmp(url, YOUTUBE_URL_PATTERN, strlen(YOUTUBE_URL_PATTERN)) == 0) {

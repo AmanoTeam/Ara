@@ -41,7 +41,18 @@ int vimeo_parse(
 	
 	curl_easy_setopt(curl_easy, CURLOPT_REFERER, referer);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	const CURLcode code = curl_easy_perform(curl_easy);
+	
+	if (code == CURLE_HTTP_RETURNED_ERROR) {
+		long status_code = 0;
+		curl_easy_getinfo(curl_easy, CURLINFO_RESPONSE_CODE, &status_code);
+		
+		if (status_code == 404) {
+			return UERR_NO_STREAMS_AVAILABLE;
+		}
+		
+		return UERR_CURL_FAILURE;
+	} else if (code != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	

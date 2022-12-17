@@ -749,6 +749,8 @@ int main(void) {
 		return EXIT_FAILURE;
 	}
 	
+	const int has_trailing_sep = (strlen(cwd) > 0 && *(strchr(cwd, '\0') - 1) == *PATH_SEPARATOR);
+	
 	for (size_t index = 0; index < queue_count; index++) {
 		struct Resource* resource = &download_queue[index];
 		
@@ -767,9 +769,13 @@ int main(void) {
 		strcpy(directory, (kof ? resource->name : resource->subdomain));
 		normalize_filename(directory);
 		
-		char resource_directory[strlen(cwd) + strlen(PATH_SEPARATOR) + strlen(directory) + 1];
+		char resource_directory[strlen(cwd) + (has_trailing_sep ? 0 : strlen(PATH_SEPARATOR)) + strlen(directory) + 1];
 		strcpy(resource_directory, cwd);
-		strcat(resource_directory, PATH_SEPARATOR);
+		
+		if (!has_trailing_sep) {
+			strcat(resource_directory, PATH_SEPARATOR);
+		}
+		
 		strcat(resource_directory, directory);
 		
 		if (!directory_exists(resource_directory)) {

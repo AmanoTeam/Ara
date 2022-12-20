@@ -26,64 +26,14 @@
 #include "curl.h"
 #include "hotmart.h"
 #include "fstream.h"
+#include "providers.h"
+#include "input.h"
 
 #if defined(_WIN32) && defined(_UNICODE)
 	#include "wio.h"
 #endif
 
 static const char LOCAL_ACCOUNTS_FILENAME[] = "accounts.json";
-
-#define MAX_INPUT_SIZE 1024
-
-static int ask_user_credentials(struct Credentials* const obj) {
-	
-	char username[MAX_INPUT_SIZE + 1] = {'\0'};
-	char password[MAX_INPUT_SIZE + 1] = {'\0'};
-	
-	while (1) {
-		printf("> Insira seu usuário: ");
-		
-		if (fgets(username, sizeof(username), stdin) != NULL && *username != '\n') {
-			break;
-		}
-		
-		fprintf(stderr, "- Usuário inválido ou não reconhecido!\r\n");
-	}
-	
-	*strchr(username, '\n') = '\0';
-	
-	while (1) {
-		printf("> Insira sua senha: ");
-		
-		if (fgets(password, sizeof(password), stdin) != NULL && *password != '\n') {
-			break;
-		}
-		
-		fprintf(stderr, "- Senha inválida ou não reconhecida!\r\n");
-	}
-	
-	*strchr(password, '\n') = '\0';
-	
-	const int code = authorize(username, password, obj);
-	
-	if (code != UERR_SUCCESS) {
-		fprintf(stderr, "- Não foi possível realizar a autenticação: %s\r\n", strurr(code));
-		return 0;
-	}
-	
-	obj->username = malloc(strlen(username) + 1);
-	
-	if (obj->username == NULL) {
-		
-	}
-	
-	strcpy(obj->username, username);
-	
-	printf("+ Usuário autenticado com sucesso!\r\n");
-	
-	return 1;
-	
-}
 
 static void curl_poll(struct Download* dqueue, const size_t dcount, size_t* total_done) {
 	
@@ -348,8 +298,6 @@ static int m3u8_download(const char* const url, const char* const output) {
 	
 	curl_poll(dl_queue, dl_total, &dl_done);
 	
-	printf("\r\n");
-	
 	printf("+ Exportando lista de reprodução para '%s'\r\n", playlist_filename);
 	 
 	struct FStream* const stream = fstream_open(playlist_filename, "wb");
@@ -380,7 +328,7 @@ static int m3u8_download(const char* const url, const char* const output) {
 	const int exit_code = execute_shell_command(shell_command);
 	
 	for (size_t index = 0; index < dl_total; index++) {
-		struct Download* download = &dl_queue[index];
+		struct Download* const download = &dl_queue[index];
 		
 		remove_file(download->filename);
 		free(download->filename);
@@ -430,6 +378,20 @@ int main(void) {
 		return EXIT_FAILURE;
 	}
 	
+	printf("+ Selecione o seu provedor de serviços:\r\n\r\n");
+	
+	const size_t total_providers = sizeof(PROVIDERS) / sizeof(*PROVIDERS);
+	
+	for (size_t index = 0; index < total_providers; index++) {
+		const struct Provider provider = PROVIDERS[index];
+		printf("%zu. \r\nNome: %s\r\nURL: %s\r\n\r\n", index + 1, provider.label, provider.url);
+	}
+	
+	int value = input_integer(1, (int) total_providers);
+	
+	const struct Provider provider = PROVIDERS[value - 1];
+	const struct ProviderMethods methods = provider.methods;
+	
 	char* const directory = get_configuration_directory();
 	
 	if (directory == NULL) {
@@ -437,9 +399,11 @@ int main(void) {
 		return EXIT_FAILURE;
 	}
 	
-	char configuration_directory[strlen(directory) + strlen(A) + 1];
+	char configuration_directory[strlen(directory) + strlen(A) + strlen(PATH_SEPARATOR) + strlen(provider.label) + 1];
 	strcpy(configuration_directory, directory);
 	strcat(configuration_directory, A);
+	strcat(configuration_directory, PATH_SEPARATOR);
+	strcat(configuration_directory, provider.label);
 	
 	free(directory);
 	
@@ -447,7 +411,7 @@ int main(void) {
 		fprintf(stderr, "- Diretório de configurações não encontrado, criando-o\r\n");
 		
 		if (!create_directory(configuration_directory)) {
-			fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o diretório em '%s'\r\n", configuration_directory);
+			fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o diretório em '%s': %s\r\n", configuration_directory, strerror(errno));
 			return EXIT_FAILURE;
 		}
 	}
@@ -500,7 +464,7 @@ int main(void) {
 			json_t* subobj = json_object_get(item, "username");
 			
 			if (subobj == NULL || !json_is_string(subobj)) {
-				fprintf(stderr, "- Uma ou mais credenciais localizadas no arquivo em '%s' possui um formato inválido ou não reconhecido!\r\n", accounts_file);
+				fprintf(stderr, "- O arquivo de configurações localizado em '%s' possui um formato inválido!\r\n", accounts_file);
 				return EXIT_FAILURE;
 			}
 			
@@ -509,68 +473,47 @@ int main(void) {
 			subobj = json_object_get(item, "access_token");
 			
 			if (subobj == NULL || !json_is_string(subobj)) {
-				fprintf(stderr, "- Uma ou mais credenciais localizadas no arquivo em '%s' possui um formato inválido ou não reconhecido!\r\n", accounts_file);
+				fprintf(stderr, "- O arquivo de configurações localizado em '%s' possui um formato inválido!\r\n", accounts_file);
 				return EXIT_FAILURE;
 			}
 			
 			const char* const access_token = json_string_value(subobj);
 			
-			subobj = json_object_get(item, "refresh_token");
-			
-			if (subobj == NULL || !json_is_string(subobj)) {
-				fprintf(stderr, "- Uma ou mais credenciais localizadas no arquivo em '%s' possui um formato inválido ou não reconhecido!\r\n", accounts_file);
-				return EXIT_FAILURE;
-			}
-			
-			const char* const refresh_token = json_string_value(subobj);
-			
 			struct Credentials credentials = {
-				.access_token = malloc(strlen(access_token) + 1),
-				.refresh_token = malloc(strlen(refresh_token) + 1)
+				.access_token = malloc(strlen(access_token) + 1)
 			};
 			
-			if (credentials.access_token == NULL || credentials.refresh_token == NULL) {
+			if (credentials.access_token == NULL) {
 				fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar alocar memória do sistema!\r\n");
 				return EXIT_FAILURE;
 			}
 			
 			strcpy(credentials.access_token, access_token);
-			strcpy(credentials.refresh_token, refresh_token);
 			
 			items[index] = credentials;
 			
 			printf("%zu. \r\nAcessar usando a conta: '%s'\r\n\r\n", index + 1, username);
 		}
 		
-		char answer[4 + 1];
-		int value = 0;
-		
-		while (1) {
-			printf("> Digite sua escolha: ");
-			
-			if (fgets(answer, sizeof(answer), stdin) != NULL && *answer != '\n') {
-				*strchr(answer, '\n') = '\0';
-				
-				if (isnumeric(answer)) {
-					value = atoi(answer);
-					
-					if (value >= 0 && (size_t) value <= total_items) {
-						break;
-					}
-				}
-			}
-			
-			fprintf(stderr, "- Opção inválida ou não reconhecida!\r\n");
-		}
+		const int value = input_integer(0, (int) total_items);
 		
 		if (value == 0) {
-			if (!ask_user_credentials(&credentials)) {
+			char username[MAX_INPUT_SIZE] = {'\0'};
+			get_username(username);
+			
+			char password[MAX_INPUT_SIZE] = {'\0'};
+			get_password(password);
+			
+			const int code = (*methods.authorize)(username, password, &credentials);
+			
+			if (code != UERR_SUCCESS) {
+				fprintf(stderr, "- Não foi possível realizar a autenticação: %s\r\n", strurr(code));
 				return EXIT_FAILURE;
 			}
 			
-			FILE* const file = fopen(accounts_file, "wb");
+			struct FStream* const stream = fstream_open(accounts_file, "wb");
 			
-			if (file == NULL) {
+			if (stream == NULL) {
 				fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", accounts_file, strerror(errno));
 				return EXIT_FAILURE;
 			}
@@ -578,7 +521,6 @@ int main(void) {
 			json_auto_t* subtree = json_object();
 			json_object_set_new(subtree, "username", json_string(credentials.username));
 			json_object_set_new(subtree, "access_token", json_string(credentials.access_token));
-			json_object_set_new(subtree, "refresh_token", json_string(credentials.refresh_token));
 			
 			json_array_append(tree, subtree);
 			
@@ -589,15 +531,13 @@ int main(void) {
 				return EXIT_FAILURE;
 			}
 			
-			const size_t buffer_size = strlen(buffer);
-			const size_t wsize = fwrite(buffer, sizeof(*buffer), buffer_size, file);
-			
+			const int status = fstream_write(stream, buffer, strlen(buffer));
 			const int cerrno = errno;
 			
 			free(buffer);
-			fclose(file);
+			fstream_close(stream);
 			
-			if (wsize != buffer_size) {
+			if (!status) {
 				fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar exportar o arquivo de credenciais: %s\r\n", strerror(cerrno));
 				return EXIT_FAILURE;
 			}
@@ -605,11 +545,20 @@ int main(void) {
 			credentials = items[value - 1];
 		}
 	} else {
-		if (!ask_user_credentials(&credentials)) {
+		char username[MAX_INPUT_SIZE] = {'\0'};
+		get_username(username);
+		
+		char password[MAX_INPUT_SIZE] = {'\0'};
+		get_password(password);
+		
+		const int code = (*methods.authorize)(username, password, &credentials);
+		
+		if (code != UERR_SUCCESS) {
+			fprintf(stderr, "- Não foi possível realizar a autenticação: %s\r\n", strurr(code));
 			return EXIT_FAILURE;
 		}
 		
-		FILE* const stream = fopen(accounts_file, "wb");
+		struct FStream* const stream = fstream_open(accounts_file, "wb");
 		
 		if (stream == NULL) {
 			fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", accounts_file, strerror(errno));
@@ -626,7 +575,6 @@ int main(void) {
 		
 		json_object_set_new(obj, "username", json_string(credentials.username));
 		json_object_set_new(obj, "access_token", json_string(credentials.access_token));
-		json_object_set_new(obj, "refresh_token", json_string(credentials.refresh_token));
 		
 		json_array_append(tree, obj);
 		
@@ -637,15 +585,14 @@ int main(void) {
 			return EXIT_FAILURE;
 		}
 		
-		const size_t buffer_size = strlen(buffer);
-		const size_t wsize = fwrite(buffer, sizeof(*buffer), buffer_size, stream);
+		const int status = fstream_write(stream, buffer, strlen(buffer));
 		
 		const int cerrno = errno;
 		
 		free(buffer);
-		fclose(stream);
+		fstream_close(stream);
 		
-		if (wsize != buffer_size) {
+		if (!status) {
 			fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar exportar o arquivo de credenciais: %s\r\n", strerror(cerrno));
 			return EXIT_FAILURE;
 		}
@@ -655,7 +602,7 @@ int main(void) {
 	
 	struct Resources resources = {0};
 	
-	const int code = get_resources(&credentials, &resources);
+	const int code = (*methods.get_resources)(&credentials, &resources);
 	
 	if (code == UERR_HOTMART_SESSION_EXPIRED) {
 		fprintf(stderr, "- Sua sessão expirou ou foi revogada, refaça o login!\r\n");
@@ -673,53 +620,37 @@ int main(void) {
 	
 	for (size_t index = 0; index < resources.offset; index++) {
 		const struct Resource* resource = &resources.items[index];
-		printf("%zu. \r\nNome: %s\r\nhttps://%s%s\r\n\r\n", index + 1, resource->name, resource->subdomain, HOTMART_CLUB_SUFFIX);
+		printf("%zu. \r\nNome: %s\r\n\r\n", index + 1, resource->name);
 	}
 	
-	char answer[4 + 1];
-	int value = 0;
-	
-	while (1) {
-		printf("> Digite sua escolha: ");
-		
-		if (fgets(answer, sizeof(answer), stdin) != NULL && *answer != '\n') {
-			*strchr(answer, '\n') = '\0';
-			
-			if (isnumeric(answer)) {
-				value = atoi(answer);
-				
-				if (value >= 0 && (size_t) value <= resources.offset) {
-					break;
-				}
-			}
-		}
-		
-		fprintf(stderr, "- Opção inválida ou não reconhecida!\r\n");
-	}
+	const int answer = input_integer(0, (int) resources.offset);
 	
 	int kof = 0;
 	
 	while (1) {
 		printf("> Manter o nome original de arquivos e diretórios? (S/n) ");
 		
-		if (fgets(answer, sizeof(answer), stdin) != NULL && *answer != '\n') {
-			*strchr(answer, '\n') = '\0';
-			
-			switch (*answer) {
-				case 's':
-				case 'y':
-					kof = 1;
-					break;
-				case 'n':
-					kof = 0;
-					break;
-				default:
-					fprintf(stderr, "- Opção inválida ou não reconhecida!\r\n");
-					continue;
-			}
-			
-			break;
+		const char answer = getchar();
+		
+		(void) getchar();
+		
+		switch (answer) {
+			case 's':
+			case 'y':
+			case 'S':
+			case 'Y':
+				kof = 1;
+				break;
+			case 'n':
+			case 'N':
+				kof = 0;
+				break;
+			default:
+				fprintf(stderr, "- Opção inválida ou não reconhecida!\r\n");
+				continue;
 		}
+		
+		break;
 	}
 	
 	fclose(stdin);
@@ -728,7 +659,7 @@ int main(void) {
 	
 	size_t queue_count = 0;
 	
-	if (value == 0) {
+	if (answer == 0) {
 		for (size_t index = 0; index < sizeof(download_queue) / sizeof(*download_queue); index++) {
 			struct Resource resource = resources.items[index];
 			download_queue[index] = resource;
@@ -736,7 +667,7 @@ int main(void) {
 			queue_count++;
 		}
 	} else {
-		struct Resource resource = resources.items[value - 1];
+		struct Resource resource = resources.items[answer - 1];
 		*download_queue = resource;
 		
 		queue_count++;
@@ -758,15 +689,15 @@ int main(void) {
 		
 		printf("+ Obtendo lista de módulos do produto '%s'\r\n", resource->name);
 		
-		const int code = get_modules(&credentials, resource);
+		const int code = (*methods.get_modules)(&credentials, resource);
 		
 		if (code != UERR_SUCCESS) {
 			fprintf(stderr, "- Ocorreu uma falha inesperada: %s\r\n", strurr(code));
 			return EXIT_FAILURE;
 		}
 		
-		char directory[(kof ? strlen(resource->name) : strlen(resource->subdomain)) + 1];
-		strcpy(directory, (kof ? resource->name : resource->subdomain));
+		char directory[(kof ? strlen(resource->name) : strlen(resource->id)) + 1];
+		strcpy(directory, (kof ? resource->name : resource->id));
 		normalize_filename(directory);
 		
 		char resource_directory[strlen(cwd) + (has_trailing_sep ? 0 : strlen(PATH_SEPARATOR)) + strlen(directory) + 1];
@@ -829,9 +760,9 @@ int main(void) {
 					continue;
 				}
 				
-				const int code = get_page(&credentials, resource, page);
+				const int code = (*methods.get_page)(&credentials, resource, page);
 				
-				if (code != UERR_SUCCESS) {
+				if (!(code == UERR_NOT_IMPLEMENTED || code == UERR_SUCCESS)) {
 					fprintf(stderr, "- Ocorreu uma falha inesperada: %s\r\n", strurr(code));
 					return EXIT_FAILURE;
 				}
@@ -1058,9 +989,10 @@ int main(void) {
 								
 								const CURLcode code = curl_easy_perform(curl_easy);
 								
+								printf("\n");
+								
 								fstream_close(stream);
 								
-								curl_easy_setopt(curl_easy, CURLOPT_XFERINFOFUNCTION, NULL);
 								curl_easy_setopt(curl_easy, CURLOPT_XFERINFOFUNCTION, NULL);
 								curl_easy_setopt(curl_easy, CURLOPT_NOPROGRESS, 1L);
 								curl_easy_setopt(curl_easy, CURLOPT_TIMEOUT, 60L);
@@ -1068,8 +1000,6 @@ int main(void) {
 								curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, NULL);
 								curl_easy_setopt(curl_easy, CURLOPT_URL, NULL);
 								curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 0L);
-								
-								printf("\r\n");
 								
 								if (code != CURLE_OK) {
 									remove_file(media_filename);
@@ -1132,17 +1062,21 @@ int main(void) {
 						curl_easy_setopt(curl_easy, CURLOPT_URL, attachment->url);
 						curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_file_cb);
 						curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, (void*) stream);
+						curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 1L);
 						
 						const CURLcode code = curl_easy_perform(curl_easy);
 						
-						fstream_close(stream);
+						printf("\n");
 						
-						printf("\r\n");
+						fstream_close(stream);
 						
 						if (code != CURLE_OK) {
 							remove_file(attachment_filename);
 							fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar conectar com o servidor em '%s': %s\r\n", attachment->url, curl_easy_strerror(code));
-							return EXIT_FAILURE;
+							
+							if (code != CURLE_HTTP_RETURNED_ERROR) {
+								return EXIT_FAILURE;
+							}
 						}
 					}
 				}
@@ -1153,6 +1087,7 @@ int main(void) {
 				curl_easy_setopt(curl_easy, CURLOPT_NOPROGRESS, 1L);
 				curl_easy_setopt(curl_easy, CURLOPT_TIMEOUT, 60L);
 				curl_easy_setopt(curl_easy, CURLOPT_XFERINFOFUNCTION, NULL);
+				curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 0L);
 				
 				json_t* tree = json_object();
 				json_object_set_new(tree, "name", json_string(page->name));

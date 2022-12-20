@@ -26,4 +26,6 @@
 #define UERR_FGETS_FAILURE -19
 #define UERR_FILENO_FAILURE -20
 
+#define UERR_NOT_IMPLEMENTED -21
+
 const char* strurr(const int code);

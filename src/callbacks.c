@@ -40,7 +40,9 @@ size_t curl_progress_cb(void* clientp, curl_off_t dltotal, curl_off_t dlnow, cur
 		return 0;
 	}
 	
-	printf("\r+ Atualmente em progresso: %" CURL_FORMAT_CURL_OFF_T "%% / 100%%\r", ((dlnow * 100) / dltotal));
+	const curl_off_t progress = (dlnow * 100) / dltotal;
+	
+	printf("\r+ Atualmente em progresso: %" CURL_FORMAT_CURL_OFF_T "%% / 100%%\r", progress);
 	
 	fflush(stdout);
 	
@@ -57,5 +59,14 @@ size_t curl_write_file_cb(char* chunk, size_t size, size_t nmemb, struct FStream
 	}
 	
 	return chunk_size;
+	
+}
+
+size_t curl_discard_body_cb(char* chunk, size_t size, size_t nmemb, void* ptr) {
+	
+	(void) chunk;
+	(void) ptr;
+	
+	return size * nmemb;
 	
 }

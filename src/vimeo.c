@@ -32,9 +32,9 @@ int vimeo_parse(
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, url);
 	
-	char referer[strlen(HTTPS_SCHEME) + strlen(resource->subdomain) + strlen(HOTMART_CLUB_SUFFIX) + strlen(HOTMART_EMBED_PAGE_PREFIX) + strlen(page->id) + 1];
+	char referer[strlen(HTTPS_SCHEME) + strlen(resource->id) + strlen(HOTMART_CLUB_SUFFIX) + strlen(HOTMART_EMBED_PAGE_PREFIX) + strlen(page->id) + 1];
 	strcpy(referer, HTTPS_SCHEME);
-	strcat(referer, resource->subdomain);
+	strcat(referer, resource->id);
 	strcat(referer, HOTMART_CLUB_SUFFIX);
 	strcat(referer, HOTMART_EMBED_PAGE_PREFIX);
 	strcat(referer, page->id);

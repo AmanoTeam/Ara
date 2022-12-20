@@ -7,6 +7,8 @@
 	#include "wio.h"
 #endif
 
+#include "credentials.h"
+#include "resources.h"
 #include "cleanup.h"
 #include "errors.h"
 #include "query.h"
@@ -30,7 +32,8 @@ static const char HTTP_HEADER_CLUB[] = "Club";
 static const char HTTP_AUTHENTICATION_BEARER[] = "Bearer";
 
 #define HOTMART_API_CLUB_PREFIX "https://api-club.hotmart.com/hot-club-api/rest/v3"
-#define HOTMART_API_SEC_PREFIX "https://api-sec-vlc.hotmart.com"
+#define HOTMART_API_SEC_VLC_PREFIX "https://api-sec-vlc.hotmart.com"
+#define HOTMART_API_VLC_PREFIX "https://api-vlc.hotmart.com"
 #define SPARKLEAPP_API_PREFIX "https://api.sparkleapp.com.br"
 
 static const char HOTMART_HOMEPAGE[] = "https://hotmart.com";
@@ -56,13 +59,17 @@ static const char HOTMART_TOKEN_ENDPOINT[] =
 	"/oauth/token";
 
 static const char HOTMART_TOKEN_CHECK_ENDPOINT[] = 
-	HOTMART_API_SEC_PREFIX
+	HOTMART_API_SEC_VLC_PREFIX
 	"/security/oauth/check_token";
+
+static const char HOTMART_PROFILE_ENDPOINT[] = 
+	HOTMART_API_VLC_PREFIX
+	"/userprofile/rest/v1/user";
 
 static const char VIMEO_URL_PATTERN[] = "https://player.vimeo.com/video";
 static const char YOUTUBE_URL_PATTERN[] = "https://www.youtube.com/embed";
 
-int authorize(
+int hotmart_authorize(
 	const char* const username,
 	const char* const password,
 	struct Credentials* const credentials
@@ -124,7 +131,62 @@ int authorize(
 	
 	const char* const access_token = json_string_value(obj);
 	
-	obj = json_object_get(tree, "refresh_token");
+	credentials->access_token = malloc(strlen(access_token) + 1);
+	
+	if (credentials->access_token == NULL) {
+		return UERR_MEMORY_ALLOCATE_FAILURE;
+	}
+	
+	strcpy(credentials->access_token, access_token);
+	
+	string_free(&string);
+	
+	char authorization[strlen(HTTP_AUTHENTICATION_BEARER) + strlen(SPACE) + strlen(credentials->access_token) + 1];
+	strcpy(authorization, HTTP_AUTHENTICATION_BEARER);
+	strcat(authorization, SPACE);
+	strcat(authorization, credentials->access_token);
+	
+	const char* const headers[][2] = {
+		{HTTP_HEADER_AUTHORIZATION, authorization}
+	};
+	
+	struct curl_slist* list __attribute__((__cleanup__(curl_slistp_free_all))) = NULL;
+	
+	for (size_t index = 0; index < sizeof(headers) / sizeof(*headers); index++) {
+		const char* const* const header = headers[index];
+		
+		const char* const key = header[0];
+		const char* const value = header[1];
+		
+		char item[strlen(key) + strlen(HTTP_HEADER_SEPARATOR) + strlen(value) + 1];
+		strcpy(item, key);
+		strcat(item, HTTP_HEADER_SEPARATOR);
+		strcat(item, value);
+		
+		struct curl_slist* tmp = curl_slist_append(list, item);
+		
+		if (tmp == NULL) {
+			return UERR_CURL_FAILURE;
+		}
+		
+		list = tmp;
+	}
+	
+	curl_easy_setopt(curl_easy, CURLOPT_HTTPGET, 1L);
+	curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, list);
+	curl_easy_setopt(curl_easy, CURLOPT_URL, HOTMART_PROFILE_ENDPOINT);
+	
+	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+		return UERR_CURL_FAILURE;
+	}
+	
+	json_auto_t* subtree = json_loads(string.s, 0, NULL);
+	
+	if (subtree == NULL) {
+		return UERR_JSON_CANNOT_PARSE;
+	}
+	
+	obj = json_object_get(subtree, "name");
 	
 	if (obj == NULL) {
 		return UERR_JSON_MISSING_REQUIRED_KEY;
@@ -134,42 +196,26 @@ int authorize(
 		return UERR_JSON_NON_MATCHING_TYPE;
 	}
 	
-	const char* const refresh_token = json_string_value(obj);
+	const char* const name = json_string_value(obj);
 	
-	obj = json_object_get(tree, "expires_in");
+	credentials->username = malloc(strlen(name) + 1);
 	
-	if (obj == NULL) {
-		return UERR_JSON_MISSING_REQUIRED_KEY;
-	}
-	
-	if (!json_is_integer(obj)) {
-		return UERR_JSON_NON_MATCHING_TYPE;
-	}
-	
-	const json_int_t expires_in = json_integer_value(obj);
-	
-	credentials->expires_in = expires_in;
-	
-	credentials->access_token = malloc(strlen(access_token) + 1);
-	credentials->refresh_token = malloc(strlen(refresh_token) + 1);
-	
-	if (credentials->access_token == NULL || credentials->refresh_token == NULL) {
+	if (credentials->username == NULL) {
 		return UERR_MEMORY_ALLOCATE_FAILURE;
 	}
 	
-	strcpy(credentials->access_token, access_token);
-	strcpy(credentials->refresh_token, refresh_token);
+	strcpy(credentials->username, name);
 	
+	curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, NULL);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, NULL);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, NULL);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, NULL);
-	curl_easy_setopt(curl_easy, CURLOPT_COPYPOSTFIELDS, NULL);
 	
 	return UERR_SUCCESS;
 	
 }
 
-int get_resources(
+int hotmart_get_resources(
 	const struct Credentials* const credentials,
 	struct Resources* const resources
 ) {
@@ -270,11 +316,11 @@ int get_resources(
 			return UERR_JSON_NON_MATCHING_TYPE;
 		}
 		
-		const char* const subdomain = json_string_value(obj);
+		const char* const id = json_string_value(obj);
 		
 		const char* const headers[][2] = {
 			{HTTP_HEADER_AUTHORIZATION, authorization},
-			{HTTP_HEADER_CLUB, subdomain}
+			{HTTP_HEADER_CLUB, id}
 		};
 		
 		struct curl_slist* list __attribute__((__cleanup__(curl_slistp_free_all))) = NULL;
@@ -326,16 +372,16 @@ int get_resources(
 		const char* const name = json_string_value(obj);
 		
 		struct Resource resource = {
-			.name = malloc(strlen(name) + 1),
-			.subdomain = malloc(strlen(subdomain) + 1)
+			.id = malloc(strlen(id) + 1),
+			.name = malloc(strlen(name) + 1)
 		};
 		
-		if (resource.name == NULL || resource.subdomain == NULL) {
+		if (resource.name == NULL || resource.id == NULL) {
 			return UERR_MEMORY_ALLOCATE_FAILURE;
 		}
 		
+		strcpy(resource.id, id);
 		strcpy(resource.name, name);
-		strcpy(resource.subdomain, subdomain);
 		
 		resources->items[resources->offset++] = resource;
 	}
@@ -349,7 +395,7 @@ int get_resources(
 	
 }
 
-int get_modules(
+int hotmart_get_modules(
 	const struct Credentials* const credentials,
 	struct Resource* const resource
 ) {
@@ -363,7 +409,7 @@ int get_modules(
 	
 	const char* const headers[][2] = {
 		{HTTP_HEADER_AUTHORIZATION, authorization},
-		{HTTP_HEADER_CLUB, resource->subdomain}
+		{HTTP_HEADER_CLUB, resource->id}
 	};
 	
 	struct curl_slist* list __attribute__((__cleanup__(curl_slistp_free_all))) = NULL;
@@ -493,7 +539,7 @@ int get_modules(
 		}
 		
 		size_t page_index = 0;
-		json_t *page_item = NULL;
+		json_t* page_item = NULL;
 		const size_t array_size = json_array_size(obj);
 		
 		module.pages.size = sizeof(struct Page) * array_size;
@@ -543,7 +589,7 @@ int get_modules(
 			}
 			
 			const int is_locked = json_boolean_value(obj);
-		
+			
 			struct Page page = {
 				.id = malloc(strlen(hash) + 1),
 				.name = malloc(strlen(name) + 1),
@@ -572,7 +618,7 @@ int get_modules(
 	
 }
 
-int get_page(
+int hotmart_get_page(
 	const struct Credentials* const credentials,
 	const struct Resource* const resource,
 	struct Page* const page
@@ -587,7 +633,7 @@ int get_page(
 	
 	const char* const headers[][2] = {
 		{HTTP_HEADER_AUTHORIZATION, authorization},
-		{HTTP_HEADER_CLUB, resource->subdomain},
+		{HTTP_HEADER_CLUB, resource->id},
 		{HTTP_HEADER_REFERER, HOTMART_HOMEPAGE}
 	};
 	
@@ -1111,17 +1157,5 @@ int get_page(
 	curl_easy_setopt(curl_easy, CURLOPT_REFERER, NULL);
 	
 	return UERR_SUCCESS;
-	
-}
-
-void credentials_free(struct Credentials* obj) {
-	
-	free(obj->access_token);
-	obj->access_token = NULL;
-	
-	free(obj->refresh_token);
-	obj->refresh_token = NULL;
-	
-	obj->expires_in = 0;
 	
 }

@@ -11,7 +11,7 @@ static const char COMMA[] = ",";
 static const char HASHTAG[] = "#";
 static const char GREATER_THAN[] = ">";
 
-#ifdef WIN32
+#ifdef _WIN32
 	#define PATH_SEPARATOR "\\"
 #else
 	#define PATH_SEPARATOR "/"
@@ -28,6 +28,7 @@ static const char TS_FILE_EXTENSION[] = "ts";
 static const char KEY_FILE_EXTENSION[] = "key";
 static const char HTML_FILE_EXTENSION[] = "html";
 static const char JSON_FILE_EXTENSION[] = "json";
+static const char PDF_FILE_EXTENSION[] = "pdf";
 
 static const char HTML_HEADER_START[] = 
 	"<!DOCTYPE html>"

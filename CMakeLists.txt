@@ -22,7 +22,7 @@ set(CURL_USE_OPENSSL OFF)
 set(CURL_USE_LIBPSL OFF)
 set(CURL_DISABLE_ALTSVC ON)
 set(CURL_DISABLE_CRYPTO_AUTH ON)
-set(CURL_DISABLE_COOKIES ON)
+set(CURL_DISABLE_COOKIES OFF)
 set(CURL_DISABLE_HSTS ON)
 set(CURL_DISABLE_HTTP_AUTH ON)
 set(CURL_DISABLE_NETRC ON)
@@ -400,6 +400,9 @@ add_executable(
 	src/vimeo.c
 	src/youtube.c
 	src/fstream.c
+	src/credentials.c
+	src/input.c
+	src/estrategia.c
 )
 
 target_compile_options(

@@ -1,12 +1,12 @@
 # SparkleC
 
-SparkleC é um programa escrito em C que usufruí das APIs da plataforma de cursos Hotmart para possibilitar que usuários baixem cursos que tenham previamente comprado diretamente para o armazenamento local de seu computador ou smartphone.
+O SparkleC é um programa escrito em C que usufruí das APIs de algumas plataformas que distribuem material didático para possibilitar que usuários baixem produtos que tenham previamente adquirido diretamente para o armazenamento local de seu computador ou smartphone.
 
 # Instalação
 
 O programa está disponível para Android, Windows, Linux e MacOS.
 
-Note que, embora versões para MacOS estejam disponíveis, as mesmas não foram testadas. Caso encontre (ou não) problemas ao executar o SparkleC nessa plataforma, [reporte-nos](https://github.com/Kartatz/SparkleC/issues).
+Note que, embora versões para MacOS estejam disponíveis, as mesmas não são testadas com frequência. Caso encontre (ou não) problemas ao executar o SparkleC nessa plataforma, [reporte-nos](https://github.com/Kartatz/SparkleC/issues).
 
 A ferramenta depende do [ffmpeg](https://ffmpeg.org/download.html) para decodificar e desencriptar os arquivos de vídeo baixados. Ele não funcionará sem ela, portanto instale-o em sua máquina antes de tudo.
 
@@ -51,6 +51,7 @@ Baixe o Termux através do F-Droid e instale-o. Você pode obtê-lo [clicando aq
 
 ```bash
 apt update --assume-yes
+apt upgrade --assume-yes
 apt install --assume-yes wget
 bash <<< "$(wget 'https://raw.githubusercontent.com/Kartatz/SparkleC/master/scripts/android-install.sh' --output-document=-)"
 
@@ -68,7 +69,7 @@ Você pode compilar o SparkleC localmente em sua máquina. Basta ter um compilad
 
 O projeto atualmente usa características específicas que não fazem parte da especificação oficial do C, as quais só não reconhecidas pelos compiladores Clang e GCC. Você pode vir a encontrar erros ao tentar compilar o código em outros compiladores fora os que foram mencionados. Isso é intencional e eu não pretendo adicionar suporte a qualquer outro.
 
-O SparkleC inclui todas as suas dependências como submódulos no git. Para clonar o repositório junto com todas as suas dependências, você precisa específicar a flag `--resursive`:
+O SparkleC inclui todas as suas dependências como submódulos no git. Para clonar o repositório junto com todas as suas dependências, você precisa específicar a opção `--resursive`:
 
 ```bash
 git clone --recursive 'https://github.com/Kartatz/SparkleC.git'
@@ -77,7 +78,8 @@ git clone --recursive 'https://github.com/Kartatz/SparkleC.git'
 Execute os comandos abaixo para compilar o projeto:
 
 ```bash
-mkdir SparkleC/build && cd SparkleC/build
+mkdir SparkleC/build
+cd SparkleC/build
 cmake ../
 cmake --build ./
 ```

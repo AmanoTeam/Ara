@@ -1,6 +1,7 @@
 #include "resources.h"
 #include "hotmart.h"
 #include "estrategia.h"
+#include "cyberclass.h"
 
 struct ProviderMethods {
 	int (*authorize)(const char* const, const char* const, struct Credentials* const);
@@ -35,8 +36,17 @@ static const struct Provider PROVIDERS[] = {
 			.get_modules = &estrategia_get_modules,
 			.get_page = &estrategia_get_page
 		}
+	},
+	{
+		.label = "CyberClass",
+		.url = "https://www.cyberclass.com.br",
+		.methods = {
+			.authorize = &cyberclass_authorize,
+			.get_resources = &cyberclass_get_resources,
+			.get_modules = &cyberclass_get_modules,
+			.get_page = &cyberclass_get_page
+		}
 	}
 };
-
 
 #pragma once

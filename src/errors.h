@@ -27,5 +27,6 @@
 #define UERR_FILENO_FAILURE -20
 
 #define UERR_NOT_IMPLEMENTED -21
+#define UERR_UNSUPPORTED_MEDIA_PROVIDER -22
 
 const char* strurr(const int code);

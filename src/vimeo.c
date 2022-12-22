@@ -12,7 +12,6 @@
 #include "utils.h"
 #include "types.h"
 #include "vimeo.h"
-#include "hotmart.h"
 #include "curl.h"
 
 static const char JSON_TREE_PATTERN[] = "window.playerConfig = ";
@@ -21,8 +20,12 @@ int vimeo_parse(
 	const char* const url,
 	const struct Resource* const resource,
 	const struct Page* const page,
-	struct Media* const media
+	struct Media* const media,
+	const char* const referer
 ) {
+	
+	(void) resource;
+	(void) page;
 	
 	CURL* const curl_easy = get_global_curl_easy();
 	
@@ -31,14 +34,6 @@ int vimeo_parse(
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, url);
-	
-	char referer[strlen(HTTPS_SCHEME) + strlen(resource->id) + strlen(HOTMART_CLUB_SUFFIX) + strlen(HOTMART_EMBED_PAGE_PREFIX) + strlen(page->id) + 1];
-	strcpy(referer, HTTPS_SCHEME);
-	strcat(referer, resource->id);
-	strcat(referer, HOTMART_CLUB_SUFFIX);
-	strcat(referer, HOTMART_EMBED_PAGE_PREFIX);
-	strcat(referer, page->id);
-	
 	curl_easy_setopt(curl_easy, CURLOPT_REFERER, referer);
 	
 	const CURLcode code = curl_easy_perform(curl_easy);

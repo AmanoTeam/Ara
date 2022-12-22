@@ -457,8 +457,8 @@ int main(void) {
 		size_t index = 0;
 		const json_t* item = NULL;
 		
-		printf("+ Selecione qual das suas contas você deseja usar: \r\n\r\n");
-		printf("0.\r\nAcessar uma outra conta\r\n\r\n");
+		printf("+ Como você deseja acessar este serviço?\r\n\r\n");
+		printf("0.\r\nAdicionar e usar nova conta\r\n\r\n");
 		
 		json_array_foreach(tree, index, item) {
 			json_t* subobj = json_object_get(item, "username");

@@ -32,7 +32,13 @@ static const char* const YOUTUBE_PLAYER_HEADERS[][2] = {
 	{"User-Agent", YOUTUBE_CLIENT_USER_AGENT}
 };
 
-int youtube_parse(const char* const uri, struct Media* const media) {
+int youtube_parse(
+	const char* const url,
+	const struct Resource* const resource,
+	const struct Page* const page,
+	struct Media* const media,
+	const char* const referer
+) {
 	
 	CURL* const curl_easy = get_global_curl_easy();
 	
@@ -42,7 +48,7 @@ int youtube_parse(const char* const uri, struct Media* const media) {
 		return UERR_CURL_FAILURE;
 	}
 	
-	if (curl_url_set(cu, CURLUPART_URL, uri, 0) != CURLUE_OK) {
+	if (curl_url_set(cu, CURLUPART_URL, url, 0) != CURLUE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	
@@ -100,10 +106,10 @@ int youtube_parse(const char* const uri, struct Media* const media) {
 	curl_url_set(cu, CURLUPART_URL, YOUTUBE_PLAYER_ENDPOINT, 0);
 	curl_url_set(cu, CURLUPART_QUERY, query, 0);
 	
-	char* url __attribute__((__cleanup__(curlcharpp_free))) = NULL;
-	curl_url_get(cu, CURLUPART_URL, &url, 0);
+	char* uri __attribute__((__cleanup__(curlcharpp_free))) = NULL;
+	curl_url_get(cu, CURLUPART_URL, &uri, 0);
 	
-	curl_easy_setopt(curl_easy, CURLOPT_URL, url);
+	curl_easy_setopt(curl_easy, CURLOPT_URL, uri);
 	
 	json_auto_t* subtree = json_object();
 	

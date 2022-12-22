@@ -26,3 +26,15 @@ void string_array_free(string_array_t* obj) {
 	obj->size = 0;
 	
 }
+
+void jint_array_free(jint_array_t* obj) {
+	
+	if (obj->items != NULL) {
+		free(obj->items);
+		obj->items = NULL;
+	}
+	
+	obj->offset = 0;
+	obj->size = 0;
+	
+}

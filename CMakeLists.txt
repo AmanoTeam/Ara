@@ -403,6 +403,7 @@ add_executable(
 	src/credentials.c
 	src/input.c
 	src/estrategia.c
+	src/cyberclass.c
 )
 
 target_compile_options(

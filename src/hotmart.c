@@ -1102,13 +1102,20 @@ int hotmart_get_page(
 			struct Media media = {0};
 			
 			if (memcmp(url, VIMEO_URL_PATTERN, strlen(VIMEO_URL_PATTERN)) == 0) {
-				const int code = vimeo_parse(url, resource, page, &media);
+				char referer[strlen(HTTPS_SCHEME) + strlen(resource->id) + strlen(HOTMART_CLUB_SUFFIX) + strlen(HOTMART_EMBED_PAGE_PREFIX) + strlen(page->id) + 1];
+				strcpy(referer, HTTPS_SCHEME);
+				strcat(referer, resource->id);
+				strcat(referer, HOTMART_CLUB_SUFFIX);
+				strcat(referer, HOTMART_EMBED_PAGE_PREFIX);
+				strcat(referer, page->id);
+				
+				const int code = vimeo_parse(url, resource, page, &media, referer);
 				
 				if (!(code == UERR_SUCCESS || code == UERR_NO_STREAMS_AVAILABLE)) {
 					return code;
 				}
 			} else if (memcmp(url, YOUTUBE_URL_PATTERN, strlen(YOUTUBE_URL_PATTERN)) == 0) {
-				const int code = youtube_parse(url, &media);
+				const int code = youtube_parse(url, resource, page, &media, NULL);
 				
 				if (!(code == UERR_SUCCESS || code == UERR_NO_STREAMS_AVAILABLE)) {
 					return code;

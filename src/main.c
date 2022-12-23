@@ -438,7 +438,26 @@ int main(void) {
 	struct Credentials credentials = {0};
 	
 	if (file_exists(accounts_file)) {
-		json_auto_t* tree = json_load_file(accounts_file, 0, NULL);
+		struct FStream* const stream = fstream_open(accounts_file, "r");
+		
+		if (stream == NULL) {
+			fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar abrir o arquivo em '%s': %s\r\n", accounts_file, strerror(errno));
+			return EXIT_FAILURE;
+		}
+		
+		const long long file_size = get_file_size(accounts_file);
+		
+		char buffer[(size_t) file_size];
+		
+		const ssize_t rsize = fstream_read(stream, buffer, sizeof(buffer));
+		
+		if (rsize != sizeof(buffer)) {
+			return UERR_FSTREAM_FAILURE;
+		}
+		
+		fstream_close(stream);
+		
+		json_auto_t* tree = json_loadb(buffer, sizeof(buffer), 0, NULL);
 		
 		if (tree == NULL || !json_is_array(tree)) {
 			fprintf(stderr, "- O arquivo de credenciais localizado em '%s' possui uma sintaxe inválida ou não reconhecida!\r\n", accounts_file);
@@ -586,7 +605,6 @@ int main(void) {
 		}
 		
 		const int status = fstream_write(stream, buffer, strlen(buffer));
-		
 		const int cerrno = errno;
 		
 		free(buffer);
@@ -630,7 +648,7 @@ int main(void) {
 	while (1) {
 		printf("> Manter o nome original de arquivos e diretórios? (S/n) ");
 		
-		const char answer = getchar();
+		const char answer = (char) getchar();
 		
 		(void) getchar();
 		

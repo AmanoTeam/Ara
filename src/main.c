@@ -758,6 +758,15 @@ int main(void) {
 			strcat(module_directory, PATH_SEPARATOR);
 			strcat(module_directory, directory);
 			
+			if (!directory_exists(module_directory)) {
+				fprintf(stderr, "- O diretório '%s' não existe, criando-o\r\n", module_directory);
+				
+				if (!create_directory(module_directory)) {
+					fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o diretório em '%s': %s\r\n", module_directory, strerror(errno));
+					return EXIT_FAILURE;
+				}
+			}
+			
 			json_t* pages = json_array();
 			
 			curl_easy_setopt(curl_easy, CURLOPT_TIMEOUT, 0L);
@@ -836,15 +845,6 @@ int main(void) {
 			curl_easy_setopt(curl_easy, CURLOPT_TIMEOUT, 60L);
 			curl_easy_setopt(curl_easy, CURLOPT_XFERINFOFUNCTION, NULL);
 			curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 0L);
-			
-			if (!directory_exists(module_directory)) {
-				fprintf(stderr, "- O diretório '%s' não existe, criando-o\r\n", module_directory);
-				
-				if (!create_directory(module_directory)) {
-					fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o diretório em '%s': %s\r\n", module_directory, strerror(errno));
-					return EXIT_FAILURE;
-				}
-			}
 			
 			printf("+ Obtendo lista de páginas do módulo '%s'\r\n", module->name);
 			

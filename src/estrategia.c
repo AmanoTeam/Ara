@@ -51,11 +51,9 @@ static const char ESTRATEGIA_COURSE_ENDPOINT[] =
 	ESTRATEGIA_API_PREFIX
 	"/api/aluno/curso";
 
-static const char* PAGE_ATTACHMENT_KEYS[] = {
-	"resumo",
-	"slide",
-	"mapa_mental"
-};
+static const char ESTRATEGIA_LESSON_ENDPOINT[] = 
+	ESTRATEGIA_API_PREFIX
+	"/api/aluno/aula";
 
 int estrategia_authorize(
 	const char* const username,
@@ -554,33 +552,93 @@ int estrategia_get_modules(
 		
 		strcpy(module.id, sid);
 		strcpy(module.name, name);
+			
+		struct String string __attribute__((__cleanup__(string_free))) = {0};
 		
-		obj = json_object_get(item, "pdf");
+		curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 		
-		if (obj == NULL) {
+		char url[strlen(ESTRATEGIA_LESSON_ENDPOINT) + strlen(SLASH) + strlen(sid) + 1];
+		strcpy(url, ESTRATEGIA_LESSON_ENDPOINT);
+		strcat(url, SLASH);
+		strcat(url, sid);
+		
+		curl_easy_setopt(curl_easy, CURLOPT_URL, url);
+		
+		if (curl_easy_perform(curl_easy) != CURLE_OK) {
+			return UERR_CURL_FAILURE;
+		}
+		
+		json_auto_t* tree = json_loads(string.s, 0, NULL);
+		
+		if (tree == NULL) {
+			return UERR_JSON_CANNOT_PARSE;
+		}
+			
+		const json_t* data = json_object_get(tree, "data");
+		
+		if (data == NULL) {
 			return UERR_JSON_MISSING_REQUIRED_KEY;
 		}
 		
-		if (json_is_string(obj)) {
-			const char* const url = json_string_value(obj);
-			
-			module.attachment = (struct Attachment) {
-				.filename = malloc(strlen(name) + strlen(DOT) + strlen(PDF_FILE_EXTENSION) + 1),
-				.url = malloc(strlen(url) + 1)
-			};
-			
-			if (module.attachment.filename == NULL || module.attachment.url == NULL) {
-				return UERR_MEMORY_ALLOCATE_FAILURE;
-			}
-			
-			strcpy(module.attachment.filename, name);
-			strcat(module.attachment.filename, DOT);
-			strcat(module.attachment.filename, PDF_FILE_EXTENSION);
-			
-			strcpy(module.attachment.url, url);
+		if (!json_is_object(data)) {
+			return UERR_JSON_NON_MATCHING_TYPE;
 		}
 		
-		obj = json_object_get(item, "videos");
+		const char* const keys[] = {
+			"pdf_grifado",
+			"pdf_simplificado",
+			"pdf"
+		};
+		
+		module.attachments.size = sizeof(struct Attachment) * (sizeof(keys) / sizeof(*keys));
+		module.attachments.items = malloc(module.attachments.size);
+			
+		for (size_t index = 0; index < (sizeof(keys) / sizeof(*keys)); index++) {
+			const char* const key = keys[index];
+			
+			const json_t* obj = json_object_get(data, key);
+			
+			if (obj == NULL) {
+				return UERR_JSON_MISSING_REQUIRED_KEY;
+			}
+			
+			if (json_is_string(obj)) {
+				const char* const url = json_string_value(obj);
+				
+				const char* name = NULL;
+				
+				if (strcmp(key, "pdf_grifado") == 0) {
+					name = "Marcação dos aprovados";
+				} else if (strcmp(key, "pdf_simplificado") == 0) {
+					name = "Versão simplificada";
+				} else if (strcmp(key, "pdf") == 0) {
+					name = "Versão original";
+				}
+				
+				struct Attachment attachment = {
+					.filename = malloc(strlen(name) + strlen(DOT) + strlen(PDF_FILE_EXTENSION) + 1),
+					.url = malloc(strlen(url) + 1)
+				};
+				
+				if (attachment.filename == NULL || attachment.url == NULL) {
+					return UERR_MEMORY_ALLOCATE_FAILURE;
+				}
+				
+				strcpy(attachment.filename, name);
+				strcat(attachment.filename, DOT);
+				strcat(attachment.filename, PDF_FILE_EXTENSION);
+				
+				normalize_filename(attachment.filename);
+				
+				strcpy(attachment.url, url);
+				
+				module.attachments.items[module.attachments.offset++] = attachment;
+			} else if (!json_is_null(obj)) {
+				return UERR_JSON_NON_MATCHING_TYPE;
+			}
+		}
+		
+		obj = json_object_get(data, "videos");
 		
 		if (obj == NULL) {
 			return UERR_JSON_MISSING_REQUIRED_KEY;
@@ -646,15 +704,21 @@ int estrategia_get_modules(
 			strcpy(page.id, sid);
 			strcpy(page.name, name);
 			
-			page.attachments.size = sizeof(struct Attachment) * 3;
+			const char* const keys[] = {
+				"resumo",
+				"slide",
+				"mapa_mental"
+			};
+			
+			page.attachments.size = sizeof(struct Attachment) * (sizeof(keys) / sizeof(*keys));
 			page.attachments.items = malloc(page.attachments.size);
 			
 			if (page.attachments.items == NULL) {
 				return UERR_MEMORY_ALLOCATE_FAILURE;
 			}
 			
-			for (size_t index = 0; index < (sizeof(PAGE_ATTACHMENT_KEYS) / sizeof(*PAGE_ATTACHMENT_KEYS)); index++) {
-				const char* const key = PAGE_ATTACHMENT_KEYS[index];
+			for (size_t index = 0; index < (sizeof(keys) / sizeof(*keys)); index++) {
+				const char* const key = keys[index];
 				
 				const json_t* obj = json_object_get(subitem, key);
 				

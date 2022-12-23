@@ -757,6 +757,83 @@ int main(void) {
 			
 			json_t* pages = json_array();
 			
+			curl_easy_setopt(curl_easy, CURLOPT_TIMEOUT, 0L);
+			curl_easy_setopt(curl_easy, CURLOPT_XFERINFOFUNCTION, curl_progress_cb);
+			
+			int suffix = 0;
+			
+			for (size_t index = 0; index < module->attachments.offset; index++) {
+				struct Attachment* attachment = &module->attachments.items[index];
+				
+				const char* const extension = get_file_extension(attachment->filename);
+				suffix++;
+				
+				char attachment_filename[strlen(module_directory) + strlen(PATH_SEPARATOR) + (kof ? strlen(attachment->filename) : strlen(module->id) + intlen(suffix) + strlen(DOT) + strlen(extension)) + 1];
+				strcpy(attachment_filename, module_directory);
+				strcat(attachment_filename, PATH_SEPARATOR);
+				
+				if (kof) {
+					strcat(attachment_filename, attachment->filename);
+				} else {
+					strcat(attachment_filename, module->id);
+					
+					char value[intlen(suffix) + 1];
+					snprintf(value, sizeof(value), "%i", suffix);
+					
+					strcat(attachment_filename, value);
+					strcat(attachment_filename, DOT);
+					strcat(attachment_filename, extension);
+					
+					normalize_filename(basename(attachment_filename));
+				}
+				
+				json_t* content = json_object();
+				json_object_set_new(content, "type", json_string("file"));
+				json_object_set_new(content, "name", json_string(attachment->filename));
+				json_object_set_new(content, "path", json_string(attachment_filename));
+				
+				json_array_append_new(pages, content);
+				
+				if (!file_exists(attachment_filename)) {
+					fprintf(stderr, "- O arquivo '%s' não existe, ele será baixado\r\n", attachment_filename);
+					printf("+ Baixando de '%s' para '%s'\r\n", attachment->url, attachment_filename);
+					
+					struct FStream* const stream = fstream_open(attachment_filename, "wb");
+					
+					if (stream == NULL) {
+						fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o arquivo em '%s': %s\r\n", attachment_filename, strerror(errno));
+						return EXIT_FAILURE;
+					}
+					
+					curl_easy_setopt(curl_easy, CURLOPT_NOPROGRESS, 0L);
+					curl_easy_setopt(curl_easy, CURLOPT_URL, attachment->url);
+					curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_file_cb);
+					curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, (void*) stream);
+					curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 1L);
+					
+					const CURLcode code = curl_easy_perform(curl_easy);
+					
+					printf("\n");
+					
+					fstream_close(stream);
+					
+					if (code != CURLE_OK) {
+						remove_file(attachment_filename);
+						
+						fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar conectar com o servidor em '%s': %s\r\n", attachment->url, curl_easy_strerror(code));
+						return EXIT_FAILURE;
+					}
+				}
+			}
+			
+			curl_easy_setopt(curl_easy, CURLOPT_URL, NULL);
+			curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, NULL);
+			curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, NULL);
+			curl_easy_setopt(curl_easy, CURLOPT_NOPROGRESS, 1L);
+			curl_easy_setopt(curl_easy, CURLOPT_TIMEOUT, 60L);
+			curl_easy_setopt(curl_easy, CURLOPT_XFERINFOFUNCTION, NULL);
+			curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 0L);
+			
 			if (!directory_exists(module_directory)) {
 				fprintf(stderr, "- O diretório '%s' não existe, criando-o\r\n", module_directory);
 				
@@ -780,9 +857,15 @@ int main(void) {
 				
 				const int code = (*methods.get_page)(&credentials, resource, page);
 				
-				if (!(code == UERR_NOT_IMPLEMENTED || code == UERR_SUCCESS)) {
-					fprintf(stderr, "- Ocorreu uma falha inesperada: %s\r\n", strurr(code));
-					return EXIT_FAILURE;
+				switch (code) {
+					case UERR_SUCCESS:
+						break;
+					case UERR_NOT_IMPLEMENTED:
+						fprintf(stderr, "- As informações sobre esta página já foram obtidas anteriormente, pulando etapa\r\n");
+						break;
+					default:
+						fprintf(stderr, "- Ocorreu uma falha inesperada: %s\r\n", strurr(code));
+						return EXIT_FAILURE;
 				}
 				
 				printf("+ Verificando estado da página '%s'\r\n", page->name);
@@ -806,8 +889,6 @@ int main(void) {
 						return EXIT_FAILURE;
 					}
 				}
-				
-				int suffix = 0;
 				
 				if (page->document.content != NULL) {
 					const char* const extension = get_file_extension(page->document.filename);
@@ -833,6 +914,7 @@ int main(void) {
 					}
 					
 					json_t* const content = json_object();
+					json_object_set_new(content, "type", json_string("file"));
 					json_object_set_new(content, "name", json_string(page->document.filename));
 					json_object_set_new(content, "path", json_string(document_filename));
 					
@@ -887,6 +969,7 @@ int main(void) {
 					}
 					
 					json_t* const content = json_object();
+					json_object_set_new(content, "type", json_string("file"));
 					json_object_set_new(content, "name", json_string(media->video.filename));
 					json_object_set_new(content, "path", json_string(media_filename));
 					
@@ -1060,6 +1143,7 @@ int main(void) {
 					}
 					
 					json_t* content = json_object();
+					json_object_set_new(content, "type", json_string("file"));
 					json_object_set_new(content, "name", json_string(attachment->filename));
 					json_object_set_new(content, "path", json_string(attachment_filename));
 					
@@ -1090,11 +1174,9 @@ int main(void) {
 						
 						if (code != CURLE_OK) {
 							remove_file(attachment_filename);
-							fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar conectar com o servidor em '%s': %s\r\n", attachment->url, curl_easy_strerror(code));
 							
-							if (code != CURLE_HTTP_RETURNED_ERROR) {
-								return EXIT_FAILURE;
-							}
+							fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar conectar com o servidor em '%s': %s\r\n", attachment->url, curl_easy_strerror(code));
+							return EXIT_FAILURE;
 						}
 					}
 				}
@@ -1108,6 +1190,7 @@ int main(void) {
 				curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 0L);
 				
 				json_t* tree = json_object();
+				json_object_set_new(tree, "type", json_string("directory"));
 				json_object_set_new(tree, "name", json_string(page->name));
 				json_object_set_new(tree, "path", json_string(page_directory));
 				json_object_set_new(tree, "items", items);
@@ -1116,6 +1199,7 @@ int main(void) {
 			}
 			
 			json_auto_t* tree = json_object();
+			json_object_set_new(tree, "type", json_string("directory"));
 			json_object_set_new(tree, "name", json_string(module->name));
 			json_object_set_new(tree, "path", json_string(module_directory));
 			json_object_set_new(tree, "items", pages);
@@ -1232,36 +1316,38 @@ int main(void) {
 				
 				fstream_write(stream, HTML_UL_START, strlen(HTML_UL_START));
 				
-				size_t index = 0;
-				const json_t* content = NULL;
-				
 				const json_t* contents = json_object_get(page, "items");
 				
-				json_array_foreach(contents, index, content) {
-					const json_t* obj = json_object_get(content, "name");
-					const char* const name = json_string_value(obj);
+				if (contents != NULL) {
+					size_t index = 0;
+					const json_t* content = NULL;
 					
-					obj = json_object_get(content, "path");
-					const char* const path = json_string_value(obj);
-					
-					char uri[strlen(FILE_SCHEME) + strlen(directory) + 1];
-					strcpy(uri, FILE_SCHEME);
-					strcat(uri, path);
-					
-					fstream_write(stream, HTML_LI_START, strlen(HTML_LI_START));
-					
-					fstream_write(stream, HTML_A_START, strlen(HTML_A_START));
-					fstream_write(stream, SPACE, strlen(SPACE));
-					fstream_write(stream, HTML_HREF_ATTRIBUTE, strlen(HTML_HREF_ATTRIBUTE));
-					fstream_write(stream, EQUAL, strlen(EQUAL));
-					fstream_write(stream, QUOTATION_MARK, strlen(QUOTATION_MARK));
-					fstream_write(stream, uri, strlen(uri));
-					fstream_write(stream, QUOTATION_MARK, strlen(QUOTATION_MARK));
-					fstream_write(stream, GREATER_THAN, strlen(GREATER_THAN));
-					fstream_write(stream, name, strlen(name));
-					fstream_write(stream, HTML_A_END, strlen(HTML_A_END));
-					
-					fstream_write(stream, HTML_LI_END, strlen(HTML_LI_END));
+					json_array_foreach(contents, index, content) {
+						const json_t* obj = json_object_get(content, "name");
+						const char* const name = json_string_value(obj);
+						
+						obj = json_object_get(content, "path");
+						const char* const path = json_string_value(obj);
+						
+						char uri[strlen(FILE_SCHEME) + strlen(directory) + 1];
+						strcpy(uri, FILE_SCHEME);
+						strcat(uri, path);
+						
+						fstream_write(stream, HTML_LI_START, strlen(HTML_LI_START));
+						
+						fstream_write(stream, HTML_A_START, strlen(HTML_A_START));
+						fstream_write(stream, SPACE, strlen(SPACE));
+						fstream_write(stream, HTML_HREF_ATTRIBUTE, strlen(HTML_HREF_ATTRIBUTE));
+						fstream_write(stream, EQUAL, strlen(EQUAL));
+						fstream_write(stream, QUOTATION_MARK, strlen(QUOTATION_MARK));
+						fstream_write(stream, uri, strlen(uri));
+						fstream_write(stream, QUOTATION_MARK, strlen(QUOTATION_MARK));
+						fstream_write(stream, GREATER_THAN, strlen(GREATER_THAN));
+						fstream_write(stream, name, strlen(name));
+						fstream_write(stream, HTML_A_END, strlen(HTML_A_END));
+						
+						fstream_write(stream, HTML_LI_END, strlen(HTML_LI_END));
+					}
 				}
 				
 				fstream_write(stream, HTML_LI_END, strlen(HTML_LI_END));

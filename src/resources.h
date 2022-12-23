@@ -63,7 +63,7 @@ struct Module {
 	char* id;
 	char* name;
 	int is_locked;
-	struct Attachment attachment;
+	struct Attachments attachments;
 	struct Pages pages;
 };
 

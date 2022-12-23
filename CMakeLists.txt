@@ -10,6 +10,10 @@ project(
 
 option(SPARKLEC_ENABLE_LTO "Turn on compiler Link Time Optimizations" OFF)
 
+option(SPARKLEC_DISABLE_HOTMART "Disable support for Hotmart" OFF)
+option(SPARKLEC_DISABLE_ESTRATEGIA "Disable support for Estratégia Concursos" OFF)
+option(SPARKLEC_DISABLE_CYBERCLASS "Disable support for CyberClass" OFF)
+
 set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
 
 # curl
@@ -390,7 +394,6 @@ add_executable(
 	src/cleanup.c
 	src/curl.c
 	src/errors.c
-	src/hotmart.c
 	src/html.c
 	src/m3u8.c
 	src/main.c
@@ -402,9 +405,49 @@ add_executable(
 	src/fstream.c
 	src/credentials.c
 	src/input.c
-	src/estrategia.c
-	src/cyberclass.c
 )
+
+if (SPARKLEC_DISABLE_HOTMART)
+	target_compile_definitions(
+		sparklec
+		PRIVATE
+		SPARKLEC_DISABLE_HOTMART
+	)
+else()
+	target_sources(
+		sparklec
+		PRIVATE
+		src/hotmart.c
+	)
+endif()
+
+if (SPARKLEC_DISABLE_ESTRATEGIA)
+	target_compile_definitions(
+		sparklec
+		PRIVATE
+		SPARKLEC_DISABLE_ESTRATEGIA
+	)
+else()
+	target_sources(
+		sparklec
+		PRIVATE
+		src/estrategia.c
+	)
+endif()
+
+if (SPARKLEC_DISABLE_CYBERCLASS)
+	target_compile_definitions(
+		sparklec
+		PRIVATE
+		SPARKLEC_DISABLE_CYBERCLASS
+	)
+else()
+	target_sources(
+		sparklec
+		PRIVATE
+		src/cyberclass.c
+	)
+endif()
 
 target_compile_options(
 	sparklec

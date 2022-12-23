@@ -378,16 +378,19 @@ int main(void) {
 		return EXIT_FAILURE;
 	}
 	
+	if (PROVIDERS_NUM < 1) {
+		fprintf(stderr, "- Todos os módulos deste programa estão desativados!\r\n");
+		return EXIT_FAILURE;
+	}
+	
 	printf("+ Selecione o seu provedor de serviços:\r\n\r\n");
 	
-	const size_t total_providers = sizeof(PROVIDERS) / sizeof(*PROVIDERS);
-	
-	for (size_t index = 0; index < total_providers; index++) {
+	for (size_t index = 0; index < PROVIDERS_NUM; index++) {
 		const struct Provider provider = PROVIDERS[index];
 		printf("%zu. \r\nNome: %s\r\nURL: %s\r\n\r\n", index + 1, provider.label, provider.url);
 	}
 	
-	int value = input_integer(1, (int) total_providers);
+	int value = input_integer(1, (int) PROVIDERS_NUM);
 	
 	const struct Provider provider = PROVIDERS[value - 1];
 	const struct ProviderMethods methods = provider.methods;

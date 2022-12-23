@@ -1,7 +1,16 @@
 #include "resources.h"
-#include "hotmart.h"
-#include "estrategia.h"
-#include "cyberclass.h"
+
+#ifndef SPARKLEC_DISABLE_HOTMART
+	#include "hotmart.h"
+#endif
+
+#ifndef SPARKLEC_DISABLE_ESTRATEGIA
+	#include "estrategia.h"
+#endif
+
+#ifndef SPARKLEC_DISABLE_CYBERCLASS
+	#include "cyberclass.h"
+#endif
 
 struct ProviderMethods {
 	int (*authorize)(const char* const, const char* const, struct Credentials* const);
@@ -17,6 +26,7 @@ struct Provider {
 };
 
 static const struct Provider PROVIDERS[] = {
+#ifndef SPARKLEC_DISABLE_HOTMART
 	{
 		.label = "Hotmart",
 		.url = "https://hotmart.com/pt-br",
@@ -27,6 +37,8 @@ static const struct Provider PROVIDERS[] = {
 			.get_page = &hotmart_get_page
 		}
 	},
+#endif
+#ifndef SPARKLEC_DISABLE_ESTRATEGIA
 	{
 		.label = "Estratégia Concursos",
 		.url = "https://www.estrategiaconcursos.com.br",
@@ -37,6 +49,8 @@ static const struct Provider PROVIDERS[] = {
 			.get_page = &estrategia_get_page
 		}
 	},
+#endif
+#ifndef SPARKLEC_DISABLE_CYBERCLASS
 	{
 		.label = "CyberClass",
 		.url = "https://www.cyberclass.com.br",
@@ -47,6 +61,9 @@ static const struct Provider PROVIDERS[] = {
 			.get_page = &cyberclass_get_page
 		}
 	}
+#endif
 };
+
+#define PROVIDERS_NUM (sizeof(PROVIDERS) / sizeof(*PROVIDERS))
 
 #pragma once

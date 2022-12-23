@@ -29,6 +29,7 @@ static const char KEY_FILE_EXTENSION[] = "key";
 static const char HTML_FILE_EXTENSION[] = "html";
 static const char JSON_FILE_EXTENSION[] = "json";
 static const char PDF_FILE_EXTENSION[] = "pdf";
+static const char MP3_FILE_EXTENSION[] = "mp3";
 
 static const char HTML_HEADER_START[] = 
 	"<!DOCTYPE html>"

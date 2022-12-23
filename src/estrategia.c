@@ -707,7 +707,8 @@ int estrategia_get_modules(
 			const char* const keys[] = {
 				"resumo",
 				"slide",
-				"mapa_mental"
+				"mapa_mental",
+				"audio"
 			};
 			
 			page.attachments.size = sizeof(struct Attachment) * (sizeof(keys) / sizeof(*keys));
@@ -737,10 +738,14 @@ int estrategia_get_modules(
 						name = "Slide";
 					} else if (strcmp(key, "mapa_mental") == 0) {
 						name = "Mapa mental";
+					} else if (strcmp(key, "audio") == 0) {
+						name = "Versão em áudio";
 					}
 					
+					const char* const file_extension = (strcmp(key, "audio") == 0) ? MP3_FILE_EXTENSION : PDF_FILE_EXTENSION;
+					
 					struct Attachment attachment = {
-						.filename = malloc(strlen(name) + strlen(DOT) + strlen(PDF_FILE_EXTENSION) + 1),
+						.filename = malloc(strlen(name) + strlen(DOT) + strlen(file_extension) + 1),
 						.url = malloc(strlen(url) + 1)
 					};
 					
@@ -750,7 +755,7 @@ int estrategia_get_modules(
 					
 					strcpy(attachment.filename, name);
 					strcat(attachment.filename, DOT);
-					strcat(attachment.filename, PDF_FILE_EXTENSION);
+					strcat(attachment.filename, file_extension);
 					
 					normalize_filename(attachment.filename);
 					

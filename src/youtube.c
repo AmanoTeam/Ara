@@ -40,6 +40,10 @@ int youtube_parse(
 	const char* const referer
 ) {
 	
+	(void) resource;
+	(void) page;
+	(void) referer;
+	
 	CURL* const curl_easy = get_global_curl_easy();
 	
 	CURLU* cu __attribute__((__cleanup__(curlupp_free))) = curl_url();

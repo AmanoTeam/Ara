@@ -397,8 +397,6 @@ int estrategia_get_resources(
 			
 			const char* const name = json_string_value(obj);
 			
-			char url[strlen(ESTRATEGIA_COURSE_HOMEPAGE) + strlen(SLASH) + strlen(sid) + strlen(AULAS) + 1];
-			
 			struct Resource resource = {
 				.id = malloc(strlen(sid) + 1),
 				.name = malloc(strlen(name) + 1),

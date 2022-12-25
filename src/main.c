@@ -378,11 +378,6 @@ int main(void) {
 		return EXIT_FAILURE;
 	}
 	
-	if (PROVIDERS_NUM < 1) {
-		fprintf(stderr, "- Todos os módulos deste programa estão desativados!\r\n");
-		return EXIT_FAILURE;
-	}
-	
 	printf("+ Selecione o seu provedor de serviços:\r\n\r\n");
 	
 	for (size_t index = 0; index < PROVIDERS_NUM; index++) {
@@ -454,7 +449,7 @@ int main(void) {
 		
 		const ssize_t rsize = fstream_read(stream, buffer, sizeof(buffer));
 		
-		if (rsize != sizeof(buffer)) {
+		if ((size_t) rsize != sizeof(buffer)) {
 			return UERR_FSTREAM_FAILURE;
 		}
 		

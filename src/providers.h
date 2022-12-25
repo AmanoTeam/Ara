@@ -66,4 +66,8 @@ static const struct Provider PROVIDERS[] = {
 
 #define PROVIDERS_NUM (sizeof(PROVIDERS) / sizeof(*PROVIDERS))
 
+#if PROVIDERS_NUM < 1
+	#error PROVIDERS_NUM should be greater than 0
+#endif
+
 #pragma once

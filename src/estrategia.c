@@ -31,29 +31,35 @@ static const char HTTP_AUTHENTICATION_BEARER[] = "Bearer";
 
 static const char CONTENT_TYPE_JSON[] = "application/json";
 
-#define ESTRATEGIA_API_PREFIX "https://api.estrategiaconcursos.com.br"
-#define ESTRATEGIA_ACCOUNTS_API_PREFIX "https://api.accounts.estrategia.com"
-#define ESTRATEGIA_HOMEPAGE_PREFIX "https://www.estrategiaconcursos.com.br"
+#define ESTRATEGIA_API_ENDPOINT "https://api.estrategiaconcursos.com.br"
+#define ESTRATEGIA_ACCOUNTS_API_ENDPOINT "https://api.accounts.estrategia.com"
+#define ESTRATEGIA_HOMEPAGE_ENDPOINT "https://www.estrategiaconcursos.com.br"
 
 static const char ESTRATEGIA_LOGIN_ENDPOINT[] = 
-	ESTRATEGIA_ACCOUNTS_API_PREFIX
+	ESTRATEGIA_ACCOUNTS_API_ENDPOINT
 	"/auth/login";
 
 static const char ESTRATEGIA_LOGIN2_ENDPOINT[] = 
-	ESTRATEGIA_HOMEPAGE_PREFIX
+	ESTRATEGIA_HOMEPAGE_ENDPOINT
 	"/accounts/login";
 
 static const char ESTRATEGIA_TOKEN_ENDPOINT[] = 
-	ESTRATEGIA_HOMEPAGE_PREFIX
+	ESTRATEGIA_HOMEPAGE_ENDPOINT
 	"/oauth/token";
 
 static const char ESTRATEGIA_COURSE_ENDPOINT[] = 
-	ESTRATEGIA_API_PREFIX
+	ESTRATEGIA_API_ENDPOINT
 	"/api/aluno/curso";
 
 static const char ESTRATEGIA_LESSON_ENDPOINT[] = 
-	ESTRATEGIA_API_PREFIX
+	ESTRATEGIA_API_ENDPOINT
 	"/api/aluno/aula";
+
+static const char ESTRATEGIA_COURSE_HOMEPAGE[] = 
+	ESTRATEGIA_HOMEPAGE_ENDPOINT
+	"/app/dashboard/cursos";
+
+static const char AULAS[] = "aulas";
 
 int estrategia_authorize(
 	const char* const username,
@@ -323,7 +329,19 @@ int estrategia_get_resources(
 			return UERR_JSON_NON_MATCHING_TYPE;
 		}
 		
-		const json_t* obj = json_object_get(item, "cursos");
+		const json_t* obj = json_object_get(item, "titulo");
+		
+		if (obj == NULL) {
+			return UERR_JSON_MISSING_REQUIRED_KEY;
+		}
+		
+		if (!json_is_string(obj)) {
+			return UERR_JSON_NON_MATCHING_TYPE;
+		}
+		
+		const char* const qualification = json_string_value(obj);
+		
+		obj = json_object_get(item, "cursos");
 		
 		if (obj == NULL) {
 			return UERR_JSON_MISSING_REQUIRED_KEY;
@@ -379,17 +397,28 @@ int estrategia_get_resources(
 			
 			const char* const name = json_string_value(obj);
 			
+			char url[strlen(ESTRATEGIA_COURSE_HOMEPAGE) + strlen(SLASH) + strlen(sid) + strlen(AULAS) + 1];
+			
 			struct Resource resource = {
 				.id = malloc(strlen(sid) + 1),
-				.name = malloc(strlen(name) + 1)
+				.name = malloc(strlen(name) + 1),
+				.qualification = malloc(strlen(qualification) + 1),
+				.url = malloc(strlen(ESTRATEGIA_COURSE_HOMEPAGE) + strlen(SLASH) + strlen(sid) + strlen(SLASH) + strlen(AULAS) + 1)
 			};
 			
-			if (resource.id == NULL || resource.name == NULL) {
+			if (resource.id == NULL || resource.name == NULL || resource.qualification == NULL) {
 				return UERR_MEMORY_ALLOCATE_FAILURE;
 			}
 			
 			strcpy(resource.id, sid);
 			strcpy(resource.name, name);
+			strcpy(resource.qualification, qualification);
+			
+			strcpy(resource.url, ESTRATEGIA_COURSE_HOMEPAGE);
+			strcat(resource.url, SLASH);
+			strcat(resource.url, sid);
+			strcat(resource.url, SLASH);
+			strcat(resource.url, AULAS);
 			
 			resources->items[resources->offset++] = resource;
 		}

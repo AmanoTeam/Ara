@@ -373,15 +373,20 @@ int hotmart_get_resources(
 		
 		struct Resource resource = {
 			.id = malloc(strlen(id) + 1),
-			.name = malloc(strlen(name) + 1)
+			.name = malloc(strlen(name) + 1),
+			.url = malloc(strlen(HTTPS_SCHEME) + strlen(id) + strlen(HOTMART_CLUB_SUFFIX) + 1)
 		};
 		
-		if (resource.name == NULL || resource.id == NULL) {
+		if (resource.id == NULL || resource.name == NULL || resource.url == NULL) {
 			return UERR_MEMORY_ALLOCATE_FAILURE;
 		}
 		
 		strcpy(resource.id, id);
 		strcpy(resource.name, name);
+		
+		strcpy(resource.url, HTTPS_SCHEME);
+		strcat(resource.url, id);
+		strcat(resource.url, HOTMART_CLUB_SUFFIX);
 		
 		resources->items[resources->offset++] = resource;
 	}
@@ -1102,10 +1107,9 @@ int hotmart_get_page(
 			struct Media media = {0};
 			
 			if (memcmp(url, VIMEO_URL_PATTERN, strlen(VIMEO_URL_PATTERN)) == 0) {
-				char referer[strlen(HTTPS_SCHEME) + strlen(resource->id) + strlen(HOTMART_CLUB_SUFFIX) + strlen(HOTMART_EMBED_PAGE_PREFIX) + strlen(page->id) + 1];
-				strcpy(referer, HTTPS_SCHEME);
-				strcat(referer, resource->id);
-				strcat(referer, HOTMART_CLUB_SUFFIX);
+				char referer[strlen(resource->url) + strlen(SLASH) + strlen(HOTMART_EMBED_PAGE_PREFIX) + strlen(page->id) + 1];
+				strcpy(referer, resource->url);
+				strcat(referer, SLASH);
 				strcat(referer, HOTMART_EMBED_PAGE_PREFIX);
 				strcat(referer, page->id);
 				

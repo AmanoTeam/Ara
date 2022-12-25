@@ -619,7 +619,7 @@ int main(void) {
 		}
 	}
 	
-	printf("+ Obtendo lista de produtos\r\n");
+	printf("+ Consultando lista de conteúdos\r\n");
 	
 	struct Resources resources = {0};
 	
@@ -635,13 +635,18 @@ int main(void) {
 		return EXIT_FAILURE;
 	}
 	
+	if (resources.offset < 1) {
+		fprintf(stderr, "- Não foram encontrados conteúdos disponíveis para baixar!\r\n");
+		return EXIT_FAILURE;
+	}
+	
 	printf("+ Selecione o que deseja baixar:\r\n\r\n");
 	
-	printf("0.\r\nTodos os produtos disponíveis\r\n\r\n");
+	printf("0.\r\nTodos os conteúdos disponíveis\r\n\r\n");
 	
 	for (size_t index = 0; index < resources.offset; index++) {
 		const struct Resource* resource = &resources.items[index];
-		printf("%zu. \r\nNome: %s\r\n\r\n", index + 1, resource->name);
+		printf("%zu. \r\nNome: %s\r\nQualificação: %s\r\nURL: %s\r\n\r\n", index + 1, resource->name, resource->qualification == NULL ? "N/A" : resource->qualification, resource->url);
 	}
 	
 	const int answer = input_integer(0, (int) resources.offset);
@@ -864,7 +869,7 @@ int main(void) {
 					case UERR_SUCCESS:
 						break;
 					case UERR_NOT_IMPLEMENTED:
-						fprintf(stderr, "- As informações sobre esta página já foram obtidas anteriormente, pulando etapa\r\n");
+						fprintf(stderr, "- As informações sobre esta página já foram obtidas, pulando etapa\r\n");
 						break;
 					default:
 						fprintf(stderr, "- Ocorreu uma falha inesperada: %s\r\n", strurr(code));

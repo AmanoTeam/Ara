@@ -76,6 +76,8 @@ struct Modules {
 struct Resource {
 	char* id;
 	char* name;
+	char* qualification;
+	char* url;
 	struct Modules modules;
 };
 

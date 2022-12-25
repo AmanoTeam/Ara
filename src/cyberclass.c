@@ -33,23 +33,24 @@ static const char CONTENT_TYPE_JSON[] = "application/json";
 
 static const char COURSES[] = "courses";
 
-#define CYBERCLASS_API_PREFIX "https://api.cyberclass.com.br/api/v1"
+#define CYBERCLASS_HOMEPAGE_ENDPOINT "https://www.cyberclass.com.br"
+#define CYBERCLASS_API_ENDPOINT "https://api.cyberclass.com.br/api/v1"
 
 static const char CYBERCLASS_LOGIN_ENDPOINT[] = 
-	CYBERCLASS_API_PREFIX
+	CYBERCLASS_API_ENDPOINT
 	"/auth/login";
 
-static const char CYBERCLASS_ONGOING_COURSES_ENDPOINT[] = 
-	CYBERCLASS_API_PREFIX
-	"/users/me/courses/ongoing";
-
 static const char CYBERCLASS_COURSE_CATEGORIES_ENDPOINT[] = 
-	CYBERCLASS_API_PREFIX
+	CYBERCLASS_API_ENDPOINT
 	"/course-categories";
 
 static const char CYBERCLASS_COURSE_ENDPOINT[] = 
-	CYBERCLASS_API_PREFIX
+	CYBERCLASS_API_ENDPOINT
 	"/courses";
+
+static const char CYBERCLASS_COURSE_HOMEPAGE[] = 
+	CYBERCLASS_HOMEPAGE_ENDPOINT
+	"/curso";
 
 static const char VIMEO_PLAYER_PREFIX[] = "https://player.vimeo.com/video";
 
@@ -428,17 +429,36 @@ int cyberclass_get_resources(
 				
 				const char* const name = json_string_value(obj);
 				
+				obj = json_object_get(item, "slug");
+				
+				if (obj == NULL) {
+					return UERR_JSON_MISSING_REQUIRED_KEY;
+				}
+				
+				if (!json_is_string(obj)) {
+					return UERR_JSON_NON_MATCHING_TYPE;
+				}
+				
+				const char* const slug = json_string_value(obj);
+				
 				struct Resource resource = {
 					.id = malloc(strlen(sid) + 1),
-					.name = malloc(strlen(name) + 1)
+					.name = malloc(strlen(name) + 1),
+					.url = malloc(strlen(CYBERCLASS_COURSE_HOMEPAGE) + strlen(SLASH) + strlen(sid) + strlen(HYPHEN) + strlen(slug) + 1)
 				};
 				
-				if (resource.id == NULL || resource.name == NULL) {
+				if (resource.id == NULL || resource.name == NULL || resource.url == NULL) {
 					return UERR_MEMORY_ALLOCATE_FAILURE;
 				}
 				
 				strcpy(resource.id, sid);
 				strcpy(resource.name, name);
+				
+				strcpy(resource.url, CYBERCLASS_COURSE_HOMEPAGE);
+				strcat(resource.url, SLASH);
+				strcat(resource.url, sid);
+				strcat(resource.url, HYPHEN);
+				strcat(resource.url, slug);
 				
 				resources->items[resources->offset++] = resource;
 			}
@@ -549,23 +569,7 @@ int cyberclass_get_modules(
 		return UERR_JSON_NON_MATCHING_TYPE;
 	}
 	
-	const json_t* obj = json_object_get(data, "url");
-	
-	if (obj == NULL) {
-		return UERR_JSON_MISSING_REQUIRED_KEY;
-	}
-	
-	if (!json_is_string(obj)) {
-		return UERR_JSON_NON_MATCHING_TYPE;
-	}
-	
-	const char* const location = json_string_value(obj);
-	
-	char course_homepage[strlen(CYBERCLASS_HOMEPAGE) + strlen(location) + 1];
-	strcpy(course_homepage, CYBERCLASS_HOMEPAGE);
-	strcat(course_homepage, location);
-	
-	obj = json_object_get(data, "course_modules");
+	const json_t* obj = json_object_get(data, "course_modules");
 	
 	if (obj == NULL) {
 		return UERR_JSON_MISSING_REQUIRED_KEY;
@@ -741,6 +745,8 @@ int cyberclass_get_modules(
 				return UERR_MEMORY_ALLOCATE_FAILURE;
 			}
 			
+			curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, NULL);
+			
 			if (strcmp(video_provider, "vimeo") == 0) {
 				char url[strlen(VIMEO_PLAYER_PREFIX) + strlen(SLASH) + strlen(video_code) + 1];
 				strcpy(url, VIMEO_PLAYER_PREFIX);
@@ -748,7 +754,7 @@ int cyberclass_get_modules(
 				strcat(url, video_code);
 				
 				struct Media media = {0};
-				const int code = vimeo_parse(url, resource, &page, &media, course_homepage);
+				const int code = vimeo_parse(url, resource, &page, &media, resource->url);
 				
 				if (!(code == UERR_SUCCESS || code == UERR_NO_STREAMS_AVAILABLE)) {
 					return code;
@@ -758,6 +764,8 @@ int cyberclass_get_modules(
 			} else {
 				return UERR_UNSUPPORTED_MEDIA_PROVIDER;
 			}
+			
+			curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, list);
 			
 			module.pages.items[module.pages.offset++] = page;
 		}

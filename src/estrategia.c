@@ -341,6 +341,11 @@ int estrategia_get_resources(
 		
 		const char* const qualification = json_string_value(obj);
 		
+		const int value = hashs(qualification);
+		
+		char qualification_id[intlen(value) + 1];
+		snprintf(qualification_id, sizeof(qualification_id), "%i", value);
+		
 		obj = json_object_get(item, "cursos");
 		
 		if (obj == NULL) {
@@ -400,17 +405,22 @@ int estrategia_get_resources(
 			struct Resource resource = {
 				.id = malloc(strlen(sid) + 1),
 				.name = malloc(strlen(name) + 1),
-				.qualification = malloc(strlen(qualification) + 1),
+				.qualification = {
+					.id = malloc(strlen(qualification_id) + 1),
+					.name = malloc(strlen(qualification) + 1)
+				},
 				.url = malloc(strlen(ESTRATEGIA_COURSE_HOMEPAGE) + strlen(SLASH) + strlen(sid) + strlen(SLASH) + strlen(AULAS) + 1)
 			};
 			
-			if (resource.id == NULL || resource.name == NULL || resource.qualification == NULL) {
+			if (resource.id == NULL || resource.name == NULL || resource.qualification.id == NULL || resource.qualification.name == NULL) {
 				return UERR_MEMORY_ALLOCATE_FAILURE;
 			}
 			
 			strcpy(resource.id, sid);
 			strcpy(resource.name, name);
-			strcpy(resource.qualification, qualification);
+			
+			strcpy(resource.qualification.id, qualification_id);
+			strcpy(resource.qualification.name, qualification);
 			
 			strcpy(resource.url, ESTRATEGIA_COURSE_HOMEPAGE);
 			strcat(resource.url, SLASH);

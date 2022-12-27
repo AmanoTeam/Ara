@@ -516,10 +516,10 @@ int main(void) {
 		
 		if (value == 0) {
 			char username[MAX_INPUT_SIZE] = {'\0'};
-			get_username(username);
+			input("> Insira seu usuário: ", username);
 			
 			char password[MAX_INPUT_SIZE] = {'\0'};
-			get_password(password);
+			input("> Insira sua senha: ", password);
 			
 			const int code = (*methods.authorize)(username, password, &credentials);
 			
@@ -563,10 +563,10 @@ int main(void) {
 		}
 	} else {
 		char username[MAX_INPUT_SIZE] = {'\0'};
-		get_username(username);
+		input("> Insira seu usuário: ", username);
 		
 		char password[MAX_INPUT_SIZE] = {'\0'};
-		get_password(password);
+		input("> Insira sua senha: ", password);
 		
 		const int code = (*methods.authorize)(username, password, &credentials);
 		
@@ -614,7 +614,7 @@ int main(void) {
 		}
 	}
 	
-	printf("+ Consultando lista de conteúdos\r\n");
+	printf("+ Obtendo lista de conteúdos disponíveis\r\n");
 	
 	struct Resources resources = {0};
 	
@@ -637,14 +637,160 @@ int main(void) {
 	
 	printf("+ Selecione o que deseja baixar:\r\n\r\n");
 	
-	printf("0.\r\nTodos os conteúdos disponíveis\r\n\r\n");
-	
 	for (size_t index = 0; index < resources.offset; index++) {
 		const struct Resource* resource = &resources.items[index];
-		printf("%zu. \r\nNome: %s\r\nQualificação: %s\r\nURL: %s\r\n\r\n", index + 1, resource->name, resource->qualification == NULL ? "N/A" : resource->qualification, resource->url);
+		printf("%zu. \r\nNome: %s\r\nQualificação: %s\r\nURL: %s\r\n\r\n", index + 1, resource->name, resource->qualification.name == NULL ? "N/A" : resource->qualification.name, resource->url);
 	}
 	
-	const int answer = input_integer(0, (int) resources.offset);
+	struct Resource download_queue[resources.offset];
+	size_t queue_count = 0;
+	
+	while (1) {
+		if (queue_count > 0) {
+			queue_count = 0;
+		}
+		
+		char query[MAX_INPUT_SIZE] = {'\0'};
+		input("> Digite sua escolha: ", query);
+		
+		const char* start = query;
+		int err = 0;
+		
+		for (size_t index = 0; index < strlen(query) + 1; index++) {
+			const char* const ch = &query[index];
+			
+			if (!(*ch == *COMMA || (*ch == '\0' && index > 0))) {
+				continue;
+			}
+			
+			const size_t size = (size_t) (ch - start);
+			
+			if (size < 1) {
+				fprintf(stderr, "- Não podem haver valores vazios dentre as escolhas!\r\n");
+				err = 1;
+				break;
+			}
+			
+			char value[size + 1];
+			memcpy(value, start, size);
+			value[size] = '\0';
+			
+			const char* hyphen = strstr(value, HYPHEN);
+			
+			if (hyphen == NULL) {
+				 if (!isnumeric(value)) {
+					fprintf(stderr, "- O valor inserido é inválido ou não reconhecido!\r\n");
+					err = 1;
+					break;
+				}
+				
+				const int position = atoi(value);
+				
+				if (position < 1) {
+					fprintf(stderr, "- O valor mínimo de uma escolha deve ser >=1!\r\n");
+					err = 1;
+					break;
+				}
+				
+				if (position > resources.offset) {
+					fprintf(stderr, "- O valor máximo de uma escolha deve ser <=%zu!\r\n", resources.offset);
+					err = 1;
+					break;
+				}
+				
+				struct Resource resource = resources.items[position - 1];
+				
+				for (size_t index = 0; index < queue_count; index++) {
+					const struct Resource subresource = download_queue[index];
+					
+					if (subresource.id == resource.id) {
+						fprintf(stderr, "- Não podem haver conteúdos duplicados dentre as escolhas!\r\n");
+						err = 1;
+						break;
+					}
+				}
+				
+				if (err) {
+					break;
+				}
+				
+				download_queue[queue_count++] = resource;
+			} else {
+				size_t size = (size_t) (hyphen - value);
+				
+				if (size < 1) {
+					fprintf(stderr, "- O valor mínimo é obrigatório para intervalos de seleção!\r\n");
+					err = 1;
+					break;
+				}
+				
+				char mins[size + 1];
+				memcpy(mins, value, size);
+				mins[size] = '\0';
+				
+				const int min = atoi(mins);
+				
+				if (min < 1) {
+					fprintf(stderr, "- O valor mínimo para este intervalo deve ser >=1!\r\n");
+					err = 1;
+					break;
+				}
+				
+				const char* const end = value + (sizeof(value) - 1);
+				hyphen++;
+				
+				size = (size_t) (end - hyphen);
+				
+				if (size < 1) {
+					fprintf(stderr, "- O valor máximo é obrigatório para intervalos de seleção!\r\n");
+					err = 1;
+					break;
+				}
+				
+				char maxs[size + 1];
+				memcpy(maxs, hyphen, size);
+				maxs[size] = '\0';
+				
+				const int max = atoi(maxs);
+				
+				if (max > resources.offset) {
+					fprintf(stderr, "- O valor máximo para este intervalo deve ser <=%zu!\r\n", resources.offset);
+					err = 1;
+					break;
+				}
+				
+				for (size_t index = min; index < (max + 1); index++) {
+					struct Resource resource = resources.items[index - 1];
+					
+					for (size_t index = 0; index < queue_count; index++) {
+						const struct Resource subresource = download_queue[index];
+						
+						if (subresource.id == resource.id) {
+							fprintf(stderr, "- Não podem haver conteúdos duplicados dentre as escolhas!\r\n");
+							err = 1;
+							break;
+						}
+					}
+					
+					if (err) {
+						break;
+					}
+					
+					download_queue[queue_count++] = resource;
+				}
+			}
+			
+			start = (ch + 1);
+		}
+		
+		if (!err) {
+			break;
+		}
+	}
+	
+	if (queue_count > 1) {
+		printf("- %zu conteúdos foram enfileirados para serem baixados\r\n", queue_count);
+	}
 	
 	int kof = 0;
 	
@@ -667,7 +813,7 @@ int main(void) {
 				kof = 0;
 				break;
 			default:
-				fprintf(stderr, "- Opção inválida ou não reconhecida!\r\n");
+				fprintf(stderr, "- O valor inserido é inválido ou não reconhecido!\r\n");
 				continue;
 		}
 		
@@ -675,24 +821,6 @@ int main(void) {
 	}
 	
 	fclose(stdin);
-	
-	struct Resource download_queue[resources.offset];
-	
-	size_t queue_count = 0;
-	
-	if (answer == 0) {
-		for (size_t index = 0; index < sizeof(download_queue) / sizeof(*download_queue); index++) {
-			struct Resource resource = resources.items[index];
-			download_queue[index] = resource;
-			
-			queue_count++;
-		}
-	} else {
-		struct Resource resource = resources.items[answer - 1];
-		*download_queue = resource;
-		
-		queue_count++;
-	}
 	
 	char* cwd = get_current_directory();
 	
@@ -718,14 +846,27 @@ int main(void) {
 		}
 		
 		char directory[(kof ? strlen(resource->name) : strlen(resource->id)) + 1];
-		strcpy(directory, (kof ? resource->name : resource->id));
+		strcpy(directory, kof ? resource->name : resource->id);
 		normalize_filename(directory);
 		
-		char resource_directory[strlen(cwd) + (has_trailing_sep ? 0 : strlen(PATH_SEPARATOR)) + strlen(directory) + 1];
+		char qualification_directory[(resource->qualification.id == NULL ? 0 : strlen(kof ? resource->qualification.name : resource->qualification.id)) + 1];
+		*qualification_directory = '\0';
+		
+		if (resource->qualification.id != NULL) {
+			strcat(qualification_directory, kof ? resource->qualification.name : resource->qualification.id);
+			normalize_filename(qualification_directory);
+		}
+		
+		char resource_directory[strlen(cwd) + (has_trailing_sep ? 0 : strlen(PATH_SEPARATOR)) + (*qualification_directory == '\0' ? 0 : strlen(qualification_directory) + strlen(SLASH)) + strlen(directory) + 1];
 		strcpy(resource_directory, cwd);
 		
 		if (!has_trailing_sep) {
 			strcat(resource_directory, PATH_SEPARATOR);
+		}
+		
+		if (resource->qualification.id != NULL) {
+			strcat(resource_directory, qualification_directory);
+			strcat(resource_directory, SLASH);
 		}
 		
 		strcat(resource_directory, directory);

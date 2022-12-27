@@ -73,11 +73,16 @@ struct Modules {
 	struct Module* items;
 };
 
+struct Qualification {
+	char* id;
+	char* name;
+};
+
 struct Resource {
 	char* id;
 	char* name;
-	char* qualification;
 	char* url;
+	struct Qualification qualification;
 	struct Modules modules;
 };
 

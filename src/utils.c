@@ -749,3 +749,16 @@ long long get_file_size(const char* const filename) {
 	#endif
 	
 }
+
+int hashs(const char* const s) {
+	
+	int value = 0;
+	
+	for (size_t index = 0; index < strlen(s); index++) {
+		const int ch = s[index];
+		value += (ch % 2 == 0) ? ch / 2 : ch;
+	}
+	
+	return value;
+	
+}

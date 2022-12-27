@@ -21,5 +21,6 @@ int is_absolute(const char* const path);
 int get_app_filename(char* const filename, const size_t size);
 char* get_parent_directory(const char* const source, char* const destination, const size_t depth);
 long long get_file_size(const char* const filename);
+int hashs(const char* const s);
 
 #pragma once

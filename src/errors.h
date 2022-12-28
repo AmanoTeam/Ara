@@ -29,4 +29,13 @@
 #define UERR_NOT_IMPLEMENTED -21
 #define UERR_UNSUPPORTED_MEDIA_PROVIDER -22
 
+struct SystemError {
+	int code;
+	char message[256];
+};
+
+struct SystemError get_system_error(void);
+
 const char* strurr(const int code);
+
+#pragma once

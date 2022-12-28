@@ -1,3 +1,10 @@
+#ifdef _WIN32
+	#include <windows.h>
+#else
+	#include <errno.h>
+	#include <string.h>
+#endif
+
 #include "errors.h"
 
 const char* strurr(const int code) {
@@ -26,5 +33,52 @@ const char* strurr(const int code) {
 		default:
 			return "Causa desconhecida ou não especificada";
 	}
+	
+}
+
+struct SystemError get_system_error(void) {
+	
+	struct SystemError error = {0};
+	
+	#ifdef _WIN32
+		const DWORD code = GetLastError();
+		
+		#ifdef _UNICODE
+			wchar_t wmessage[sizeof(error.message)];
+			
+			FormatMessageW(
+				FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+				NULL,
+				code,
+				LANG_NEUTRAL,
+				wmessage,
+				sizeof(wmessage) / sizeof(*wmessage),
+				NULL
+			);
+			
+			WideCharToMultiByte(CP_UTF8, 0, wmessage, -1, error.message, sizeof(error.message), NULL, NULL);
+		#else
+			FormatMessageA(
+				FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+				NULL,
+				code,
+				LANG_NEUTRAL,
+				error.message,
+				sizeof(error.message),
+				NULL
+			);
+		#endif
+		
+		error.code = (int) code;
+	#else
+		const int code = errno;
+		
+		error.code = code;
+		const char* const message = strerror(code);
+		
+		strcpy(error.message, message);
+	#endif
+	
+	return error;
 	
 }

@@ -1,6 +1,6 @@
 # SparkleC
 
-O SparkleC é um programa escrito em C que usufruí das APIs de algumas plataformas que distribuem material didático para possibilitar que usuários baixem produtos que tenham previamente adquirido diretamente para o armazenamento local de seu computador ou smartphone.
+O SparkleC é um programa escrito em C que usufruí das APIs de algumas plataformas que distribuem material didático para possibilitar que usuários baixem conteúdos que tenham previamente adquirido diretamente para o armazenamento local de seu computador ou smartphone.
 
 # Instalação
 
@@ -69,7 +69,7 @@ Você pode compilar o SparkleC localmente em sua máquina. Basta ter um compilad
 
 O projeto atualmente usa características específicas que não fazem parte da especificação oficial do C, as quais só não reconhecidas pelos compiladores Clang e GCC. Você pode vir a encontrar erros ao tentar compilar o código em outros compiladores fora os que foram mencionados. Isso é intencional e eu não pretendo adicionar suporte a qualquer outro.
 
-O SparkleC inclui todas as suas dependências como submódulos no git. Para clonar o repositório junto com todas as suas dependências, você precisa específicar a opção `--resursive`:
+O SparkleC inclui todas as suas dependências como submódulos no git. Para clonar o repositório junto com todas as dependências necessárias para compilá-lo, você precisa específicar a opção `--resursive`:
 
 ```bash
 git clone --recursive 'https://github.com/Kartatz/SparkleC.git'
@@ -89,3 +89,10 @@ Após a compilação, você pode executar o SparkleC através do diretório no q
 ```bash
 cmake --install ./
 ```
+
+## Problemas
+
+Reporte qualquer tipo de problema que esteja enfrentando através das [issues](https://github.com/Kartatz/SparkleC/issues) no GitHub.
+
+Ao fazer isso, sempre forneça o maior número possível de informações que você puder – de forma clara e objetiva.
+

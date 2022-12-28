@@ -857,7 +857,7 @@ int main(void) {
 			normalize_filename(qualification_directory);
 		}
 		
-		char resource_directory[strlen(cwd) + (has_trailing_sep ? 0 : strlen(PATH_SEPARATOR)) + (*qualification_directory == '\0' ? 0 : strlen(qualification_directory) + strlen(SLASH)) + strlen(directory) + 1];
+		char resource_directory[strlen(cwd) + (has_trailing_sep ? 0 : strlen(PATH_SEPARATOR)) + (*qualification_directory == '\0' ? 0 : strlen(qualification_directory) + strlen(PATH_SEPARATOR)) + strlen(directory) + 1];
 		strcpy(resource_directory, cwd);
 		
 		if (!has_trailing_sep) {
@@ -866,7 +866,7 @@ int main(void) {
 		
 		if (resource->qualification.id != NULL) {
 			strcat(resource_directory, qualification_directory);
-			strcat(resource_directory, SLASH);
+			strcat(resource_directory, PATH_SEPARATOR);
 		}
 		
 		strcat(resource_directory, directory);

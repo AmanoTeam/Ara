@@ -553,6 +553,15 @@ if (SPARKLEC_ENABLE_LTO)
 	endif()
 endif()
 
+if (CMAKE_C_COMPILER_ID STREQUAL "GCC")
+	target_link_options(
+		sparklec
+		BEFORE
+		PRIVATE
+		-Wl,-rpath-link,.
+	)
+endif()
+
 target_link_libraries(
 	sparklec
 	jansson

@@ -553,7 +553,7 @@ if (SPARKLEC_ENABLE_LTO)
 	endif()
 endif()
 
-if (CMAKE_C_COMPILER_ID STREQUAL "GCC")
+if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 	target_link_options(
 		sparklec
 		BEFORE

@@ -4,9 +4,9 @@ O SparkleC é um programa escrito em C que usufruí das APIs de algumas platafor
 
 # Instalação
 
-O programa está disponível para Android, Windows, Linux e MacOS.
+O programa está disponível para Android, Windows, Linux, NetBSD e MacOS.
 
-Note que, embora versões para MacOS estejam disponíveis, as mesmas não são testadas com frequência. Caso encontre (ou não) problemas ao executar o SparkleC nessa plataforma, [reporte-nos](https://github.com/Kartatz/SparkleC/issues).
+Note que, embora versões para MacOS e NetBSD estejam disponíveis, as mesmas não são testadas com frequência. Caso encontre (ou não) problemas ao executar o SparkleC nessas plataformas, [reporte-nos](https://github.com/Kartatz/SparkleC/issues).
 
 A ferramenta depende do [ffmpeg](https://ffmpeg.org/download.html) para decodificar e desencriptar os arquivos de vídeo baixados. Ele não funcionará sem ela, portanto instale-o em sua máquina antes de tudo.
 

@@ -52,16 +52,19 @@ Baixe o Termux através do F-Droid e instale-o. Você pode obtê-lo [clicando aq
 ```bash
 apt update --assume-yes
 apt upgrade --assume-yes
-apt install --assume-yes wget
-bash <<< "$(wget 'https://raw.githubusercontent.com/Kartatz/SparkleC/master/scripts/android-install.sh' --output-document=-)"
 
+apt install --assume-yes curl
+
+bash <<< "$(curl --fail --silent 'https://raw.githubusercontent.com/Kartatz/SparkleC/master/scripts/android-install.sh')"
 ```
 
 Se a instalação correu bem, você verá essa mensagem após a conclusão:
 
 ```
-Instalação concluída! Execute o comando "sparklec" sempre que quiser usar a ferramenta.
++ Instalação concluída!
 ```
+
+Todos os conteúdos baixados por você através do programa ficaram salvos no diretório de downloads do seu smartphone.
 
 ## Compilando
 

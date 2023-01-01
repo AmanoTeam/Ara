@@ -58,65 +58,15 @@ jobs:
         
         echo 'NETBSD_TOOLCHAIN=/tmp/unknown-unknown-netbsd' >> "${GITHUB_ENV}"
     - name: Setup FreeBSD cross compiler
-      if: false
       run: |
-        declare -r targets=(
-            amd64
-            arm64
-            i386
-            powerpc
-            riscv
-        )
+        declare -r FREEBSD_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --silent --url 'https://api.github.com/repos/AmanoTeam/FreeBSD-Cross/releases/latest')")"
+        declare -r FREEBSD_CROSS_TARBALL='/tmp/freebsd-cross.tar.xz'
+        declare -r FREEBSD_CROSS_URL="https://github.com/AmanoTeam/FreeBSD-Cross/releases/download/${FREEBSD_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
         
-        declare -r binutils_tarball='/tmp/binutils.tar.xz'
-        declare -r binutils_directory='/tmp/binutils-2.39'
+        curl --silent --location --url "${FREEBSD_CROSS_URL}" --output "${FREEBSD_CROSS_TARBALL}"
+        tar --directory="$(dirname "${FREEBSD_CROSS_TARBALL}")" --extract --file="${FREEBSD_CROSS_TARBALL}"
         
-        declare -r toolchain_directory='/tmp/unknown-unknown-freebsd'
-        
-        wget 'https://ftpmirror.gnu.org/gnu/binutils/binutils-2.39.tar.xz' --output-document="${binutils_tarball}"
-        
-        tar --directory="$(dirname "${binutils_directory}")" --extract --file="${binutils_tarball}"
-        
-        for target in "${targets[@]}"; do
-        	declare url="https://download.freebsd.org/snapshots/${target}/14.0-CURRENT/base.txz"
-        	declare output="/tmp/freebsd-${target//\//_}-base.tar.xz"
-        	
-        	wget "${url}" --output-document="${output}"
-        	
-        	cd "${binutils_directory}"
-        	
-        	case "${target}" in
-        		amd64)
-        			declare triple='x86_64-unknown-freebsd';;
-        		arm64)
-        			declare triple='aarch64-unknown-freebsd';;
-        		i386)
-        			declare triple='i386-unknown-freebsd';;
-        		powerpc)
-        			declare triple='powerpc64le-unknown-freebsd';;
-        		riscv)
-        			declare triple='riscv64-unknown-freebsd';;
-        	esac
-        	
-        	declare toolchain_prefix="${toolchain_directory}/${triple}"
-        	
-        	make distclean 1>/dev/null || true
-        	./configure --target="${triple}" --prefix="${toolchain_prefix}" 1>/dev/null
-        	
-        	make --jobs 1>/dev/null
-        	make install 1>/dev/null
-        	
-        	tar --directory="${toolchain_prefix}" --extract --file="${output}" './lib' './usr/lib' './usr/include' 1>/dev/null
-        	
-        	declare wrapper="${toolchain_prefix}/bin/${triple}-clang"
-        	
-        	echo "#\!/bin/bash\n\nPATH=${toolchain_prefix}/bin:\${PATH} clang -target ${triple} --sysroot=${toolchain_prefix} -Wl,-rpath-link,${toolchain_prefix}/lib:./ \${@}" > "${wrapper}"
-        	chmod 500 "${wrapper}"
-        	
-        	rm "${output}"
-        done
-        
-        echo "FREEBSD_TOOLCHAIN=${toolchain_directory}" >> "${GITHUB_ENV}"
+        echo 'FREEBSD_TOOLCHAIN=/tmp/unknown-unknown-freebsd' >> "${GITHUB_ENV}"
     - name: Build with CMake
       run: |
         declare -r MACHINE_HOST="$(gcc -dumpmachine)"
@@ -126,6 +76,7 @@ jobs:
             aarch64-linux-gnu
             aarch64-w64-mingw32
             aarch64-apple-darwin
+            aarch64-unknown-freebsd
             arm-linux-gnueabi
             armv7-w64-mingw32
             armv7a-linux-androideabi
@@ -133,11 +84,13 @@ jobs:
             i686-linux-gnu
             i686-w64-mingw32
             i386-unknown-netbsdelf
+            i386-unknown-freebsd
             x86_64-apple-darwin
             x86_64h-apple-darwin
             x86_64-linux-android
             x86_64-w64-mingw32
             x86_64-unknown-netbsd
+            x86_64-unknown-freebsd
             "${MACHINE_HOST}"
         )
         

@@ -67,6 +67,16 @@ jobs:
         tar --directory="$(dirname "${FREEBSD_CROSS_TARBALL}")" --extract --file="${FREEBSD_CROSS_TARBALL}"
         
         echo 'FREEBSD_TOOLCHAIN=/tmp/unknown-unknown-freebsd' >> "${GITHUB_ENV}"
+    - name: Setup DragonFly cross compiler
+      run: |
+        declare -r DRAGONFLY_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --silent --url 'https://api.github.com/repos/AmanoTeam/DragonFlyBSD-Cross/releases/latest')")"
+        declare -r DRAGONFLY_CROSS_TARBALL='/tmp/freebsd-cross.tar.xz'
+        declare -r DRAGONFLY_CROSS_URL="https://github.com/AmanoTeam/DragonFlyBSD-Cross/releases/download/${DRAGONFLY_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
+        
+        curl --silent --location --url "${DRAGONFLY_CROSS_URL}" --output "${DRAGONFLY_CROSS_TARBALL}"
+        tar --directory="$(dirname "${DRAGONFLY_CROSS_TARBALL}")" --extract --file="${DRAGONFLY_CROSS_TARBALL}"
+        
+        echo 'DRAGONFLY_TOOLCHAIN=/tmp/unknown-unknown-dragonfly' >> "${GITHUB_ENV}"
     - name: Build with CMake
       run: |
         declare -r MACHINE_HOST="$(gcc -dumpmachine)"
@@ -91,6 +101,7 @@ jobs:
             x86_64-w64-mingw32
             x86_64-unknown-netbsd
             x86_64-unknown-freebsd
+            x86_64-unknown-dragonfly
             "${MACHINE_HOST}"
         )
         

@@ -95,9 +95,12 @@ char* get_current_directory(void) {
 	#ifdef _WIN32
 		#ifdef _UNICODE
 			wchar_t wpwd[PATH_MAX];
+			const DWORD wpwds = (DWORD) (sizeof(wpwd) / sizeof(*wpwd));
 			
-			if (_wgetcwd(wpwd, sizeof(wpwd) / sizeof(*wpwd)) == NULL) {
-				return NULL;
+			const DWORD code = GetCurrentDirectoryW(wpwds, wpwd);
+			
+			if (code == 0 || code > wpwds) {
+				return 0;
 			}
 			
 			const int size = WideCharToMultiByte(CP_UTF8, 0, wpwd, -1, NULL, 0, NULL, NULL);
@@ -111,12 +114,15 @@ char* get_current_directory(void) {
 			WideCharToMultiByte(CP_UTF8, 0, wpwd, -1, pwd, size, NULL, NULL);
 		#else
 			char cpwd[PATH_MAX];
+			const DWORD cpwds = (DWORD) sizeof(wpwd);
 			
-			if (_getcwd(cpwd, sizeof(cpwd) / sizeof(*cpwd)) == NULL) {
-				return NULL;
+			const DWORD code = GetCurrentDirectoryA(cpwds, cpwd);
+			
+			if (code == 0 || code > cpwds) {
+				return 0;
 			}
 			
-			char* pwd = malloc(strlen(pwd) + 1);
+			char* pwd = malloc(strlen(cpwd) + 1);
 			
 			if (pwd == NULL) {
 				return NULL;
@@ -208,7 +214,6 @@ int is_administrator(void) {
 			return 0;
 		}
 		
-		
 		return (int) is_member;
 	#else
 		return geteuid() == 0;
@@ -228,19 +233,19 @@ char* get_configuration_directory(void) {
 		const char* const directory = getenv("XDG_CONFIG_HOME");
 		
 		if (directory == NULL) {
-			const char* const config = ".config";
-			const char* const home = getenv("HOME");
+			const char* const config_directory = ".config";
+			const char* const home_directory = getenv("HOME");
 			
-			char* configuration_directory = malloc(strlen(home) + strlen(SLASH) + strlen(config) + strlen(SLASH) + 1);
+			char* configuration_directory = malloc(strlen(home_directory) + strlen(PATH_SEPARATOR) + strlen(config_directory) + strlen(PATH_SEPARATOR) + 1);
 			
 			if (configuration_directory == NULL) {
 				return NULL;
 			}
 			
-			strcpy(configuration_directory, home);
-			strcat(configuration_directory, SLASH);
-			strcat(configuration_directory, config);
-			strcat(configuration_directory, SLASH);
+			strcpy(configuration_directory, home_directory);
+			strcat(configuration_directory, PATH_SEPARATOR);
+			strcat(configuration_directory, config_directory);
+			strcat(configuration_directory, PATH_SEPARATOR);
 			
 			return configuration_directory;
 		}

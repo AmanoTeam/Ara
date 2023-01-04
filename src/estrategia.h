@@ -17,6 +17,12 @@ int estrategia_get_modules(
 	struct Resource* const resource
 );
 
+int estrategia_get_module(
+	const struct Credentials* const credentials,
+	const struct Resource* const resource,
+	struct Module* const module
+);
+
 int estrategia_get_page(
 	const struct Credentials* const credentials,
 	const struct Resource* const resource,

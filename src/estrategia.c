@@ -287,12 +287,13 @@ int estrategia_get_resources(
 	
 	const CURLcode code = curl_easy_perform(curl_easy);
 	
-	if (code == CURLE_HTTP_RETURNED_ERROR) {
-		return UERR_HOTMART_SESSION_EXPIRED;
-	}
-	
-	if (code != CURLE_OK) {
-		return UERR_CURL_FAILURE;
+	switch (code) {
+		case CURLE_OK:
+			break;
+		case CURLE_HTTP_RETURNED_ERROR:
+			return UERR_PROVIDER_SESSION_EXPIRED;
+		default:
+			return UERR_CURL_FAILURE;
 	}
 	
 	json_auto_t* tree = json_loads(string.s, 0, NULL);
@@ -405,22 +406,36 @@ int estrategia_get_resources(
 			struct Resource resource = {
 				.id = malloc(strlen(sid) + 1),
 				.name = malloc(strlen(name) + 1),
+				.dirname = malloc(strlen(name) + 1),
+				.short_dirname = malloc(strlen(sid) + 1),
 				.qualification = {
 					.id = malloc(strlen(qualification_id) + 1),
-					.name = malloc(strlen(qualification) + 1)
+					.name = malloc(strlen(qualification) + 1),
+					.dirname = malloc(strlen(qualification) + 1),
+					.short_dirname = malloc(strlen(qualification_id) + 1)
 				},
 				.url = malloc(strlen(ESTRATEGIA_COURSE_HOMEPAGE) + strlen(SLASH) + strlen(sid) + strlen(SLASH) + strlen(AULAS) + 1)
 			};
 			
-			if (resource.id == NULL || resource.name == NULL || resource.qualification.id == NULL || resource.qualification.name == NULL) {
+			if (resource.id == NULL || resource.name == NULL || resource.dirname == NULL || resource.short_dirname == NULL ||  resource.qualification.id == NULL || resource.qualification.name == NULL || resource.qualification.dirname == NULL || resource.qualification.short_dirname == NULL) {
 				return UERR_MEMORY_ALLOCATE_FAILURE;
 			}
 			
 			strcpy(resource.id, sid);
 			strcpy(resource.name, name);
 			
+			strcpy(resource.dirname, name);
+			normalize_filename(resource.dirname);
+			
+			strcpy(resource.short_dirname, sid);
+			
 			strcpy(resource.qualification.id, qualification_id);
 			strcpy(resource.qualification.name, qualification);
+			
+			strcpy(resource.qualification.dirname, qualification);
+			normalize_filename(resource.qualification.dirname);
+			
+			strcpy(resource.qualification.short_dirname, qualification_id);
 			
 			strcpy(resource.url, ESTRATEGIA_COURSE_HOMEPAGE);
 			strcat(resource.url, SLASH);
@@ -580,305 +595,450 @@ int estrategia_get_modules(
 		struct Module module = {
 			.id = malloc(strlen(sid) + 1),
 			.name = malloc(strlen(name) + 1),
+			.dirname = malloc(strlen(name) + 1),
+			.short_dirname = malloc(strlen(sid) + 1),
 			.is_locked = is_locked
 		};
 		
-		if (module.id == NULL || module.name == NULL) {
+		if (module.id == NULL || module.name == NULL || module.dirname == NULL || module.short_dirname == NULL) {
 			return UERR_MEMORY_ALLOCATE_FAILURE;
 		}
 		
 		strcpy(module.id, sid);
 		strcpy(module.name, name);
 		
-		if (!is_locked) {
-			struct String string __attribute__((__cleanup__(string_free))) = {0};
+		strcpy(module.dirname, name);
+		normalize_filename(module.dirname);
+		
+		strcpy(module.short_dirname, sid);
+		
+		resource->modules.items[resource->modules.offset++] = module;
+	}
+	
+	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, NULL);
+	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, NULL);
+	curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, NULL);
+	curl_easy_setopt(curl_easy, CURLOPT_URL, NULL);
+	
+	return UERR_SUCCESS;
+	
+}
+
+int estrategia_get_module(
+	const struct Credentials* const credentials,
+	const struct Resource* const resource,
+	struct Module* const module
+) {
+	
+	(void) resource;
+	
+	CURL* curl_easy = get_global_curl_easy();
+	
+	char authorization[strlen(HTTP_AUTHENTICATION_BEARER) + strlen(SPACE) + strlen(credentials->access_token) + 1];
+	strcpy(authorization, HTTP_AUTHENTICATION_BEARER);
+	strcat(authorization, SPACE);
+	strcat(authorization, credentials->access_token);
+	
+	const char* const headers[][2] = {
+		{HTTP_HEADER_AUTHORIZATION, authorization}
+	};
+	
+	struct curl_slist* list __attribute__((__cleanup__(curl_slistp_free_all))) = NULL;
+	
+	for (size_t index = 0; index < sizeof(headers) / sizeof(*headers); index++) {
+		const char* const* const header = headers[index];
+		
+		const char* const key = header[0];
+		const char* const value = header[1];
+		
+		char item[strlen(key) + strlen(HTTP_HEADER_SEPARATOR) + strlen(value) + 1];
+		strcpy(item, key);
+		strcat(item, HTTP_HEADER_SEPARATOR);
+		strcat(item, value);
+		
+		struct curl_slist* tmp = curl_slist_append(list, item);
+		
+		if (tmp == NULL) {
+			return UERR_CURL_FAILURE;
+		}
+		
+		list = tmp;
+	}
+	
+	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	
+	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
+	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
+	curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, list);
+	
+	char url[strlen(ESTRATEGIA_LESSON_ENDPOINT) + strlen(SLASH) + strlen(module->id) + 1];
+	strcpy(url, ESTRATEGIA_LESSON_ENDPOINT);
+	strcat(url, SLASH);
+	strcat(url, module->id);
+	
+	curl_easy_setopt(curl_easy, CURLOPT_URL, url);
+	
+	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+		return UERR_CURL_FAILURE;
+	}
+	
+	json_auto_t* tree = json_loads(string.s, 0, NULL);
+	
+	if (tree == NULL) {
+		return UERR_JSON_CANNOT_PARSE;
+	}
+		
+	const json_t* data = json_object_get(tree, "data");
+	
+	if (data == NULL) {
+		return UERR_JSON_MISSING_REQUIRED_KEY;
+	}
+	
+	if (!json_is_object(data)) {
+		return UERR_JSON_NON_MATCHING_TYPE;
+	}
+	
+	const char* const keys[] = {
+		"pdf_grifado",
+		"pdf_simplificado",
+		"pdf"
+	};
+	
+	module->attachments.size = sizeof(struct Attachment) * (sizeof(keys) / sizeof(*keys));
+	module->attachments.items = malloc(module->attachments.size);
+	
+	for (size_t index = 0; index < (sizeof(keys) / sizeof(*keys)); index++) {
+		const char* const key = keys[index];
+		
+		const json_t* obj = json_object_get(data, key);
+		
+		if (obj == NULL) {
+			return UERR_JSON_MISSING_REQUIRED_KEY;
+		}
+		
+		if (json_is_string(obj)) {
+			const char* const url = json_string_value(obj);
 			
-			curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
+			const char* name = NULL;
 			
-			char url[strlen(ESTRATEGIA_LESSON_ENDPOINT) + strlen(SLASH) + strlen(sid) + 1];
-			strcpy(url, ESTRATEGIA_LESSON_ENDPOINT);
-			strcat(url, SLASH);
-			strcat(url, sid);
-			
-			curl_easy_setopt(curl_easy, CURLOPT_URL, url);
-			
-			if (curl_easy_perform(curl_easy) != CURLE_OK) {
-				return UERR_CURL_FAILURE;
+			if (strcmp(key, "pdf_grifado") == 0) {
+				name = "Marcação dos aprovados";
+			} else if (strcmp(key, "pdf_simplificado") == 0) {
+				name = "Versão simplificada";
+			} else if (strcmp(key, "pdf") == 0) {
+				name = "Versão original";
 			}
 			
-			json_auto_t* tree = json_loads(string.s, 0, NULL);
+			const int hash = hashs(name);
 			
-			if (tree == NULL) {
-				return UERR_JSON_CANNOT_PARSE;
-			}
-				
-			const json_t* data = json_object_get(tree, "data");
+			char sid[intlen(hash) + 1];
+			snprintf(sid, sizeof(sid), "%i", hash);
 			
-			if (data == NULL) {
-				return UERR_JSON_MISSING_REQUIRED_KEY;
-			}
-			
-			if (!json_is_object(data)) {
-				return UERR_JSON_NON_MATCHING_TYPE;
-			}
-			
-			const char* const keys[] = {
-				"pdf_grifado",
-				"pdf_simplificado",
-				"pdf"
+			struct Attachment attachment = {
+				.id = malloc(strlen(sid) + 1),
+				.filename = malloc(strlen(name) + strlen(DOT) + strlen(PDF_FILE_EXTENSION) + 1),
+				.short_filename = malloc(strlen(sid) + strlen(DOT) + strlen(PDF_FILE_EXTENSION) + 1),
+				.url = malloc(strlen(url) + 1)
 			};
 			
-			module.attachments.size = sizeof(struct Attachment) * (sizeof(keys) / sizeof(*keys));
-			module.attachments.items = malloc(module.attachments.size);
-				
-			for (size_t index = 0; index < (sizeof(keys) / sizeof(*keys)); index++) {
-				const char* const key = keys[index];
-				
-				const json_t* obj = json_object_get(data, key);
-				
-				if (obj == NULL) {
-					return UERR_JSON_MISSING_REQUIRED_KEY;
-				}
-				
-				if (json_is_string(obj)) {
-					const char* const url = json_string_value(obj);
-					
-					const char* name = NULL;
-					
-					if (strcmp(key, "pdf_grifado") == 0) {
-						name = "Marcação dos aprovados";
-					} else if (strcmp(key, "pdf_simplificado") == 0) {
-						name = "Versão simplificada";
-					} else if (strcmp(key, "pdf") == 0) {
-						name = "Versão original";
-					}
-					
-					struct Attachment attachment = {
-						.filename = malloc(strlen(name) + strlen(DOT) + strlen(PDF_FILE_EXTENSION) + 1),
-						.url = malloc(strlen(url) + 1)
-					};
-					
-					if (attachment.filename == NULL || attachment.url == NULL) {
-						return UERR_MEMORY_ALLOCATE_FAILURE;
-					}
-					
-					strcpy(attachment.filename, name);
-					strcat(attachment.filename, DOT);
-					strcat(attachment.filename, PDF_FILE_EXTENSION);
-					
-					normalize_filename(attachment.filename);
-					
-					strcpy(attachment.url, url);
-					
-					module.attachments.items[module.attachments.offset++] = attachment;
-				} else if (!json_is_null(obj)) {
-					return UERR_JSON_NON_MATCHING_TYPE;
-				}
+			if (attachment.id == NULL || attachment.filename == NULL || attachment.short_filename == NULL || attachment.url == NULL) {
+				return UERR_MEMORY_ALLOCATE_FAILURE;
 			}
 			
-			obj = json_object_get(data, "videos");
+			strcpy(attachment.id, sid);
+			
+			strcpy(attachment.filename, name);
+			strcat(attachment.filename, DOT);
+			strcat(attachment.filename, PDF_FILE_EXTENSION);
+			
+			strcpy(attachment.short_filename, sid);
+			strcat(attachment.short_filename, DOT);
+			strcat(attachment.short_filename, PDF_FILE_EXTENSION);
+			
+			normalize_filename(attachment.filename);
+			
+			strcpy(attachment.url, url);
+			
+			module->attachments.items[module->attachments.offset++] = attachment;
+		} else if (!json_is_null(obj)) {
+			return UERR_JSON_NON_MATCHING_TYPE;
+		}
+	}
+	
+	const json_t* obj = json_object_get(data, "videos");
+	
+	if (obj == NULL) {
+		return UERR_JSON_MISSING_REQUIRED_KEY;
+	}
+	
+	if (!json_is_array(obj)) {
+		return UERR_JSON_NON_MATCHING_TYPE;
+	}
+	
+	size_t subindex = 0;
+	const json_t* subitem = NULL;
+	const size_t array_size = json_array_size(obj);
+	
+	module->pages.size = sizeof(struct Page) * array_size;
+	module->pages.items = malloc(module->pages.size);
+	
+	if (module->pages.items == NULL) {
+		return UERR_MEMORY_ALLOCATE_FAILURE;
+	}
+	
+	json_array_foreach(obj, subindex, subitem) {
+		if (!json_is_object(subitem)) {
+			return UERR_JSON_NON_MATCHING_TYPE;
+		}
+		
+		const json_t* obj = json_object_get(subitem, "id");
+		
+		if (obj == NULL) {
+			return UERR_JSON_MISSING_REQUIRED_KEY;
+		}
+		
+		if (!json_is_integer(obj)) {
+			return UERR_JSON_NON_MATCHING_TYPE;
+		}
+		
+		const json_int_t id = json_integer_value(obj);
+		
+		char sid[intlen(id) + 1];
+		snprintf(sid, sizeof(sid), "%llu", id);
+		
+		obj = json_object_get(subitem, "titulo");
+		
+		if (obj == NULL) {
+			return UERR_JSON_MISSING_REQUIRED_KEY;
+		}
+		
+		if (!json_is_string(obj)) {
+			return UERR_JSON_NON_MATCHING_TYPE;
+		}
+		
+		const char* const name = json_string_value(obj);
+		
+		struct Page page = {
+			.id = malloc(strlen(sid) + 1),
+			.name = malloc(strlen(name) + 1),
+			.dirname = malloc(strlen(name) + 1),
+			.short_dirname = malloc(strlen(sid) + 1),
+			.is_locked = 0
+		};
+		
+		if (page.id == NULL || page.name == NULL || page.dirname == NULL || page.short_dirname == NULL) {
+			return UERR_MEMORY_ALLOCATE_FAILURE;
+		}
+		
+		strcpy(page.id, sid);
+		strcpy(page.name, name);
+		
+		strcpy(page.dirname, name);
+		normalize_filename(page.dirname);
+		
+		strcpy(page.short_dirname, sid);
+		
+		const char* const keys[] = {
+			"resumo",
+			"slide",
+			"mapa_mental"
+		};
+		
+		page.attachments.size = sizeof(struct Attachment) * (sizeof(keys) / sizeof(*keys));
+		page.attachments.items = malloc(page.attachments.size);
+		
+		if (page.attachments.items == NULL) {
+			return UERR_MEMORY_ALLOCATE_FAILURE;
+		}
+		
+		for (size_t index = 0; index < (sizeof(keys) / sizeof(*keys)); index++) {
+			const char* const key = keys[index];
+			
+			const json_t* obj = json_object_get(subitem, key);
 			
 			if (obj == NULL) {
 				return UERR_JSON_MISSING_REQUIRED_KEY;
 			}
 			
-			if (!json_is_array(obj)) {
-				return UERR_JSON_NON_MATCHING_TYPE;
-			}
-			
-			size_t subindex = 0;
-			const json_t* subitem = NULL;
-			const size_t array_size = json_array_size(obj);
-			
-			module.pages.size = sizeof(struct Page) * array_size;
-			module.pages.items = malloc(module.pages.size);
-			
-			if (module.pages.items == NULL) {
-				return UERR_MEMORY_ALLOCATE_FAILURE;
-			}
-			
-			json_array_foreach(obj, subindex, subitem) {
-				if (!json_is_object(subitem)) {
-					return UERR_JSON_NON_MATCHING_TYPE;
+			if (json_is_string(obj)) {
+				const char* const url = json_string_value(obj);
+				
+				const char* name = NULL;
+				
+				if (strcmp(key, "resumo") == 0) {
+					name = "Resumo";
+				} else if (strcmp(key, "slide") == 0) {
+					name = "Slide";
+				} else if (strcmp(key, "mapa_mental") == 0) {
+					name = "Mapa mental";
 				}
 				
-				const json_t* obj = json_object_get(subitem, "id");
+				const int hash = hashs(name);
 				
-				if (obj == NULL) {
-					return UERR_JSON_MISSING_REQUIRED_KEY;
-				}
+				char sid[intlen(hash) + 1];
+				snprintf(sid, sizeof(sid), "%i", hash);
 				
-				if (!json_is_integer(obj)) {
-					return UERR_JSON_NON_MATCHING_TYPE;
-				}
-				
-				const json_int_t id = json_integer_value(obj);
-				
-				char sid[intlen(id) + 1];
-				snprintf(sid, sizeof(sid), "%llu", id);
-				
-				obj = json_object_get(subitem, "titulo");
-				
-				if (obj == NULL) {
-					return UERR_JSON_MISSING_REQUIRED_KEY;
-				}
-				
-				if (!json_is_string(obj)) {
-					return UERR_JSON_NON_MATCHING_TYPE;
-				}
-				
-				const char* const name = json_string_value(obj);
-				
-				struct Page page = {
+				struct Attachment attachment = {
 					.id = malloc(strlen(sid) + 1),
-					.name = malloc(strlen(name) + 1),
-					.is_locked = 0
+					.filename = malloc(strlen(name) + strlen(DOT) + strlen(PDF_FILE_EXTENSION) + 1),
+					.short_filename = malloc(strlen(sid) + strlen(DOT) + strlen(PDF_FILE_EXTENSION) + 1),
+					.url = malloc(strlen(url) + 1)
 				};
 				
-				if (page.id == NULL || page.name == NULL) {
+				if (attachment.id == NULL || attachment.filename == NULL || attachment.short_filename == NULL || attachment.url == NULL) {
 					return UERR_MEMORY_ALLOCATE_FAILURE;
 				}
 				
-				strcpy(page.id, sid);
-				strcpy(page.name, name);
+				strcpy(attachment.id, sid);
 				
-				const char* const keys[] = {
-					"resumo",
-					"slide",
-					"mapa_mental",
-					"audio"
-				};
+				strcpy(attachment.short_filename, sid);
+				strcat(attachment.short_filename, DOT);
+				strcat(attachment.short_filename, PDF_FILE_EXTENSION);
 				
-				page.attachments.size = sizeof(struct Attachment) * (sizeof(keys) / sizeof(*keys));
-				page.attachments.items = malloc(page.attachments.size);
+				strcpy(attachment.filename, name);
+				strcat(attachment.filename, DOT);
+				strcat(attachment.filename, PDF_FILE_EXTENSION);
 				
-				if (page.attachments.items == NULL) {
-					return UERR_MEMORY_ALLOCATE_FAILURE;
-				}
+				normalize_filename(attachment.filename);
 				
-				for (size_t index = 0; index < (sizeof(keys) / sizeof(*keys)); index++) {
-					const char* const key = keys[index];
-					
-					const json_t* obj = json_object_get(subitem, key);
-					
-					if (obj == NULL) {
-						return UERR_JSON_MISSING_REQUIRED_KEY;
-					}
-					
-					if (json_is_string(obj)) {
-						const char* const url = json_string_value(obj);
-						
-						const char* name = NULL;
-						
-						if (strcmp(key, "resumo") == 0) {
-							name = "Resumo";
-						} else if (strcmp(key, "slide") == 0) {
-							name = "Slide";
-						} else if (strcmp(key, "mapa_mental") == 0) {
-							name = "Mapa mental";
-						} else if (strcmp(key, "audio") == 0) {
-							name = "Versão em áudio";
-						}
-						
-						const char* const file_extension = (strcmp(key, "audio") == 0) ? MP3_FILE_EXTENSION : PDF_FILE_EXTENSION;
-						
-						struct Attachment attachment = {
-							.filename = malloc(strlen(name) + strlen(DOT) + strlen(file_extension) + 1),
-							.url = malloc(strlen(url) + 1)
-						};
-						
-						if (attachment.filename == NULL || attachment.url == NULL) {
-							return UERR_MEMORY_ALLOCATE_FAILURE;
-						}
-						
-						strcpy(attachment.filename, name);
-						strcat(attachment.filename, DOT);
-						strcat(attachment.filename, file_extension);
-						
-						normalize_filename(attachment.filename);
-						
-						strcpy(attachment.url, url);
-						
-						page.attachments.items[page.attachments.offset++] = attachment;
-					} else if (!json_is_null(obj)) {
-						return UERR_JSON_NON_MATCHING_TYPE;
-					}
-				}
+				strcpy(attachment.url, url);
 				
-				obj = json_object_get(subitem, "resolucoes");
-				
-				if (obj == NULL) {
-					return UERR_JSON_MISSING_REQUIRED_KEY;
-				}
-				
-				if (!json_is_object(obj)) {
-					return UERR_JSON_NON_MATCHING_TYPE;
-				}
-				
-				const char* key = NULL;
-				json_t* value = NULL;
-				
-				int last_width = 0;
-				const char* stream_uri = NULL;
-				
-				json_object_foreach((json_t*) obj, key, value) {
-					const char* const end = strstr(key, "p");
-					
-					if (end == NULL) {
-						return UERR_STRSTR_FAILURE;
-					}
-					
-					const size_t size = (size_t) (end - key);
-					
-					char val[size];
-					memcpy(val, key, size);
-					val[size] = '\0';
-					
-					const int width = atoi(val);
-					
-					if (last_width < width) {
-						last_width = width;
-						stream_uri = json_string_value(value);
-					}
-				}
-				
-				if (stream_uri == NULL) {
-					return UERR_FSTREAM_FAILURE;
-				}
-				
-				page.medias.size = sizeof(struct Media) * 1;
-				page.medias.items = malloc(page.medias.size);
-				
-				if (page.medias.items == NULL) {
-					return UERR_MEMORY_ALLOCATE_FAILURE;
-				}
-				
-				struct Media media = {
-					.type = MEDIA_SINGLE,
-					.video = {
-						.filename = malloc(strlen(name) + strlen(DOT) + strlen(MP4_FILE_EXTENSION) + 1),
-						.url = malloc(strlen(stream_uri) + 1)
-					}
-				};
-				
-				if (media.video.filename == NULL || media.video.url == NULL) {
-					return UERR_MEMORY_ALLOCATE_FAILURE;
-				}
-				
-				strcpy(media.video.filename, name);
-				strcat(media.video.filename, DOT);
-				strcat(media.video.filename, MP4_FILE_EXTENSION);
-				
-				normalize_filename(media.video.filename);
-				
-				strcpy(media.video.url, stream_uri);
-				
-				page.medias.items[page.medias.offset++] = media;
-				module.pages.items[module.pages.offset++] = page;
+				page.attachments.items[page.attachments.offset++] = attachment;
+			} else if (!json_is_null(obj)) {
+				return UERR_JSON_NON_MATCHING_TYPE;
 			}
 		}
 		
-		resource->modules.items[resource->modules.offset++] = module;
+		obj = json_object_get(subitem, "audio");
+		
+		if (obj == NULL) {
+			return UERR_JSON_MISSING_REQUIRED_KEY;
+		}
+		
+		if (json_is_string(obj)) {
+			const size_t size = page.medias.size + (sizeof(struct Media) * 1);
+			struct Media* items = realloc(page.medias.items, size);
+			
+			if (items == NULL) {
+				return UERR_MEMORY_ALLOCATE_FAILURE;
+			}
+			
+			page.medias.size = size;
+			page.medias.items = items;
+			
+			const char* const url = json_string_value(obj);
+			
+			struct Media media = {
+				.type = MEDIA_SINGLE,
+				.audio = {
+					.id = malloc(strlen(sid) + 1),
+					.filename = malloc(strlen(name) + strlen(DOT) + strlen(MP3_FILE_EXTENSION) + 1),
+					.short_filename = malloc(strlen(sid) + strlen(DOT) + strlen(MP3_FILE_EXTENSION) + 1),
+					.url = malloc(strlen(url) + 1)
+				},
+				.video = {0}
+			};
+			
+			if (media.audio.id == NULL || media.audio.filename == NULL || media.audio.short_filename == NULL || media.audio.url == NULL) {
+				return UERR_MEMORY_ALLOCATE_FAILURE;
+			}
+			
+			strcpy(media.audio.id, sid);
+			
+			strcpy(media.audio.filename, name);
+			strcat(media.audio.filename, DOT);
+			strcat(media.audio.filename, MP3_FILE_EXTENSION);
+			
+			strcpy(media.audio.short_filename, sid);
+			strcat(media.audio.short_filename, DOT);
+			strcat(media.audio.short_filename, MP3_FILE_EXTENSION);
+			
+			strcpy(media.audio.url, url);
+			
+			page.medias.items[page.medias.offset++] = media;
+		}
+		
+		obj = json_object_get(subitem, "resolucoes");
+		
+		if (obj == NULL) {
+			return UERR_JSON_MISSING_REQUIRED_KEY;
+		}
+		
+		if (!json_is_object(obj)) {
+			return UERR_JSON_NON_MATCHING_TYPE;
+		}
+		
+		const char* key = NULL;
+		json_t* value = NULL;
+		
+		int last_width = 0;
+		const char* stream_uri = NULL;
+		
+		json_object_foreach((json_t*) obj, key, value) {
+			const char* const end = strstr(key, "p");
+			
+			if (end == NULL) {
+				return UERR_STRSTR_FAILURE;
+			}
+			
+			const size_t size = (size_t) (end - key);
+			
+			char val[size];
+			memcpy(val, key, size);
+			val[size] = '\0';
+			
+			const int width = atoi(val);
+			
+			if (last_width < width) {
+				last_width = width;
+				stream_uri = json_string_value(value);
+			}
+		}
+		
+		if (stream_uri == NULL) {
+			return UERR_FSTREAM_FAILURE;
+		}
+		
+		const size_t size = page.medias.size + (sizeof(struct Media) * 1);
+		struct Media* items = realloc(page.medias.items, size);
+		
+		if (items == NULL) {
+			return UERR_MEMORY_ALLOCATE_FAILURE;
+		}
+		
+		page.medias.size = size;
+		page.medias.items = items;
+		
+		struct Media media = {
+			.type = MEDIA_SINGLE,
+			.video = {
+				.id = malloc(strlen(sid) + 1),
+				.filename = malloc(strlen(name) + strlen(DOT) + strlen(MP4_FILE_EXTENSION) + 1),
+				.short_filename = malloc(strlen(name) + strlen(DOT) + strlen(MP4_FILE_EXTENSION) + 1),
+				.url = malloc(strlen(stream_uri) + 1)
+			}
+		};
+		
+		if (media.video.id == NULL || media.video.filename == NULL || media.video.short_filename == NULL || media.video.url == NULL) {
+			return UERR_MEMORY_ALLOCATE_FAILURE;
+		}
+		
+		strcpy(media.video.id, sid);
+		
+		strcpy(media.video.filename, name);
+		strcat(media.video.filename, DOT);
+		strcat(media.video.filename, MP4_FILE_EXTENSION);
+		
+		strcpy(media.video.short_filename, sid);
+		strcat(media.video.short_filename, DOT);
+		strcat(media.video.short_filename, MP4_FILE_EXTENSION);
+		
+		normalize_filename(media.video.filename);
+		
+		strcpy(media.video.url, stream_uri);
+		
+		page.medias.items[page.medias.offset++] = media;
+		module->pages.items[module->pages.offset++] = page;
 	}
 	
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, NULL);

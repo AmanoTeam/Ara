@@ -268,6 +268,108 @@ char* get_configuration_directory(void) {
 	
 }
 
+char* get_temporary_directory(void) {
+	
+	#ifdef _WIN32
+		#ifdef _UNICODE
+			const size_t wsize = (size_t) GetTempPathW(0, NULL);
+			
+			if (wsize == 0) {
+				return NULL;
+			}
+			
+			wchar_t wdirectory[wsize + 1];
+			
+			const DWORD code = GetTempPathW((DWORD) (sizeof(wdirectory) / sizeof(*wdirectory)), wdirectory);
+			
+			if (code == 0) {
+				return 0;
+			}
+			
+			const int csize = WideCharToMultiByte(CP_UTF8, 0, wdirectory, -1, NULL, 0, NULL, NULL);
+			char* temporary_directory = malloc((size_t) csize);
+			
+			if (temporary_directory == NULL) {
+				return NULL;
+			}
+			
+			WideCharToMultiByte(CP_UTF8, 0, wdirectory, -1, temporary_directory, csize, NULL, NULL);
+		#else
+			const size_t size = (size_t) GetTempPathA(0, NULL);
+			
+			if (size == 0) {
+				return NULL;
+			}
+			
+			char directory[size + 1];
+			const DWORD code = GetTempPathA(sizeof(directory), directory);
+			
+			if (code == 0) {
+				return 0;
+			}
+			
+			char* temporary_directory = malloc(sizeof(directory));
+			
+			if (temporary_directory == NULL) {
+				return NULL;
+			}
+			
+			strcpy(temporary_directory, directory);
+		#endif
+	#else
+		const char* const keys[] = {
+			"TMPDIR",
+			"TEMP",
+			"TMP",
+			"TEMPDIR"
+		};
+		
+		for (size_t index = 0; index < (sizeof(keys) / sizeof(*keys)); index++) {
+			const char* const key = keys[index];
+			const char* const value = getenv(key);
+			
+			if (key == NULL || !directory_exists(value)) {
+				continue;
+			}
+			
+			char* temporary_directory = malloc(strlen(value) + 1);
+			
+			if (temporary_directory == NULL) {
+				return NULL;
+			}
+			
+			strcpy(temporary_directory, value);
+			
+			return temporary_directory;
+		}
+		
+		const char* const tmp = "/tmp";
+		
+		if (!directory_exists(tmp)) {
+			return NULL;
+		}
+		
+		char* temporary_directory = malloc(strlen(tmp) + 1);
+		
+		if (temporary_directory == NULL) {
+			return NULL;
+		}
+		
+		strcpy(temporary_directory, tmp);
+	#endif
+	
+	if (strlen(temporary_directory) > 1) {
+		char* ptr = strchr(temporary_directory, '\0') - 1;
+		
+		if (*ptr == *PATH_SEPARATOR) {
+			*ptr = '\0';
+		}
+	}
+	
+	return temporary_directory;
+	
+}
+
 char* normalize_filename(char* filename) {
 	
 	for (size_t index = 0; index < strlen(filename); index++) {
@@ -536,7 +638,7 @@ int create_directory(const char* const directory) {
 	
 }
 
-static int copy_file(const char* const source, const char* const destination) {
+int copy_file(const char* const source, const char* const destination) {
 	/*
 	Copies a file from source to destination.
 	*/
@@ -761,7 +863,7 @@ int hashs(const char* const s) {
 	
 	for (size_t index = 0; index < strlen(s); index++) {
 		const int ch = s[index];
-		value += (ch % 2 == 0) ? ch / 2 : ch;
+		value += ch + (int) index;
 	}
 	
 	return value;

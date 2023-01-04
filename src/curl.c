@@ -18,6 +18,8 @@ static const char CA_CERT_FILENAME[] =
 
 static const char HTTP_DEFAULT_USER_AGENT[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36";
 
+static char CURL_ERROR_MESSAGE[CURL_ERROR_SIZE] = {'\0'};
+
 static CURL* curl_easy_global = NULL;
 static CURLM* curl_multi_global = NULL;
 static struct curl_blob curl_blob_global = {0};
@@ -157,6 +159,8 @@ CURL* get_global_curl_easy(void) {
 		return NULL;
 	}
 	
+	curl_easy_setopt(curl_easy_global, CURLOPT_ERRORBUFFER, CURL_ERROR_MESSAGE);
+	
 	return curl_easy_global;
 	
 }
@@ -195,5 +199,11 @@ CURLM* get_global_curl_multi(void) {
 	curl_multi_setopt(curl_multi_global, CURLMOPT_MAX_TOTAL_CONNECTIONS, 30L);
 	
 	return curl_multi_global;
+	
+}
+
+const char* get_global_curl_error(void) {
+	
+	return CURL_ERROR_MESSAGE;
 	
 }

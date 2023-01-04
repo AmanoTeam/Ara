@@ -106,6 +106,21 @@ int vimeo_parse(
 	
 	const char* const title = json_string_value(obj);
 	
+	obj = json_object_get(obj, "id");
+	
+	if (obj == NULL) {
+		return UERR_JSON_MISSING_REQUIRED_KEY;
+	}
+	
+	if (!json_is_integer(obj)) {
+		return UERR_JSON_NON_MATCHING_TYPE;
+	}
+	
+	const json_int_t id = json_integer_value(obj);
+	
+	char sid[intlen(id) + 1];
+	snprintf(sid, sizeof(sid), "%llu", id);
+	
 	obj = json_object_get(tree, "request");
 	
 	if (obj == NULL) {
@@ -190,15 +205,21 @@ int vimeo_parse(
 			return UERR_STRSTR_FAILURE;
 		}
 		
+		media->video.id = malloc(strlen(sid) + 1);
 		media->video.filename = malloc(strlen(title) + strlen(DOT) + strlen(file_extension) + 1);
+		media->video.short_filename = malloc(strlen(sid) + strlen(DOT) + strlen(file_extension) + 1);
 		
-		if (media->video.filename == NULL) {
+		if (media->video.id == NULL || media->video.filename == NULL || media->video.short_filename == NULL) {
 			return UERR_MEMORY_ALLOCATE_FAILURE;
 		}
 		
 		strcpy(media->video.filename, title);
 		strcat(media->video.filename, DOT);
 		strcat(media->video.filename, file_extension);
+		
+		strcpy(media->video.short_filename, sid);
+		strcat(media->video.short_filename, DOT);
+		strcat(media->video.short_filename, file_extension);
 		
 		normalize_filename(media->video.filename);
 		
@@ -353,37 +374,71 @@ int vimeo_parse(
 		
 		CURLU* cu __attribute__((__cleanup__(curlupp_free))) = curl_url();
 		
-		curl_url_set(cu, CURLUPART_URL, url, 0);
-		curl_url_set(cu, CURLUPART_URL, video_stream, 0);
+		if (cu == NULL) {
+			return UERR_CURLU_FAILURE;
+		}
 		
-		curl_url_get(cu, CURLUPART_URL, &media->video.url, 0);
+		if (curl_url_set(cu, CURLUPART_URL, url, 0) != CURLUE_OK) {
+			return UERR_CURLU_FAILURE;
+		}
 		
-		curl_url_set(cu, CURLUPART_URL, url, 0);
-		curl_url_set(cu, CURLUPART_URL, audio_stream, 0);
+		if (curl_url_set(cu, CURLUPART_URL, video_stream, 0) != CURLUE_OK) {
+			return UERR_CURLU_FAILURE;
+		}
 		
-		curl_url_get(cu, CURLUPART_URL, &media->audio.url, 0);
+		if (curl_url_get(cu, CURLUPART_URL, &media->video.url, 0) != CURLUE_OK) {
+			return UERR_CURLU_FAILURE;
+		}
 		
+		if (curl_url_set(cu, CURLUPART_URL, url, 0) != CURLUE_OK) {
+			return UERR_CURLU_FAILURE;
+		}
+		
+		if (curl_url_set(cu, CURLUPART_URL, audio_stream, 0) != CURLUE_OK) {
+			return UERR_CURLU_FAILURE;
+		}
+		
+		if (curl_url_get(cu, CURLUPART_URL, &media->audio.url, 0) != CURLUE_OK) {
+			return UERR_CURLU_FAILURE;
+		}
+		
+		media->audio.id = malloc(strlen(sid) + 1);
 		media->audio.filename = malloc(strlen(title) + strlen(DOT) + strlen(AAC_FILE_EXTENSION) + 1);
+		media->audio.short_filename = malloc(strlen(sid) + strlen(DOT) + strlen(AAC_FILE_EXTENSION) + 1);
 		
-		if (media->audio.filename == NULL) {
+		if (media->audio.id == NULL || media->audio.filename == NULL || media->audio.short_filename) {
 			return UERR_MEMORY_ALLOCATE_FAILURE;
 		}
+		
+		strcpy(media->audio.id, sid);
 		
 		strcpy(media->audio.filename, title);
 		strcat(media->audio.filename, DOT);
 		strcat(media->audio.filename, AAC_FILE_EXTENSION);
 		
+		strcpy(media->audio.short_filename, title);
+		strcat(media->audio.short_filename, DOT);
+		strcat(media->audio.short_filename, AAC_FILE_EXTENSION);
+		
 		normalize_filename(media->audio.filename);
 		
+		media->video.id = malloc(strlen(sid) + 1);
 		media->video.filename = malloc(strlen(title) + strlen(DOT) + strlen(MP4_FILE_EXTENSION) + 1);
+		media->video.short_filename = malloc(strlen(sid) + strlen(DOT) + strlen(MP4_FILE_EXTENSION) + 1);
 		
-		if (media->video.filename == NULL) {
+		if (media->video.id == NULL || media->video.filename == NULL || media->video.short_filename) {
 			return UERR_MEMORY_ALLOCATE_FAILURE;
 		}
+		
+		strcpy(media->video.id, sid);
 		
 		strcpy(media->video.filename, title);
 		strcat(media->video.filename, DOT);
 		strcat(media->video.filename, MP4_FILE_EXTENSION);
+		
+		strcpy(media->video.short_filename, sid);
+		strcat(media->video.short_filename, DOT);
+		strcat(media->video.short_filename, MP4_FILE_EXTENSION);
 		
 		normalize_filename(media->video.filename);
 		

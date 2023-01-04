@@ -54,8 +54,6 @@ static const char CYBERCLASS_COURSE_HOMEPAGE[] =
 
 static const char VIMEO_PLAYER_PREFIX[] = "https://player.vimeo.com/video";
 
-static const char CYBERCLASS_HOMEPAGE[] = "https://www.cyberclass.com.br";
-
 int cyberclass_authorize(
 	const char* const username,
 	const char* const password,
@@ -232,7 +230,7 @@ int cyberclass_get_resources(
 	const CURLcode code = curl_easy_perform(curl_easy);
 	
 	if (code == CURLE_HTTP_RETURNED_ERROR) {
-		return UERR_HOTMART_SESSION_EXPIRED;
+		return UERR_PROVIDER_SESSION_EXPIRED;
 	}
 	
 	if (code != CURLE_OK) {
@@ -360,7 +358,7 @@ int cyberclass_get_resources(
 			const CURLcode code = curl_easy_perform(curl_easy);
 			
 			if (code == CURLE_HTTP_RETURNED_ERROR) {
-				return UERR_HOTMART_SESSION_EXPIRED;
+				return UERR_PROVIDER_SESSION_EXPIRED;
 			}
 			
 			if (code != CURLE_OK) {
@@ -780,6 +778,20 @@ int cyberclass_get_modules(
 	curl_easy_setopt(curl_easy, CURLOPT_URL, NULL);
 	
 	return UERR_SUCCESS;
+	
+}
+
+int cyberclass_get_module(
+	const struct Credentials* const credentials,
+	const struct Resource* const resource,
+	struct Module* const module
+) {
+	
+	(void) credentials;
+	(void) resource;
+	(void) module;
+	
+	return UERR_NOT_IMPLEMENTED;
 	
 }
 

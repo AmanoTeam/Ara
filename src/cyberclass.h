@@ -17,6 +17,12 @@ int cyberclass_get_modules(
 	struct Resource* const resource
 );
 
+int cyberclass_get_module(
+	const struct Credentials* const credentials,
+	const struct Resource* const resource,
+	struct Module* const module
+);
+
 int cyberclass_get_page(
 	const struct Credentials* const credentials,
 	const struct Resource* const resource,

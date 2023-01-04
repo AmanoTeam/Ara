@@ -234,11 +234,25 @@ int hotmart_get_resources(
 	}
 	
 	CURLU* cu __attribute__((__cleanup__(curlupp_free))) = curl_url();
-	curl_url_set(cu, CURLUPART_URL, HOTMART_TOKEN_CHECK_ENDPOINT, 0);
-	curl_url_set(cu, CURLUPART_QUERY, squery, 0);
+	
+	if (cu == NULL) {
+		return UERR_CURLU_FAILURE;
+	}
+	
+	if (curl_url_set(cu, CURLUPART_URL, HOTMART_TOKEN_CHECK_ENDPOINT, 0) != CURLUE_OK) {
+		return UERR_CURLU_FAILURE;
+	}
+	
+	if (curl_url_set(cu, CURLUPART_QUERY, squery, 0) != CURLUE_OK) {
+		return UERR_CURLU_FAILURE;
+	}
 	
 	char* url __attribute__((__cleanup__(curlcharpp_free))) = NULL;
-	curl_url_get(cu, CURLUPART_URL, &url, 0);
+	
+	if (curl_url_get(cu, CURLUPART_URL, &url, 0) != CURLUE_OK) {
+		return UERR_CURLU_FAILURE;
+	}
+	
 	curl_easy_setopt(curl_easy, CURLOPT_URL, url);
 	
 	struct String string __attribute__((__cleanup__(string_free))) = {0};
@@ -247,14 +261,13 @@ int hotmart_get_resources(
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 	curl_easy_setopt(curl_easy, CURLOPT_HTTPGET, 1L);
 	
-	const CURLcode ccode = curl_easy_perform(curl_easy);
-	
-	if (ccode == CURLE_HTTP_RETURNED_ERROR) {
-		return UERR_HOTMART_SESSION_EXPIRED;
-	}
-	
-	if (ccode != CURLE_OK) {
-		return UERR_CURL_FAILURE;
+	switch (curl_easy_perform(curl_easy)) {
+		case CURLE_OK:
+			break;
+		case CURLE_HTTP_RETURNED_ERROR:
+			return UERR_PROVIDER_SESSION_EXPIRED;
+		default:
+			return UERR_CURL_FAILURE;
 	}
 	
 	json_auto_t* tree = json_loads(string.s, 0, NULL);
@@ -374,15 +387,22 @@ int hotmart_get_resources(
 		struct Resource resource = {
 			.id = malloc(strlen(id) + 1),
 			.name = malloc(strlen(name) + 1),
+			.dirname = malloc(strlen(name) + 1),
+			.short_dirname = malloc(strlen(id) + 1),
 			.url = malloc(strlen(HTTPS_SCHEME) + strlen(id) + strlen(HOTMART_CLUB_SUFFIX) + 1)
 		};
 		
-		if (resource.id == NULL || resource.name == NULL || resource.url == NULL) {
+		if (resource.id == NULL || resource.name == NULL || resource.dirname == NULL || resource.short_dirname == NULL || resource.url == NULL) {
 			return UERR_MEMORY_ALLOCATE_FAILURE;
 		}
 		
 		strcpy(resource.id, id);
 		strcpy(resource.name, name);
+		
+		strcpy(resource.dirname, name);
+		normalize_filename(resource.dirname);
+		
+		strcpy(resource.short_dirname, id);
 		
 		strcpy(resource.url, HTTPS_SCHEME);
 		strcat(resource.url, id);
@@ -523,15 +543,22 @@ int hotmart_get_modules(
 		struct Module module = {
 			.id = malloc(strlen(id) + 1),
 			.name = malloc(strlen(name) + 1),
+			.dirname = malloc(strlen(name) + 1),
+			.short_dirname = malloc(strlen(id) + 1),
 			.is_locked = is_locked
 		};
 		
-		if (module.id == NULL || module.name == NULL) {
+		if (module.id == NULL || module.name == NULL || module.dirname == NULL || module.short_dirname == NULL) {
 			return UERR_MEMORY_ALLOCATE_FAILURE;
 		}
 		
 		strcpy(module.id, id);
 		strcpy(module.name, name);
+		
+		strcpy(module.dirname, name);
+		normalize_filename(module.dirname);
+		
+		strcpy(module.short_dirname, id);
 		
 		obj = json_object_get(item, "pages");
 		
@@ -569,7 +596,7 @@ int hotmart_get_modules(
 				return UERR_JSON_NON_MATCHING_TYPE;
 			}
 			
-			const char* const hash = json_string_value(obj);
+			const char* const id = json_string_value(obj);
 			
 			obj = json_object_get(page_item, "name");
 			
@@ -596,17 +623,24 @@ int hotmart_get_modules(
 			const int is_locked = json_boolean_value(obj);
 			
 			struct Page page = {
-				.id = malloc(strlen(hash) + 1),
+				.id = malloc(strlen(id) + 1),
 				.name = malloc(strlen(name) + 1),
+				.dirname = malloc(strlen(name) + 1),
+				.short_dirname = malloc(strlen(id) + 1),
 				.is_locked = is_locked
 			};
 			
-			if (page.id == NULL || page.name == NULL) {
+			if (page.id == NULL || page.name == NULL || page.dirname == NULL || page.short_dirname == NULL) {
 				return UERR_MEMORY_ALLOCATE_FAILURE;
 			}
 			
-			strcpy(page.id, hash);
+			strcpy(page.id, id);
 			strcpy(page.name, name);
+			
+			strcpy(page.dirname, name);
+			normalize_filename(page.dirname);
+			
+			strcpy(page.short_dirname, id);
 			
 			module.pages.items[module.pages.offset++] = page;
 		}
@@ -620,6 +654,20 @@ int hotmart_get_modules(
 	curl_easy_setopt(curl_easy, CURLOPT_URL, NULL);
 	
 	return UERR_SUCCESS;
+	
+}
+
+int hotmart_get_module(
+	const struct Credentials* const credentials,
+	const struct Resource* const resource,
+	struct Module* const module
+) {
+	
+	(void) credentials;
+	(void) resource;
+	(void) module;
+	
+	return UERR_NOT_IMPLEMENTED;
 	
 }
 
@@ -734,6 +782,18 @@ int hotmart_get_page(
 			
 			const char* const media_name = json_string_value(obj);
 			
+			obj = json_object_get(item, "mediaCode");
+			
+			if (obj == NULL) {
+				return UERR_JSON_MISSING_REQUIRED_KEY;
+			}
+			
+			if (!json_is_string(obj)) {
+				return UERR_JSON_NON_MATCHING_TYPE;
+			}
+			
+			const char* const media_code = json_string_value(obj);
+			
 			obj = json_object_get(item, "mediaType");
 			
 			if (obj == NULL) {
@@ -781,6 +841,18 @@ int hotmart_get_page(
 					memmove(offset + 1, offset + 6, strlen(offset + 6) + 1);
 					
 					size -= 5;
+				}
+			}
+			
+			char* const file_extension = get_file_extension(media_name);
+			
+			if (file_extension != NULL) {
+				for (size_t index = 0; index < strlen(file_extension); index++) {
+					char* ch = &file_extension[index];
+					
+					if (isupper(*ch)) {
+						*ch = (char) tolower(*ch);
+					}
 				}
 			}
 			
@@ -832,37 +904,41 @@ int hotmart_get_page(
 				}
 				
 				CURLU* cu __attribute__((__cleanup__(curlupp_free))) = curl_url();
-				curl_url_set(cu, CURLUPART_URL, url, 0);
-				curl_url_set(cu, CURLUPART_URL, playlist_uri, 0);
 				
-				char* stream_url = NULL;	
-				curl_url_get(cu, CURLUPART_URL, &stream_url, 0);
+				if (cu == NULL) {
+					return UERR_CURLU_FAILURE;
+				}
 				
-				char* const file_extension = get_file_extension(media_name);
+				if (curl_url_set(cu, CURLUPART_URL, url, 0) != CURLUE_OK) {
+					return UERR_CURLU_FAILURE;
+				}
 				
-				if (file_extension != NULL) {
-					for (size_t index = 0; index < strlen(file_extension); index++) {
-						char* ch = &file_extension[index];
-						
-						if (isupper(*ch)) {
-							*ch = *ch + 32;
-						}
-					}
+				if (curl_url_set(cu, CURLUPART_URL, playlist_uri, 0) != CURLUE_OK) {
+					return UERR_CURLU_FAILURE;
+				}
+				
+				char* stream_url = NULL;
+				
+				if (curl_url_get(cu, CURLUPART_URL, &stream_url, 0) != CURLUE_OK) {
+					return UERR_CURLU_FAILURE;
 				}
 				
 				struct Media media = {
 					.type = MEDIA_M3U8,
 					.audio = {0},
 					.video = {
+						.id = malloc(strlen(media_code) + 1),
 						.filename = malloc(strlen(media_name) + (file_extension == NULL ? strlen(DOT) + strlen(MP4_FILE_EXTENSION) : 0) + 1),
+						.short_filename = malloc(strlen(media_code) + (file_extension == NULL ? strlen(DOT) + strlen(MP4_FILE_EXTENSION) : 0) + 1),
 						.url = malloc(strlen(stream_url) + 1)
 					}
 				};
 				
-				if (media.video.filename == NULL || media.video.url == NULL) {
+				if (media.video.id == NULL || media.video.filename == NULL || media.video.short_filename == NULL || media.video.url == NULL) {
 					return UERR_MEMORY_ALLOCATE_FAILURE;
 				}
 				
+				strcpy(media.video.id, media_code);
 				strcpy(media.video.url, stream_url);
 				strcpy(media.video.filename, media_name);
 				
@@ -871,32 +947,44 @@ int hotmart_get_page(
 					strcat(media.video.filename, MP4_FILE_EXTENSION);
 				}
 				
+				strcpy(media.video.short_filename, media_code);
+				strcat(media.video.short_filename, DOT);
+				strcat(media.video.short_filename, file_extension == NULL ? MP4_FILE_EXTENSION : file_extension);
+				
 				normalize_filename(media.video.filename);
 				
 				page->medias.items[page->medias.offset++] = media;
 			} else {
-				page->attachments.size = sizeof(struct Attachment) * 1;
-				page->attachments.items = malloc(page->attachments.size);
-				
-				if (page->attachments.items == NULL) {
-					return UERR_MEMORY_ALLOCATE_FAILURE;
-				}
-				
-				struct Attachment attachment = {
-					.filename = malloc(strlen(media_name) + 1),
-					.url = malloc(strlen(url) + 1),
+				struct Media media = {
+					.type = MEDIA_SINGLE,
+					.audio = {
+						.id = malloc(strlen(media_code) + 1),
+						.filename = malloc(strlen(media_name) + (file_extension == NULL ? strlen(DOT) + strlen(MP3_FILE_EXTENSION) : 0) + 1),
+						.short_filename = malloc(strlen(media_code) + (file_extension == NULL ? strlen(DOT) + strlen(MP3_FILE_EXTENSION) : 0) + 1),
+						.url = malloc(strlen(url) + 1)
+					},
+					.video = {0}
 				};
 				
-				if (attachment.filename == NULL || attachment.url == NULL) {
+				if (media.audio.id == NULL || media.audio.filename == NULL || media.audio.short_filename == NULL || media.audio.url == NULL) {
 					return UERR_MEMORY_ALLOCATE_FAILURE;
 				}
 				
-				strcpy(attachment.url, url);
-				strcpy(attachment.filename, media_name);
+				strcpy(media.audio.id, media_code);
+				strcpy(media.audio.url, url);
+				strcpy(media.audio.filename, media_name);
+				strcpy(media.audio.short_filename, media_code);
 				
-				normalize_filename(attachment.filename);
+				if (file_extension == NULL) {
+					strcat(media.audio.filename, DOT);
+					strcat(media.audio.filename, MP3_FILE_EXTENSION);
+					strcat(media.audio.short_filename, DOT);
+					strcat(media.audio.short_filename, MP3_FILE_EXTENSION);
+				}
 				
-				page->attachments.items[page->attachments.offset++] = attachment;
+				normalize_filename(media.audio.filename);
+				
+				page->medias.items[page->medias.offset++] = media;
 			}
 			
 			curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, list);
@@ -1045,17 +1133,33 @@ int hotmart_get_page(
 				curl_easy_setopt(curl_easy, CURLOPT_URL, NULL);
 			}
 			
+			const int hash = hashs(id);
+			
+			char sid[intlen(hash) + 1];
+			snprintf(sid, sizeof(sid), "%i", hash);
+			
+			const char* const file_extension = get_file_extension(filename);
+			
 			struct Attachment attachment = {
+				.id = malloc(strlen(sid) + 1),
 				.filename = malloc(strlen(filename) + 1),
+				.short_filename = malloc(strlen(sid) + (file_extension == NULL ? 0 : strlen(DOT) + strlen(file_extension))  + 1),
 				.url = malloc(strlen(download_url) + 1),
 			};
 			
-			if (attachment.filename == NULL || attachment.url == NULL) {
+			if (attachment.id == NULL || attachment.filename == NULL || attachment.short_filename == NULL || attachment.url == NULL) {
 				return UERR_MEMORY_ALLOCATE_FAILURE;
 			}
 			
+			strcpy(attachment.id, sid);
 			strcpy(attachment.url, download_url);
 			strcpy(attachment.filename, filename);
+			strcpy(attachment.short_filename, sid);
+			
+			if (file_extension != NULL) {
+				strcat(attachment.short_filename, DOT);
+				strcat(attachment.short_filename, file_extension);
+			}
 			
 			normalize_filename(attachment.filename);
 			
@@ -1144,16 +1248,24 @@ int hotmart_get_page(
 			}
 		}
 		
+		page->document.id = malloc(strlen(page->id) + 1);
 		page->document.filename = malloc(strlen(page->name) + strlen(DOT) + strlen(HTML_FILE_EXTENSION) + 1);
+		page->document.short_filename = malloc(strlen(page->id) + strlen(DOT) + strlen(HTML_FILE_EXTENSION) + 1);
 		page->document.content = malloc(strlen(HTML_HEADER_START) + strlen(content) + strlen(HTML_HEADER_END) + 1);
 		
-		if (page->document.filename == NULL || page->document.content == NULL) {
+		if (page->document.id == NULL || page->document.filename == NULL || page->document.short_filename == NULL || page->document.content == NULL) {
 			return UERR_MEMORY_ALLOCATE_FAILURE;
 		}
+		
+		strcpy(page->document.id, page->id);
 		
 		strcpy(page->document.filename, page->name);
 		strcat(page->document.filename, DOT);
 		strcat(page->document.filename, HTML_FILE_EXTENSION);
+		
+		strcpy(page->document.short_filename, page->id);
+		strcat(page->document.short_filename, DOT);
+		strcat(page->document.short_filename, HTML_FILE_EXTENSION);
 		
 		normalize_filename(page->document.filename);
 		

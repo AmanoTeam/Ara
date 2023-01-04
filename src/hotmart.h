@@ -20,6 +20,12 @@ int hotmart_get_modules(
 	struct Resource* const resource
 );
 
+int hotmart_get_module(
+	const struct Credentials* const credentials,
+	const struct Resource* const resource,
+	struct Module* const module
+);
+
 int hotmart_get_page(
 	const struct Credentials* const credentials,
 	const struct Resource* const resource,

@@ -16,6 +16,8 @@ int execute_shell_command(const char* const command);
 int is_administrator(void);
 char* get_file_extension(const char* const filename);
 char* get_configuration_directory(void);
+char* get_temporary_directory(void);
+int copy_file(const char* const source, const char* const destination);
 int move_file(const char* const source, const char* const destination);
 int is_absolute(const char* const path);
 int get_app_filename(char* const filename, const size_t size);

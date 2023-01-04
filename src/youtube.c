@@ -49,17 +49,17 @@ int youtube_parse(
 	CURLU* cu __attribute__((__cleanup__(curlupp_free))) = curl_url();
 	
 	if (cu == NULL) {
-		return UERR_CURL_FAILURE;
+		return UERR_CURLU_FAILURE;
 	}
 	
 	if (curl_url_set(cu, CURLUPART_URL, url, 0) != CURLUE_OK) {
-		return UERR_CURL_FAILURE;
+		return UERR_CURLU_FAILURE;
 	}
 	
 	char* path __attribute__((__cleanup__(curlcharpp_free))) = NULL;
 	
 	if (curl_url_get(cu, CURLUPART_PATH, &path, 0) != CURLUE_OK) {
-		return UERR_CURL_FAILURE;
+		return UERR_CURLU_FAILURE;
 	}
 	
 	const char* const start = basename(path);
@@ -107,11 +107,19 @@ int youtube_parse(
 		return code;
 	}
 	
-	curl_url_set(cu, CURLUPART_URL, YOUTUBE_PLAYER_ENDPOINT, 0);
-	curl_url_set(cu, CURLUPART_QUERY, query, 0);
+	if (curl_url_set(cu, CURLUPART_URL, YOUTUBE_PLAYER_ENDPOINT, 0) != CURLUE_OK) {
+		return UERR_CURLU_FAILURE;
+	}
+	
+	if (curl_url_set(cu, CURLUPART_QUERY, query, 0) != CURLUE_OK) {
+		return UERR_CURLU_FAILURE;
+	}
 	
 	char* uri __attribute__((__cleanup__(curlcharpp_free))) = NULL;
-	curl_url_get(cu, CURLUPART_URL, &uri, 0);
+	
+	if (curl_url_get(cu, CURLUPART_URL, &uri, 0) != CURLUE_OK) {
+		return UERR_CURLU_FAILURE;
+	}
 	
 	curl_easy_setopt(curl_easy, CURLOPT_URL, uri);
 	
@@ -279,15 +287,23 @@ int youtube_parse(
 	
 	const char* const title = json_string_value(obj);
 	
+	media->video.id = malloc(strlen(video_id) + 1);
 	media->video.filename = malloc(strlen(title) + strlen(DOT) + strlen(MP4_FILE_EXTENSION) + 1);
+	media->video.short_filename = malloc(strlen(video_id) + strlen(DOT) + strlen(MP4_FILE_EXTENSION) + 1);
 	
-	if (media->video.filename == NULL) {
+	if (media->video.filename == NULL || media->video.short_filename == NULL) {
 		return UERR_MEMORY_ALLOCATE_FAILURE;
 	}
+	
+	strcpy(media->video.id, video_id);
 	
 	strcpy(media->video.filename, title);
 	strcat(media->video.filename, DOT);
 	strcat(media->video.filename, MP4_FILE_EXTENSION);
+	
+	strcpy(media->video.short_filename, video_id);
+	strcat(media->video.short_filename, DOT);
+	strcat(media->video.short_filename, MP4_FILE_EXTENSION);
 	
 	normalize_filename(media->video.filename);
 	

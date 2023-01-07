@@ -833,13 +833,10 @@ int main(void) {
 	int kof = 0;
 	
 	while (1) {
-		printf("> Manter o nome original de arquivos e diretórios? (S/n) ");
+		char answer[MAX_INPUT_SIZE] = {'\0'};
+		input("> Manter o nome original de arquivos e diretórios? (S/n) ", answer);
 		
-		const char answer = (char) getchar();
-		
-		(void) getchar();
-		
-		switch (answer) {
+		switch (*answer) {
 			case 's':
 			case 'y':
 			case 'S':

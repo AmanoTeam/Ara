@@ -136,7 +136,7 @@ static int curl_set_options(CURL* handle) {
 	}
 	
 	curl_easy_setopt(handle, CURLOPT_CAINFO_BLOB, &curl_blob_global);
-	curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
+	curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 1L);
 	curl_easy_setopt(handle, CURLOPT_CAINFO, NULL);
 	curl_easy_setopt(handle, CURLOPT_CAPATH, NULL);
 	curl_easy_setopt(handle, CURLOPT_CAINFO_BLOB, &curl_blob_global);

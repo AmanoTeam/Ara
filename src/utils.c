@@ -224,11 +224,25 @@ int is_administrator(void) {
 char* get_configuration_directory(void) {
 	
 	#ifdef _WIN32
-		const char* const directory = getenv("APPDATA");
-		
-		if (directory == NULL) {
-			return NULL;
-		}
+		#ifdef _UNICODE
+			const wchar_t* const wdirectory = _wgetenv(L"APPDATA");
+			
+			if (wdirectory == NULL) {
+				return NULL;
+			}
+			
+			const int size = WideCharToMultiByte(CP_UTF8, 0, wdirectory, -1, NULL, 0, NULL, NULL);
+			
+			char directory[(size_t) size];
+			
+			WideCharToMultiByte(CP_UTF8, 0, wdirectory, -1, directory, size, NULL, NULL);
+		#else
+			const char* const directory = getenv("APPDATA");
+			
+			if (directory == NULL) {
+				return NULL;
+			}
+		#endif
 	#else
 		const char* const directory = getenv("XDG_CONFIG_HOME");
 		

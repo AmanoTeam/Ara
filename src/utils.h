@@ -11,7 +11,6 @@ int isnumeric(const char* const s);
 char* normalize_filename(char* filename);
 char* get_current_directory(void);
 char* basename(const char* const path);
-int expand_filename(const char* filename, char** fullpath);
 int execute_shell_command(const char* const command);
 int is_administrator(void);
 char* get_file_extension(const char* const filename);

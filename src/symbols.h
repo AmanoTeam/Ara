@@ -54,3 +54,7 @@ static const char HTML_LI_END[] = "</li>";
 static const char HTML_A_START[] = "<a";
 static const char HTML_A_END[] = "</a>";
 static const char HTML_HREF_ATTRIBUTE[] = "href";
+
+#if defined(_WIN32) && defined(_UNICODE)
+	static const wchar_t WIN10LP_PREFIX[] = L"\\\\?\\";
+#endif

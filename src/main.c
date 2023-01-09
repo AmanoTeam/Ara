@@ -329,7 +329,7 @@ static int m3u8_download(const char* const url, const char* const output) {
 	
 	printf("+ Concatenando seguimentos de mídia baixados para um único arquivo em '%s'\r\n", output);
 	
-	const char* const command = "ffmpeg -nostdin -nostats -loglevel fatal -allowed_extensions ALL -i \"%s\" -c copy \"%s\"";
+	const char* const command = "ffmpeg -nostdin -nostats -loglevel error -allowed_extensions ALL -i \"%s\" -c copy \"%s\"";
 	
 	const int size = snprintf(NULL, 0, command, playlist_filename, output);
 	char shell_command[size + 1];
@@ -1320,7 +1320,7 @@ int main(void) {
 							strcat(temporary_file, DOT);
 							strcat(temporary_file, file_extension);
 							
-							const char* const command = "ffmpeg -nostdin -nostats -loglevel fatal -i \"%s\" -i \"%s\" -c copy -movflags +faststart -map_metadata -1 -map 0:v:0 -map 1:a:0 \"%s\"";
+							const char* const command = "ffmpeg -nostdin -nostats -loglevel error -i \"%s\" -i \"%s\" -c copy -movflags +faststart -map_metadata -1 -map 0:v:0 -map 1:a:0 \"%s\"";
 							
 							const int size = snprintf(NULL, 0, command, video_path, audio_path, temporary_file);
 							char shell_command[size + 1];
@@ -1349,13 +1349,21 @@ int main(void) {
 						} else {
 							const char* const input = audio_path == NULL ? video_path : audio_path;
 							
-							const char* const command = "ffmpeg -nostdin -nostats -loglevel fatal -i \"%s\" -c copy -movflags +faststart -map_metadata -1 \"%s\"";
+							const char* const bname = basename(input);
 							
-							const int size = snprintf(NULL, 0, command, input, media_filename);
+							char temporary_file[strlen(temporary_directory) + strlen(PATH_SEPARATOR) + 1 + strlen(bname) + 1];
+							strcpy(temporary_file, temporary_directory);
+							strcat(temporary_file, PATH_SEPARATOR);
+							strcat(temporary_file, "0");
+							strcat(temporary_file, bname);
+							
+							const char* const command = "ffmpeg -nostdin -nostats -loglevel error -i \"%s\" -c copy -movflags +faststart -map_metadata -1 \"%s\"";
+							
+							const int size = snprintf(NULL, 0, command, input, temporary_file);
 							char shell_command[size + 1];
-							snprintf(shell_command, sizeof(shell_command), command, input, media_filename);
+							snprintf(shell_command, sizeof(shell_command), command, input, temporary_file);
 							
-							printf("+ Movendo arquivo de mídia de '%s' para '%s'\r\n", input, media_filename);
+							printf("+ Copiando arquivo de mídia de '%s' para '%s'\r\n", input, temporary_file);
 							
 							const int exit_code = execute_shell_command(shell_command);
 							
@@ -1365,6 +1373,19 @@ int main(void) {
 								fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar processar a mídia!\r\n");
 								return EXIT_FAILURE;
 							}
+							
+							printf("+ Movendo arquivo de mídia de '%s' para '%s'\r\n", temporary_file, media_filename);
+							
+							if (!move_file(temporary_file, media_filename)) {
+								const struct SystemError error = get_system_error();
+								
+								remove_file(temporary_file);
+								
+								fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar mover o arquivo de '%s' para '%s': %s\r\n", temporary_file, media_filename, error.message);
+								return EXIT_FAILURE;
+							}
+							
+							remove_file(temporary_file);
 						}
 					}
 				}

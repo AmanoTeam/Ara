@@ -9,6 +9,10 @@
 
 #include "fstream.h"
 
+#if defined(_WIN32) && defined(_UNICODE)
+	#include "symbols.h"
+#endif
+
 struct FStream* fstream_open(const char* const filename, const char* const mode) {
 	
 	#ifdef _WIN32
@@ -31,8 +35,9 @@ struct FStream* fstream_open(const char* const filename, const char* const mode)
 		
 		#ifdef _UNICODE
 			const int wcsize = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
-			wchar_t lpFileName[wcsize];
-			MultiByteToWideChar(CP_UTF8, 0, filename, -1, lpFileName, (int) (sizeof(lpFileName) / sizeof(*lpFileName)));
+			wchar_t lpFileName[wcslen(WIN10LP_PREFIX) + wcsize];
+			wcscpy(lpFileName, WIN10LP_PREFIX);
+			MultiByteToWideChar(CP_UTF8, 0, filename, -1, lpFileName + wcslen(WIN10LP_PREFIX), wcsize);
 			
 			HANDLE handle = CreateFileW(
 				lpFileName,

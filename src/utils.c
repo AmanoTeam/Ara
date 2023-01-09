@@ -453,71 +453,6 @@ int isnumeric(const char* const s) {
 	
 }
 
-int expand_filename(const char* filename, char** fullpath) {
-	
-	#ifdef _WIN32
-		#ifdef _UNICODE
-			const int wcsize = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
-			wchar_t wfilename[wcsize];
-			MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfilename, wcsize);
-			
-			wchar_t path[PATH_MAX];
-			const DWORD code = GetFullPathNameW(wfilename, sizeof(path) / sizeof(*path), path, NULL);
-			
-			if (code == 0) {
-				return 0;
-			}
-			
-			wchar_t fpath[code];
-			
-			if (code > sizeof(path) / sizeof(*path)) {
-				const DWORD code = GetFullPathNameW(wfilename, (DWORD) (sizeof(fpath) / sizeof(*fpath)), fpath, NULL);
-				
-				if (code == 0) {
-					return 0;
-				}
-			} else {
-				wcscpy(fpath, path);
-			}
-			
-			const int size = WideCharToMultiByte(CP_UTF8, 0, fpath, -1, NULL, 0, NULL, NULL);
-			
-			*fullpath = malloc((size_t) size);
-			
-			if (*fullpath == NULL) {
-				return 0;
-			}
-			
-			WideCharToMultiByte(CP_UTF8, 0, fpath, -1, *fullpath, size, NULL, NULL);
-		#else
-			char path[PATH_MAX];
-			const DWORD code = GetFullPathNameA(filename, sizeof(path), path, NULL);
-			
-			if (code == 0) {
-				return code;
-			}
-			
-			*fullpath = malloc(code + 1);
-			
-			if (*fullpath == NULL) {
-				return 0;
-			}
-			
-			strcpy(*fullpath, path);
-		#endif
-	#else
-		*fullpath = realpath(filename, NULL);
-		
-		if (*fullpath == NULL) {
-			return 0;
-		}
-	#endif
-	
-	return 1;
-	
-}
-
-
 int remove_file(const char* const filename) {
 	/*
 	Removes the file. On Windows, ignores the read-only attribute.
@@ -526,8 +461,9 @@ int remove_file(const char* const filename) {
 	#ifdef _WIN32
 		#ifdef _UNICODE
 			const int wcsize = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
-			wchar_t wfilename[wcsize];
-			MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfilename, wcsize);
+			wchar_t wfilename[wcslen(WIN10LP_PREFIX) + wcsize];
+			wcscpy(wfilename, WIN10LP_PREFIX);
+			MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfilename + wcslen(WIN10LP_PREFIX), wcsize);
 			
 			return DeleteFileW(wfilename) == 1;
 		#else
@@ -544,8 +480,9 @@ int directory_exists(const char* const directory) {
 	#ifdef _WIN32
 		#ifdef _UNICODE
 			const int wcsize = MultiByteToWideChar(CP_UTF8, 0, directory, -1, NULL, 0);
-			wchar_t wdirectory[wcsize];
-			MultiByteToWideChar(CP_UTF8, 0, directory, -1, wdirectory, wcsize);
+			wchar_t wdirectory[wcslen(WIN10LP_PREFIX) + wcsize];
+			wcscpy(wdirectory, WIN10LP_PREFIX);
+			MultiByteToWideChar(CP_UTF8, 0, directory, -1, wdirectory + wcslen(WIN10LP_PREFIX), wcsize);
 			
 			const DWORD value = GetFileAttributesW(wdirectory);
 		#else
@@ -570,8 +507,9 @@ int file_exists(const char* const filename) {
 	#ifdef _WIN32
 		#ifdef _UNICODE
 			const int wcsize = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
-			wchar_t wfilename[wcsize];
-			MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfilename, wcsize);
+			wchar_t wfilename[wcslen(WIN10LP_PREFIX) + wcsize];
+			wcscpy(wfilename, WIN10LP_PREFIX);
+			MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfilename + wcslen(WIN10LP_PREFIX), wcsize);
 			
 			const DWORD value = GetFileAttributesW(wfilename);
 		#else
@@ -591,8 +529,9 @@ static int raw_create_dir(const char* const directory) {
 	#ifdef _WIN32
 		#ifdef _UNICODE
 			const int wcsize = MultiByteToWideChar(CP_UTF8, 0, directory, -1, NULL, 0);
-			wchar_t wdirectory[wcsize];
-			MultiByteToWideChar(CP_UTF8, 0, directory, -1, wdirectory, wcsize);
+			wchar_t wdirectory[wcslen(WIN10LP_PREFIX) + wcsize];
+			wcscpy(wdirectory, WIN10LP_PREFIX);
+			MultiByteToWideChar(CP_UTF8, 0, directory, -1, wdirectory + wcslen(WIN10LP_PREFIX), wcsize);
 			
 			const BOOL code = CreateDirectoryW(wdirectory, NULL);
 		#else
@@ -660,12 +599,14 @@ int copy_file(const char* const source, const char* const destination) {
 	#ifdef _WIN32
 		#ifdef _UNICODE
 			int wcsize = MultiByteToWideChar(CP_UTF8, 0, source, -1, NULL, 0);
-			wchar_t wsource[wcsize];
-			MultiByteToWideChar(CP_UTF8, 0, source, -1, wsource, (int) (sizeof(wsource) / sizeof(*wsource)));
+			wchar_t wsource[wcslen(WIN10LP_PREFIX) + wcsize];
+			wcscpy(wsource, WIN10LP_PREFIX);
+			MultiByteToWideChar(CP_UTF8, 0, source, -1, wsource + wcslen(WIN10LP_PREFIX), wcsize);
 			
 			wcsize = MultiByteToWideChar(CP_UTF8, 0, destination, -1, NULL, 0);
-			wchar_t wdestination[wcsize];
-			MultiByteToWideChar(CP_UTF8, 0, destination, -1, wdestination, (int) (sizeof(wdestination) / sizeof(*wdestination)));
+			wchar_t wdestination[wcslen(WIN10LP_PREFIX) + wcsize];
+			wcscpy(wdestination, WIN10LP_PREFIX);
+			MultiByteToWideChar(CP_UTF8, 0, destination, -1, wdestination + wcslen(WIN10LP_PREFIX), wcsize);
 			
 			return CopyFileW(wsource, wdestination, FALSE) == 1;
 		#else
@@ -725,12 +666,14 @@ int move_file(const char* const source, const char* const destination) {
 	#ifdef _WIN32
 		#ifdef _UNICODE
 			int wcsize = MultiByteToWideChar(CP_UTF8, 0, source, -1, NULL, 0);
-			wchar_t wsource[wcsize];
-			MultiByteToWideChar(CP_UTF8, 0, source, -1, wsource, (int) (sizeof(wsource) / sizeof(*wsource)));
+			wchar_t wsource[wcslen(WIN10LP_PREFIX) + wcsize];
+			wcscpy(wsource, WIN10LP_PREFIX);
+			MultiByteToWideChar(CP_UTF8, 0, source, -1, wsource + wcslen(WIN10LP_PREFIX), wcsize);
 			
 			wcsize = MultiByteToWideChar(CP_UTF8, 0, destination, -1, NULL, 0);
-			wchar_t wdestination[wcsize];
-			MultiByteToWideChar(CP_UTF8, 0, destination, -1, wdestination, (int) (sizeof(wdestination) / sizeof(*wdestination)));
+			wchar_t wdestination[wcslen(WIN10LP_PREFIX) + wcsize];
+			wcscpy(wdestination, WIN10LP_PREFIX);
+			MultiByteToWideChar(CP_UTF8, 0, destination, -1, wdestination + wcslen(WIN10LP_PREFIX), wcsize);
 			
 			return MoveFileExW(wsource, wdestination, MOVEFILE_COPY_ALLOWED|MOVEFILE_REPLACE_EXISTING) == 1;
 		#else
@@ -849,8 +792,9 @@ long long get_file_size(const char* const filename) {
 		
 		#ifdef _UNICODE
 			const int wcsize = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
-			wchar_t wfilename[wcsize];
-			MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfilename, (int) (sizeof(wfilename) / sizeof(*wfilename)));
+			wchar_t wfilename[wcslen(WIN10LP_PREFIX) + wcsize];
+			wcscpy(wfilename, WIN10LP_PREFIX);
+			MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfilename + wcslen(WIN10LP_PREFIX), wcsize);
 			
 			const HANDLE handle = FindFirstFileW(wfilename, &data);
 		#else

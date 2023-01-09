@@ -516,23 +516,39 @@ foreach(property RUNTIME_OUTPUT_DIRECTORY LIBRARY_OUTPUT_DIRECTORY)
 endforeach()
 
 if (WIN32)
-	target_compile_definitions(
-		sparklec
-		PRIVATE
-		UNICODE _UNICODE
-	)
-	
-	target_link_options(
-		sparklec
-		BEFORE
-		PRIVATE
-		-municode
-	)
-	
 	target_sources(
 		sparklec
 		PRIVATE
 		src/wio.c
+	)
+	
+	add_executable(
+		win10lp
+		src/win10lp.c
+		src/errors.c
+		src/utils.c
+		src/fstream.c
+	)
+	
+	foreach(target sparklec win10lp)
+		target_compile_definitions(
+			${target}
+			PRIVATE
+			UNICODE _UNICODE
+		)
+		
+		target_link_options(
+			${target}
+			BEFORE
+			PRIVATE
+			-municode
+		)
+	endforeach()
+	
+	install(
+		TARGETS win10lp
+		RUNTIME DESTINATION bin
+		LIBRARY DESTINATION lib NAMELINK_SKIP
 	)
 endif()
 

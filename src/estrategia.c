@@ -949,6 +949,8 @@ int estrategia_get_module(
 			strcat(media.audio.filename, DOT);
 			strcat(media.audio.filename, MP3_FILE_EXTENSION);
 			
+			normalize_filename(media.audio.filename);
+			
 			strcpy(media.audio.short_filename, sid);
 			strcat(media.audio.short_filename, DOT);
 			strcat(media.audio.short_filename, MP3_FILE_EXTENSION);
@@ -1029,11 +1031,11 @@ int estrategia_get_module(
 		strcat(media.video.filename, DOT);
 		strcat(media.video.filename, MP4_FILE_EXTENSION);
 		
+		normalize_filename(media.video.filename);
+		
 		strcpy(media.video.short_filename, sid);
 		strcat(media.video.short_filename, DOT);
 		strcat(media.video.short_filename, MP4_FILE_EXTENSION);
-		
-		normalize_filename(media.video.filename);
 		
 		strcpy(media.video.url, stream_uri);
 		

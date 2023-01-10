@@ -425,7 +425,7 @@ int estrategia_get_resources(
 			strcpy(resource.name, name);
 			
 			strcpy(resource.dirname, name);
-			normalize_filename(resource.dirname);
+			normalize_directory(resource.dirname);
 			
 			strcpy(resource.short_dirname, sid);
 			
@@ -433,7 +433,7 @@ int estrategia_get_resources(
 			strcpy(resource.qualification.name, qualification);
 			
 			strcpy(resource.qualification.dirname, qualification);
-			normalize_filename(resource.qualification.dirname);
+			normalize_directory(resource.qualification.dirname);
 			
 			strcpy(resource.qualification.short_dirname, qualification_id);
 			
@@ -608,7 +608,7 @@ int estrategia_get_modules(
 		strcpy(module.name, name);
 		
 		strcpy(module.dirname, name);
-		normalize_filename(module.dirname);
+		normalize_directory(module.dirname);
 		
 		strcpy(module.short_dirname, sid);
 		
@@ -834,7 +834,7 @@ int estrategia_get_module(
 		strcpy(page.name, name);
 		
 		strcpy(page.dirname, name);
-		normalize_filename(page.dirname);
+		normalize_directory(page.dirname);
 		
 		strcpy(page.short_dirname, sid);
 		

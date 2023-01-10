@@ -400,7 +400,7 @@ int hotmart_get_resources(
 		strcpy(resource.name, name);
 		
 		strcpy(resource.dirname, name);
-		normalize_filename(resource.dirname);
+		normalize_directory(resource.dirname);
 		
 		strcpy(resource.short_dirname, id);
 		
@@ -556,7 +556,7 @@ int hotmart_get_modules(
 		strcpy(module.name, name);
 		
 		strcpy(module.dirname, name);
-		normalize_filename(module.dirname);
+		normalize_directory(module.dirname);
 		
 		strcpy(module.short_dirname, id);
 		
@@ -638,7 +638,7 @@ int hotmart_get_modules(
 			strcpy(page.name, name);
 			
 			strcpy(page.dirname, name);
-			normalize_filename(page.dirname);
+			normalize_directory(page.dirname);
 			
 			strcpy(page.short_dirname, id);
 			

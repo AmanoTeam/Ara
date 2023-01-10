@@ -3,24 +3,21 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "utils.h"
-#include "symbols.h"
-#include "fstream.h"
-
 #ifdef _WIN32
 	#include <windows.h>
 	#include <fileapi.h>
 	#include <direct.h>
+	
+	#define NAME_MAX (_MAX_FNAME - 1)
 #else
 	#include <unistd.h>
 	#include <sys/stat.h>
 	#include <errno.h>
+	#include <limits.h>
 	
 	#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
 		#include <sys/sysctl.h>
 	#endif
-	
-	#include <limits.h>
 	
 	#ifdef __linux__
 		#ifndef PATH_MAX
@@ -30,6 +27,10 @@
 	
 	#define FILERW_MAX_CHUNK_SIZE 8192
 #endif
+
+#include "utils.h"
+#include "symbols.h"
+#include "fstream.h"
 
 static const char INVALID_FILENAME_CHARS[] = {
 	'\'', '%', '"', ' ', '/', '\\', ':', '*', '?', '\"', '<', '>', '|', '^', '\x00'
@@ -395,6 +396,18 @@ char* normalize_filename(char* filename) {
 	}
 	
 	return filename;
+	
+}
+
+char* normalize_directory(char* directory) {
+	
+	normalize_filename(directory);
+	
+	if (strlen(directory) > NAME_MAX) {
+		directory[NAME_MAX - 1] = '\0';
+	}
+	
+	return directory;
 	
 }
 

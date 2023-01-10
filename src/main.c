@@ -918,7 +918,7 @@ int main(void) {
 		}
 		
 		for (size_t index = 0; index < resource->modules.offset; index++) {
-			struct Module* module = &resource->modules.items[index];
+			struct Module* const module = &resource->modules.items[index];
 			
 			printf("+ Obtendo lista de aulas do módulo '%s'\r\n", module->name);
 			
@@ -1045,7 +1045,7 @@ int main(void) {
 			printf("+ Obtendo lista de páginas do módulo '%s'\r\n", module->name);
 			
 			for (size_t index = 0; index < module->pages.offset; index++) {
-				struct Page* page = &module->pages.items[index];
+				struct Page* const page = &module->pages.items[index];
 				
 				printf("+ Obtendo informações sobre a aula '%s'\r\n", page->name);
 				
@@ -1135,7 +1135,7 @@ int main(void) {
 				}
 				
 				for (size_t index = 0; index < page->medias.offset; index++) {
-					struct Media* media = &page->medias.items[index];
+					struct Media* const media = &page->medias.items[index];
 					
 					char* media_filename = NULL;
 					

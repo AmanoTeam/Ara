@@ -9,6 +9,7 @@ char from_hex(const char ch);
 size_t intlen(const int value);
 int isnumeric(const char* const s);
 char* normalize_filename(char* filename);
+char* normalize_directory(char* directory);
 char* get_current_directory(void);
 char* basename(const char* const path);
 int execute_shell_command(const char* const command);

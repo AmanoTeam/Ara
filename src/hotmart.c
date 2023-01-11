@@ -929,7 +929,7 @@ int hotmart_get_page(
 					.video = {
 						.id = malloc(strlen(media_code) + 1),
 						.filename = malloc(strlen(media_name) + (file_extension == NULL ? strlen(DOT) + strlen(MP4_FILE_EXTENSION) : 0) + 1),
-						.short_filename = malloc(strlen(media_code) + (file_extension == NULL ? strlen(DOT) + strlen(MP4_FILE_EXTENSION) : 0) + 1),
+						.short_filename = malloc(strlen(media_code) + strlen(DOT) + (file_extension == NULL ? strlen(MP4_FILE_EXTENSION) : strlen(file_extension)) + 1),
 						.url = malloc(strlen(stream_url) + 1)
 					}
 				};
@@ -941,15 +941,17 @@ int hotmart_get_page(
 				strcpy(media.video.id, media_code);
 				strcpy(media.video.url, stream_url);
 				strcpy(media.video.filename, media_name);
+				strcpy(media.video.short_filename, media_code);
 				
 				if (file_extension == NULL) {
 					strcat(media.video.filename, DOT);
 					strcat(media.video.filename, MP4_FILE_EXTENSION);
+					strcat(media.video.short_filename, DOT);
+					strcat(media.video.short_filename, MP4_FILE_EXTENSION);
+				} else {
+					strcat(media.video.short_filename, DOT);
+					strcat(media.video.short_filename, file_extension);
 				}
-				
-				strcpy(media.video.short_filename, media_code);
-				strcat(media.video.short_filename, DOT);
-				strcat(media.video.short_filename, file_extension == NULL ? MP4_FILE_EXTENSION : file_extension);
 				
 				normalize_filename(media.video.filename);
 				
@@ -960,7 +962,7 @@ int hotmart_get_page(
 					.audio = {
 						.id = malloc(strlen(media_code) + 1),
 						.filename = malloc(strlen(media_name) + (file_extension == NULL ? strlen(DOT) + strlen(MP3_FILE_EXTENSION) : 0) + 1),
-						.short_filename = malloc(strlen(media_code) + (file_extension == NULL ? strlen(DOT) + strlen(MP3_FILE_EXTENSION) : 0) + 1),
+						.short_filename = malloc(strlen(media_code) + strlen(DOT) + (file_extension == NULL ? strlen(MP3_FILE_EXTENSION) : strlen(file_extension)) + 1),
 						.url = malloc(strlen(url) + 1)
 					},
 					.video = {0}
@@ -980,6 +982,9 @@ int hotmart_get_page(
 					strcat(media.audio.filename, MP3_FILE_EXTENSION);
 					strcat(media.audio.short_filename, DOT);
 					strcat(media.audio.short_filename, MP3_FILE_EXTENSION);
+				} else {
+					strcat(media.audio.short_filename, DOT);
+					strcat(media.audio.short_filename, file_extension);
 				}
 				
 				normalize_filename(media.audio.filename);

@@ -329,7 +329,7 @@ static int m3u8_download(const char* const url, const char* const output) {
 	
 	printf("+ Concatenando seguimentos de mídia baixados para um único arquivo em '%s'\r\n", output);
 	
-	const char* const command = "ffmpeg -nostdin -nostats -loglevel error -allowed_extensions ALL -i \"%s\" -c copy \"%s\"";
+	const char* const command = "ffmpeg -nostdin -nostats -loglevel error -allowed_extensions ALL -i \"%s\" -c copy -movflags +faststart -map_metadata -1 \"%s\"";
 	
 	const int size = snprintf(NULL, 0, command, playlist_filename, output);
 	char shell_command[size + 1];

@@ -115,7 +115,7 @@ char* get_current_directory(void) {
 			WideCharToMultiByte(CP_UTF8, 0, wpwd, -1, pwd, size, NULL, NULL);
 		#else
 			char cpwd[PATH_MAX];
-			const DWORD cpwds = (DWORD) sizeof(wpwd);
+			const DWORD cpwds = (DWORD) sizeof(cpwd);
 			
 			const DWORD code = GetCurrentDirectoryA(cpwds, cpwd);
 			
@@ -317,7 +317,7 @@ char* get_temporary_directory(void) {
 			}
 			
 			char directory[size + 1];
-			const DWORD code = GetTempPathA(sizeof(directory), directory);
+			const DWORD code = GetTempPathA((DWORD) sizeof(directory), directory);
 			
 			if (code == 0) {
 				return 0;

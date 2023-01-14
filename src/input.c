@@ -7,7 +7,7 @@
 
 #include "credentials.h"
 #include "input.h"
-#include "utils.h"
+#include "stringu.h"
 #include "errors.h"
 
 #if defined(_WIN32) && defined(_UNICODE)

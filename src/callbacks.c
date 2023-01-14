@@ -2,8 +2,8 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "types.h"
 #include "callbacks.h"
+#include "types.h"
 #include "fstream.h"
 
 #if defined(_WIN32) && defined(_UNICODE)

@@ -399,7 +399,9 @@ add_executable(
 	src/main.c
 	src/query.c
 	src/types.c
-	src/utils.c
+	src/stringu.c
+	src/filesystem.c
+	src/os.c
 	src/vimeo.c
 	src/youtube.c
 	src/fstream.c
@@ -526,7 +528,7 @@ if (WIN32)
 		win10lp
 		src/win10lp.c
 		src/errors.c
-		src/utils.c
+		src/os.c
 		src/fstream.c
 	)
 	

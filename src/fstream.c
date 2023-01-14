@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 	#include <windows.h>
 	#include <fileapi.h>
 #else
@@ -35,9 +35,17 @@ struct FStream* fstream_open(const char* const filename, const char* const mode)
 		
 		#ifdef _UNICODE
 			const int wcsize = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
+			
+			if (wcsize == 0) {
+				return NULL;
+			}
+			
 			wchar_t lpFileName[wcslen(WIN10LP_PREFIX) + wcsize];
 			wcscpy(lpFileName, WIN10LP_PREFIX);
-			MultiByteToWideChar(CP_UTF8, 0, filename, -1, lpFileName + wcslen(WIN10LP_PREFIX), wcsize);
+			
+			if (MultiByteToWideChar(CP_UTF8, 0, filename, -1, lpFileName + wcslen(WIN10LP_PREFIX), wcsize) == 0) {
+				return NULL;
+			}
 			
 			HANDLE handle = CreateFileW(
 				lpFileName,
@@ -85,12 +93,12 @@ struct FStream* fstream_open(const char* const filename, const char* const mode)
 
 ssize_t fstream_read(struct FStream* const stream, char* const buffer, const size_t size) {
 	/*
-	-1 Read error
-	0 EOF reached
-	1 Read success
+	-1 = Read error
+	0 = EOF reached
+	1 = Read success
 	*/
 	
-	#ifdef WIN32
+	#ifdef _WIN32
 		DWORD rsize = 0;
 		const BOOL status = ReadFile(stream->stream, buffer, (DWORD) size, &rsize, NULL);
 		
@@ -117,7 +125,7 @@ ssize_t fstream_read(struct FStream* const stream, char* const buffer, const siz
 
 int fstream_write(struct FStream* const stream, const char* const buffer, const size_t size) {
 	
-	#ifdef WIN32
+	#ifdef _WIN32
 		DWORD wsize = 0;
 		const BOOL status = WriteFile(stream->stream, buffer, (DWORD) size, &wsize, NULL);
 		
@@ -138,7 +146,7 @@ int fstream_write(struct FStream* const stream, const char* const buffer, const 
 
 int fstream_seek(struct FStream* const stream, const long int offset, const enum FStreamSeek method) {
 	
-	#ifdef WIN32
+	#ifdef _WIN32
 		DWORD whence = 0;
 		
 		switch (method) {
@@ -182,7 +190,7 @@ int fstream_seek(struct FStream* const stream, const long int offset, const enum
 	
 int fstream_close(struct FStream* const stream) {
 	
-	#ifdef WIN32
+	#ifdef _WIN32
 		if (stream->stream != 0) {
 			const BOOL status = CloseHandle(stream->stream);
 			

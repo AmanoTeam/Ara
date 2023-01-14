@@ -110,9 +110,9 @@ Ao fazer isso, sempre forneça o maior número possível de informações que vo
 
 ## Seu direito
 
-Usar o conteúdo que você comprou é um direito seu. Como ou onde você planeja usá-lo é algo que fica a seu total critério e também algo para o qual eu particularmente não dou a mínima.
+Usar o que você comprou é um direito seu. Já *como* ou *onde* você planeja usá-lo é algo que fica a seu total critério e também uma coisa para a qual eu particularmente não dou a mínima.
 
-Toda e qualquer responsabilidade decorrentes do uso do programa ou do conteúdo por ele baixado recaem exclusivamente sobre você.
+Toda e qualquer possível responsabilidade decorrentes do uso do programa ou do conteúdo por ele baixado recaem exclusivamente sobre você.
 
 ## Minhas obrigações
 

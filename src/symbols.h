@@ -11,6 +11,7 @@ static const char COMMA[] = ",";
 static const char HASHTAG[] = "#";
 static const char GREATER_THAN[] = ">";
 static const char HYPHEN[] = "-";
+static const char UNDERSCORE[] = "_";
 
 #ifdef _WIN32
 	#define PATH_SEPARATOR "\\"

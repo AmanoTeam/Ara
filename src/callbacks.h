@@ -1,5 +1,6 @@
-#include "types.h"
-#include "utils.h"
+#include <stdlib.h>
+
+#include <curl/curl.h>
 
 size_t curl_write_string_cb(char* ptr, size_t size, size_t nmemb, void* userdata);
 size_t curl_progress_cb(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow);

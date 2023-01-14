@@ -14,7 +14,7 @@
 #include "query.h"
 #include "callbacks.h"
 #include "types.h"
-#include "utils.h"
+#include "stringu.h"
 #include "symbols.h"
 #include "m3u8.h"
 #include "vimeo.h"

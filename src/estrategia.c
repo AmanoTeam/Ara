@@ -11,18 +11,13 @@
 #include "resources.h"
 #include "cleanup.h"
 #include "errors.h"
-#include "query.h"
 #include "callbacks.h"
 #include "types.h"
-#include "utils.h"
+#include "stringu.h"
+#include "query.h"
 #include "symbols.h"
-#include "m3u8.h"
-#include "vimeo.h"
-#include "youtube.h"
 #include "curl.h"
 #include "estrategia.h"
-#include "html.h"
-#include "ttidy.h"
 
 static const char HTTP_HEADER_AUTHORIZATION[] = "Authorization";
 static const char HTTP_HEADER_CONTENT_TYPE[] = "Content-Type";

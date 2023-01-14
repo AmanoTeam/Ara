@@ -9,7 +9,7 @@
 #include "callbacks.h"
 #include "m3u8.h"
 #include "cleanup.h"
-#include "utils.h"
+#include "stringu.h"
 #include "types.h"
 #include "vimeo.h"
 #include "curl.h"

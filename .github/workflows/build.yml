@@ -77,6 +77,16 @@ jobs:
         tar --directory="$(dirname "${DRAGONFLY_CROSS_TARBALL}")" --extract --file="${DRAGONFLY_CROSS_TARBALL}"
         
         echo 'DRAGONFLY_TOOLCHAIN=/tmp/unknown-unknown-dragonfly' >> "${GITHUB_ENV}"
+    - name: Setup Haiku cross compiler
+      run: |
+        declare -r HAIKU_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --silent --url 'https://api.github.com/repos/AmanoTeam/Haiku-Cross/releases/latest')")"
+        declare -r HAIKU_CROSS_TARBALL='/tmp/haiku-cross.tar.xz'
+        declare -r HAIKU_CROSS_URL="https://github.com/AmanoTeam/Haiku-Cross/releases/download/${HAIKU_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
+        
+        curl --silent --location --url "${HAIKU_CROSS_URL}" --output "${HAIKU_CROSS_TARBALL}"
+        tar --directory="$(dirname "${HAIKU_CROSS_TARBALL}")" --extract --file="${HAIKU_CROSS_TARBALL}"
+        
+        echo 'HAIKU_TOOLCHAIN=/tmp/unknown-unknown-haiku' >> "${GITHUB_ENV}"
     - name: Build with CMake
       run: |
         declare -r MACHINE_HOST="$(gcc -dumpmachine)"
@@ -102,6 +112,7 @@ jobs:
             x86_64-unknown-netbsd
             x86_64-unknown-freebsd
             x86_64-unknown-dragonfly
+            x86_64-unknown-haiku
             "${MACHINE_HOST}"
         )
         

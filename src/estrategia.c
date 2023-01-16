@@ -46,6 +46,10 @@ static const char ESTRATEGIA_COURSE_ENDPOINT[] =
 	ESTRATEGIA_API_ENDPOINT
 	"/api/aluno/curso";
 
+static const char ESTRATEGIA_EXCLUSIVE_ENDPOINT[] = 
+	ESTRATEGIA_API_ENDPOINT
+	"/api/aluno/curso/tipo/EXCLUSIVO";
+
 static const char ESTRATEGIA_LESSON_ENDPOINT[] = 
 	ESTRATEGIA_API_ENDPOINT
 	"/api/aluno/aula";
@@ -234,6 +238,216 @@ int estrategia_authorize(
 	
 }
 
+static int estrategia_get_exclusives(
+	struct Resources* const resources
+) {
+	
+	CURL* curl_easy = get_global_curl_easy();
+	
+	CURLU* cu __attribute__((__cleanup__(curlupp_free))) = curl_url();
+	
+	if (cu == NULL) {
+		return UERR_CURLU_FAILURE;
+	}
+	
+	if (curl_url_set(cu, CURLUPART_URL, ESTRATEGIA_EXCLUSIVE_ENDPOINT, 0) != CURLUE_OK) {
+		return UERR_CURLU_FAILURE;
+	}
+	
+	const char* const qualification = "Exclusivos";
+	
+	const int value = hashs(qualification);
+	
+	char qualification_id[intlen(value) + 1];
+	snprintf(qualification_id, sizeof(qualification_id), "%i", value);
+	
+	for (size_t index = 1; 1; index++) {
+		char page_number[intlen(index) + 1];
+		snprintf(page_number, sizeof(page_number), "%zu", index);
+		
+		struct Query query __attribute__((__cleanup__(query_free))) = {0};
+		
+		add_parameter(&query, "page", page_number);
+		
+		char* query_fields __attribute__((__cleanup__(charpp_free))) = NULL;
+		const int code = query_stringify(query, &query_fields);
+		
+		if (code != UERR_SUCCESS) {
+			return code;
+		}
+		
+		if (curl_url_set(cu, CURLUPART_QUERY, query_fields, 0) != CURLUE_OK) {
+			return UERR_CURLU_FAILURE;
+		}
+		
+		char* url __attribute__((__cleanup__(curlcharpp_free))) = NULL;
+		
+		if (curl_url_get(cu, CURLUPART_URL, &url, 0) != CURLUE_OK) {
+			return UERR_CURLU_FAILURE;
+		}
+		
+		curl_easy_setopt(curl_easy, CURLOPT_URL, url);
+		
+		struct String string __attribute__((__cleanup__(string_free))) = {0};
+		
+		curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
+		
+		switch (curl_easy_perform(curl_easy)) {
+			case CURLE_OK:
+				break;
+			case CURLE_HTTP_RETURNED_ERROR:
+				return UERR_PROVIDER_SESSION_EXPIRED;
+			default:
+				return UERR_CURL_FAILURE;
+		}
+		
+		json_auto_t* tree = json_loads(string.s, 0, NULL);
+		
+		if (tree == NULL) {
+			return UERR_JSON_CANNOT_PARSE;
+		}
+		
+		const json_t* meta = json_object_get(tree, "meta");
+		
+		if (meta == NULL) {
+			return UERR_JSON_MISSING_REQUIRED_KEY;
+		}
+		
+		if (!json_is_object(meta)) {
+			return UERR_JSON_NON_MATCHING_TYPE;
+		}
+		
+		if (index == 1) {
+			const json_t* obj = json_object_get(meta, "total");
+			
+			if (obj == NULL) {
+				return UERR_JSON_MISSING_REQUIRED_KEY;
+			}
+			
+			 if (!json_is_integer(obj)) {
+				return UERR_JSON_NON_MATCHING_TYPE;
+			}
+			
+			const json_int_t total = json_integer_value(obj);
+			
+			const size_t size = resources->size + sizeof(struct Resource) * (size_t) total;
+			struct Resource* items = realloc(resources->items, size);
+			
+			if (items == NULL) {
+				return UERR_MEMORY_ALLOCATE_FAILURE;
+			}
+			
+			resources->size = size;
+			resources->items = items;
+		}
+		
+		const json_t*  obj = json_object_get(tree, "data");
+		
+		if (obj == NULL) {
+			return UERR_JSON_MISSING_REQUIRED_KEY;
+		}
+		
+		if (!json_is_array(obj)) {
+			return UERR_JSON_NON_MATCHING_TYPE;
+		}
+		
+		size_t index = 0;
+		const json_t* item = NULL;
+		
+		json_array_foreach(obj, index, item) {
+			if (!json_is_object(item)) {
+				return UERR_JSON_NON_MATCHING_TYPE;
+			}
+			
+			const json_t* obj = json_object_get(item, "id");
+			
+			if (obj == NULL) {
+				return UERR_JSON_MISSING_REQUIRED_KEY;
+			}
+			
+			if (!json_is_integer(obj)) {
+				return UERR_JSON_NON_MATCHING_TYPE;
+			}
+			
+			const json_int_t id = json_integer_value(obj);
+			
+			char sid[intlen(id) + 1];
+			snprintf(sid, sizeof(sid), "%llu", id);
+			
+			obj = json_object_get(item, "nome");
+			
+			if (obj == NULL) {
+				return UERR_JSON_MISSING_REQUIRED_KEY;
+			}
+			
+			if (!json_is_string(obj)) {
+				return UERR_JSON_NON_MATCHING_TYPE;
+			}
+			
+			const char* const name = json_string_value(obj);
+			
+			struct Resource resource = {
+				.id = malloc(strlen(sid) + 1),
+				.name = malloc(strlen(name) + 1),
+				.dirname = malloc(strlen(name) + 1),
+				.short_dirname = malloc(strlen(sid) + 1),
+				.qualification = {
+					.id = malloc(strlen(qualification_id) + 1),
+					.name = malloc(strlen(qualification) + 1),
+					.dirname = malloc(strlen(qualification) + 1),
+					.short_dirname = malloc(strlen(qualification_id) + 1)
+				},
+				.url = malloc(strlen(ESTRATEGIA_COURSE_HOMEPAGE) + strlen(SLASH) + strlen(sid) + strlen(SLASH) + strlen(AULAS) + 1)
+			};
+			
+			if (resource.id == NULL || resource.name == NULL || resource.dirname == NULL || resource.short_dirname == NULL ||  resource.qualification.id == NULL || resource.qualification.name == NULL || resource.qualification.dirname == NULL || resource.qualification.short_dirname == NULL) {
+				return UERR_MEMORY_ALLOCATE_FAILURE;
+			}
+			
+			strcpy(resource.id, sid);
+			strcpy(resource.name, name);
+			
+			strcpy(resource.dirname, name);
+			normalize_directory(resource.dirname);
+			
+			strcpy(resource.short_dirname, sid);
+			
+			strcpy(resource.qualification.id, qualification_id);
+			strcpy(resource.qualification.name, qualification);
+			
+			strcpy(resource.qualification.dirname, qualification);
+			normalize_directory(resource.qualification.dirname);
+			
+			strcpy(resource.qualification.short_dirname, qualification_id);
+			
+			strcpy(resource.url, ESTRATEGIA_COURSE_HOMEPAGE);
+			strcat(resource.url, SLASH);
+			strcat(resource.url, sid);
+			strcat(resource.url, SLASH);
+			strcat(resource.url, AULAS);
+			
+			resources->items[resources->offset++] = resource;
+		}
+		
+		obj = json_object_get(meta, "to");
+		
+		if (obj == NULL) {
+			return UERR_JSON_MISSING_REQUIRED_KEY;
+		}
+		
+		if (json_is_null(obj)) {
+			break;
+		}
+		
+		if (!json_is_integer(obj)) {
+			return UERR_JSON_NON_MATCHING_TYPE;
+		}
+	}
+	
+	return UERR_SUCCESS;
+	
+}
+
 int estrategia_get_resources(
 	const struct Credentials* const credentials,
 	struct Resources* const resources
@@ -280,9 +494,7 @@ int estrategia_get_resources(
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, ESTRATEGIA_COURSE_ENDPOINT);
 	
-	const CURLcode code = curl_easy_perform(curl_easy);
-	
-	switch (code) {
+	switch (curl_easy_perform(curl_easy)) {
 		case CURLE_OK:
 			break;
 		case CURLE_HTTP_RETURNED_ERROR:
@@ -440,6 +652,12 @@ int estrategia_get_resources(
 			
 			resources->items[resources->offset++] = resource;
 		}
+	}
+	
+	const int code = estrategia_get_exclusives(resources);
+	
+	if (code != UERR_SUCCESS) {
+		return code;
 	}
 	
 	curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, NULL);

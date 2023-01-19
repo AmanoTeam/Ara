@@ -1211,7 +1211,7 @@ int hotmart_get_page(
 		for (size_t index = 0; index < items.offset; index++) {
 			const char* const url = items.items[index];
 			
-			printf("+ A mídia localizada em '%s' aponta para uma fonte fora da Hotmart, verificando se é possível processá-la\r\n", url);
+			printf("+ A mídia localizada em '%s' aponta para uma fonte externa, verificando se é possível processá-la\r\n", url);
 			
 			struct Media media = {0};
 			

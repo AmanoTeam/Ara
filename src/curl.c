@@ -102,7 +102,7 @@ static int curl_set_options(CURL* handle) {
 	curl_easy_setopt(handle, CURLOPT_TCP_KEEPALIVE, 1L);
 	curl_easy_setopt(handle, CURLOPT_TCP_KEEPIDLE, 30L);
 	curl_easy_setopt(handle, CURLOPT_TCP_KEEPINTVL, 15L);
-	//curl_easy_setopt(handle, CURLOPT_VERBOSE, 1L);
+	curl_easy_setopt(handle, CURLOPT_VERBOSE, 0L);
 	curl_easy_setopt(handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
 	curl_easy_setopt(handle, CURLOPT_USERAGENT, HTTP_DEFAULT_USER_AGENT);
 	curl_easy_setopt(handle, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);

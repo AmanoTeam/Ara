@@ -12,6 +12,10 @@
 	#include "cyberclass.h"
 #endif
 
+#ifndef SPARKLEC_DISABLE_IAEXPERT
+	#include "iaexpert.h"
+#endif
+
 struct ProviderMethods {
 	int (*authorize)(const char* const, const char* const, struct Credentials* const);
 	int (*get_resources)(const struct Credentials* const, struct Resources* const);
@@ -30,7 +34,7 @@ static const struct Provider PROVIDERS[] = {
 #ifndef SPARKLEC_DISABLE_HOTMART
 	{
 		.label = "Hotmart",
-		.url = "https://hotmart.com/pt-br",
+		.url = "https://hotmart.com",
 		.methods = {
 			.authorize = &hotmart_authorize,
 			.get_resources = &hotmart_get_resources,
@@ -63,6 +67,19 @@ static const struct Provider PROVIDERS[] = {
 			.get_modules = &cyberclass_get_modules,
 			.get_module = &cyberclass_get_module,
 			.get_page = &cyberclass_get_page
+		}
+	},
+#endif
+#ifndef SPARKLEC_DISABLE_IAEXPERT
+	{
+		.label = "IA Expert Academy",
+		.url = "https://iaexpert.academy",
+		.methods = {
+			.authorize = &iaexpert_authorize,
+			.get_resources = &iaexpert_get_resources,
+			.get_modules = &iaexpert_get_modules,
+			.get_module = &iaexpert_get_module,
+			.get_page = &iaexpert_get_page
 		}
 	}
 #endif

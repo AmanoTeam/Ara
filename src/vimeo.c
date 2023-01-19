@@ -406,7 +406,7 @@ int vimeo_parse(
 		media->audio.filename = malloc(strlen(title) + strlen(DOT) + strlen(AAC_FILE_EXTENSION) + 1);
 		media->audio.short_filename = malloc(strlen(sid) + strlen(DOT) + strlen(AAC_FILE_EXTENSION) + 1);
 		
-		if (media->audio.id == NULL || media->audio.filename == NULL || media->audio.short_filename) {
+		if (media->audio.id == NULL || media->audio.filename == NULL || media->audio.short_filename == NULL) {
 			return UERR_MEMORY_ALLOCATE_FAILURE;
 		}
 		
@@ -416,7 +416,7 @@ int vimeo_parse(
 		strcat(media->audio.filename, DOT);
 		strcat(media->audio.filename, AAC_FILE_EXTENSION);
 		
-		strcpy(media->audio.short_filename, title);
+		strcpy(media->audio.short_filename, sid);
 		strcat(media->audio.short_filename, DOT);
 		strcat(media->audio.short_filename, AAC_FILE_EXTENSION);
 		
@@ -426,7 +426,7 @@ int vimeo_parse(
 		media->video.filename = malloc(strlen(title) + strlen(DOT) + strlen(MP4_FILE_EXTENSION) + 1);
 		media->video.short_filename = malloc(strlen(sid) + strlen(DOT) + strlen(MP4_FILE_EXTENSION) + 1);
 		
-		if (media->video.id == NULL || media->video.filename == NULL || media->video.short_filename) {
+		if (media->video.id == NULL || media->video.filename == NULL || media->video.short_filename == NULL) {
 			return UERR_MEMORY_ALLOCATE_FAILURE;
 		}
 		

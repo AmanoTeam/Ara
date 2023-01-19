@@ -14,6 +14,7 @@ typedef struct _TidyAttr tidy_attr_t;
 #define tidy_get_root tidyGetRoot
 #define tidy_get_next tidyGetNext
 #define tidy_get_child tidyGetChild
+#define tidy_node_get_text tidyNodeGetText
 #define tidy_node_get_name tidyNodeGetName
 #define tidy_attr_first tidyAttrFirst
 #define tidy_attr_name tidyAttrName

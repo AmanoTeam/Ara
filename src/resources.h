@@ -64,6 +64,7 @@ struct Page {
 	struct Attachments attachments;
 	int is_locked;
 	char* path;
+	char* url;
 };
 
 struct Pages {

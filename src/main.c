@@ -2,8 +2,6 @@
 #include <string.h>
 #include <errno.h>
 
-#define PROGRAM_NAME "SparkleC"
-
 #ifdef _WIN32
 	#include <stdio.h>
 	#include <fcntl.h>
@@ -30,6 +28,7 @@
 #include "fstream.h"
 #include "providers.h"
 #include "input.h"
+#include "sparklec.h"
 
 #if defined(_WIN32) && defined(_UNICODE)
 	#include "wio.h"
@@ -423,7 +422,7 @@ int main(void) {
 	
 	switch (directory_exists(configuration_directory)) {
 		case 0: {
-			fprintf(stderr, "- Diretório de configurações não encontrado, criando-o\r\n");
+			fprintf(stderr, "- Diretório de configurações não encontrado, criando-o em '%s'\r\n", configuration_directory);
 			
 			if (create_directory(configuration_directory) == -1) {
 				const struct SystemError error = get_system_error();
@@ -492,7 +491,9 @@ int main(void) {
 		return EXIT_FAILURE;
 	}
 	
-	struct Credentials credentials = {0};
+	struct Credentials credentials = {
+		.directory = configuration_directory
+	};
 	
 	if (file_exists(accounts_file)) {
 		struct FStream* const stream = fstream_open(accounts_file, "r");
@@ -540,23 +541,45 @@ int main(void) {
 			
 			subobj = json_object_get(item, "access_token");
 			
-			if (subobj == NULL || !json_is_string(subobj)) {
+			if (subobj == NULL || (!json_is_null(subobj) && !json_is_string(subobj))) {
 				fprintf(stderr, "- O arquivo de configurações localizado em '%s' possui um formato inválido!\r\n", accounts_file);
 				return EXIT_FAILURE;
 			}
 			
-			const char* const access_token = json_string_value(subobj);
+			struct Credentials credentials = {0};
 			
-			struct Credentials credentials = {
-				.access_token = malloc(strlen(access_token) + 1)
-			};
+			const char* const access_token = json_is_null(subobj) ? NULL : json_string_value(subobj);
 			
-			if (credentials.access_token == NULL) {
-				fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar alocar memória do sistema!\r\n");
+			credentials.access_token = access_token == NULL ? NULL : malloc(strlen(access_token) + 1);
+			
+			if (access_token != NULL) {
+				if (credentials.access_token == NULL) {
+					fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar alocar memória do sistema!\r\n");
+					return EXIT_FAILURE;
+				}
+				
+				strcpy(credentials.access_token, access_token);
+			}
+			
+			subobj = json_object_get(item, "cookie_jar");
+			
+			if (subobj == NULL || (!json_is_null(subobj) && !json_is_string(subobj))) {
+				fprintf(stderr, "- O arquivo de configurações localizado em '%s' possui um formato inválido!\r\n", accounts_file);
 				return EXIT_FAILURE;
 			}
 			
-			strcpy(credentials.access_token, access_token);
+			const char* const cookie_jar = json_is_null(subobj) ? NULL : json_string_value(subobj);
+			
+			credentials.cookie_jar = cookie_jar == NULL ? NULL : malloc(strlen(cookie_jar) + 1);
+			
+			if (cookie_jar != NULL) {
+				if (credentials.cookie_jar == NULL) {
+					fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar alocar memória do sistema!\r\n");
+					return EXIT_FAILURE;
+				}
+				
+				strcpy(credentials.cookie_jar, cookie_jar);
+			}
 			
 			items[index] = credentials;
 			
@@ -596,7 +619,8 @@ int main(void) {
 			
 			json_auto_t* subtree = json_object();
 			json_object_set_new(subtree, "username", json_string(credentials.username));
-			json_object_set_new(subtree, "access_token", json_string(credentials.access_token));
+			json_object_set_new(subtree, "access_token", credentials.access_token == NULL ? json_null() : json_string(credentials.access_token));
+			json_object_set_new(subtree, "cookie_jar", credentials.cookie_jar == NULL ? json_null() : json_string(credentials.cookie_jar));
 			
 			json_array_append(tree, subtree);
 			
@@ -624,9 +648,15 @@ int main(void) {
 		
 		const int code = (*methods.authorize)(username, password, &credentials);
 		
-		if (code != UERR_SUCCESS) {
-			fprintf(stderr, "- Não foi possível realizar a autenticação: %s\r\n", strurr(code));
-			return EXIT_FAILURE;
+		switch (code) {
+			case UERR_SUCCESS:
+				break;
+			case UERR_CURL_FAILURE:
+				fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar conectar com o servidor HTTP: %s\r\n", get_global_curl_error());
+				return EXIT_FAILURE;
+			default:
+				fprintf(stderr, "- Ocorreu uma falha inesperada: %s\r\n", strurr(code));
+				return EXIT_FAILURE;
 		}
 		
 		struct FStream* const stream = fstream_open(accounts_file, "wb");
@@ -647,8 +677,9 @@ int main(void) {
 		}
 		
 		json_object_set_new(obj, "username", json_string(credentials.username));
-		json_object_set_new(obj, "access_token", json_string(credentials.access_token));
-		
+		json_object_set_new(obj, "access_token", credentials.access_token == NULL ? json_null() : json_string(credentials.access_token));
+		json_object_set_new(obj, "cookie_jar", credentials.cookie_jar == NULL ? json_null() : json_string(credentials.cookie_jar));
+			
 		json_array_append(tree, obj);
 		
 		const int rcode = json_dump_callback(tree, json_dump_cb, (void*) stream, JSON_COMPACT);

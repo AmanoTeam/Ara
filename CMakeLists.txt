@@ -408,6 +408,8 @@ add_executable(
 	src/fstream.c
 	src/credentials.c
 	src/input.c
+	src/terminal.c
+	src/cir.c
 )
 
 if (SPARKLEC_DISABLE_HOTMART)

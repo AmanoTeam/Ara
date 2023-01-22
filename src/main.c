@@ -8,6 +8,7 @@
 	#include <io.h>
 	#include <locale.h>
 #else
+	#include <termios.h>
 	#include <sys/resource.h>
 #endif
 
@@ -29,10 +30,14 @@
 #include "providers.h"
 #include "input.h"
 #include "sparklec.h"
+#include "cir.h"
+#include "terminal.h"
 
 #if defined(_WIN32) && defined(_UNICODE)
 	#include "wio.h"
 #endif
+
+#define PAGINATION_MAX_ITEMS 15
 
 static const char LOCAL_ACCOUNTS_FILENAME[] = "accounts.json";
 
@@ -305,6 +310,8 @@ static int m3u8_download(const char* const url, const char* const output) {
 	
 	curl_poll(dl_queue, dl_total, &dl_done);
 	
+	erase_line();
+	
 	printf("+ Exportando lista de reprodução M3U8 para '%s'\r\n", playlist_filename);
 	 
 	struct FStream* const stream = fstream_open(playlist_filename, "wb");
@@ -562,11 +569,12 @@ int main(void) {
 			}
 			
 			subobj = json_object_get(item, "cookie_jar");
-			
+			/*
 			if (subobj == NULL || (!json_is_null(subobj) && !json_is_string(subobj))) {
 				fprintf(stderr, "- O arquivo de configurações localizado em '%s' possui um formato inválido!\r\n", accounts_file);
 				return EXIT_FAILURE;
 			}
+			*/
 			
 			const char* const cookie_jar = json_is_null(subobj) ? NULL : json_string_value(subobj);
 			
@@ -721,11 +729,115 @@ int main(void) {
 		return EXIT_FAILURE;
 	}
 	
-	printf("+ Selecione o que deseja baixar:\r\n\r\n");
+	size_t start = 0;
+	size_t end = PAGINATION_MAX_ITEMS;
 	
-	for (size_t index = 0; index < resources.offset; index++) {
-		const struct Resource* const resource = &resources.items[index];
-		printf("%zu. \r\nNome: %s\r\nQualificação: %s\r\nURL: %s\r\n\r\n", index + 1, resource->name, resource->qualification.name == NULL ? "N/A" : resource->qualification.name, resource->url);
+	char answer[MAX_INPUT_SIZE] = {'\0'};
+	
+	struct CIR cir __attribute__((__cleanup__(cir_free))) = {0};
+	cir_init(&cir);
+	
+	while (1) {
+		erase_screen();
+		
+		printf("+ Selecione o que deseja baixar:\r\n\r\n");
+		
+		for (size_t index = start; index < end; index++) {
+			const struct Resource* const resource = &resources.items[index];
+			printf("%zu. \r\nNome: %s\r\nQualificação: %s\r\nURL: %s\r\n\r\n", index + 1, resource->name, resource->qualification.name == NULL ? "N/A" : resource->qualification.name, resource->url);
+		}
+		
+		printf("> Digite sua escolha: %s", answer);
+		
+		int enter_pressed = 0;
+		
+		while (1) {
+			const struct CIKey* const key = cir_get(&cir);
+			
+			int break_parent = 0;
+			
+			switch (key->type) {
+				case KEY_PAGE_UP:
+				case KEY_ARROW_LEFT:
+				case KEY_ARROW_UP:
+				case KEY_HOME: {
+					if (PAGINATION_MAX_ITEMS > start) {
+						break;
+					}
+					
+					end = start;
+					start -= PAGINATION_MAX_ITEMS;
+					
+					break_parent = 1;
+					
+					break;
+				}
+				case KEY_PAGE_DOWN:
+				case KEY_ARROW_RIGHT:
+				case KEY_ARROW_DOWN:
+				case KEY_END: {
+					if (end == resources.offset) {
+						break;
+					}
+					
+					start = end;
+					end += ((end + PAGINATION_MAX_ITEMS) < resources.offset) ? PAGINATION_MAX_ITEMS : resources.offset - end;
+					
+					break_parent = 1;
+					
+					break;
+				case KEY_DELETE:
+					if (strlen(answer) < 1) {
+						break;
+					}
+					
+					printf("\b \b");
+					fflush(stdout);
+					
+					*(strchr(answer, '\0') - 1) = '\0';
+					
+					break;
+				}
+				case KEY_ZERO:
+				case KEY_ONE:
+				case KEY_TWO:
+				case KEY_THREE:
+				case KEY_FOUR:
+				case KEY_FIVE:
+				case KEY_SIX:
+				case KEY_SEVEN:
+				case KEY_EIGHTH:
+				case KEY_NINE:
+				case KEY_HYPHEN:
+				case KEY_COMMA: {
+					strcat(answer, cir.tmp);
+					printf("%s", cir.tmp);
+					break;
+				}
+				case KEY_ENTER: {
+					break_parent = 1;
+					enter_pressed = 1;
+					break;
+				}
+				case KEY_CTRL_BACKSLASH:
+				case KEY_CTRL_C:
+				case KEY_CTRL_D:
+					printf("\r\n");
+					return EXIT_FAILURE;
+				default:
+					break;
+			}
+			
+			if (break_parent) {
+				break;
+			}
+		}
+		
+		printf("\r\n");
+		
+		if (enter_pressed) {
+			break;
+		}
 	}
 	
 	struct Resource download_queue[resources.offset];
@@ -736,14 +848,11 @@ int main(void) {
 			queue_count = 0;
 		}
 		
-		char query[MAX_INPUT_SIZE] = {'\0'};
-		input("> Digite sua escolha: ", query);
-		
-		const char* start = query;
+		const char* start = answer;
 		int err = 0;
 		
-		for (size_t index = 0; index < strlen(query) + 1; index++) {
-			const char* const ch = &query[index];
+		for (size_t index = 0; index < strlen(answer) + 1; index++) {
+			const char* const ch = &answer[index];
 			
 			if (!(*ch == *COMMA || (*ch == '\0' && index > 0))) {
 				continue;
@@ -872,6 +981,8 @@ int main(void) {
 		if (!err) {
 			break;
 		}
+		
+		input("> Digite sua escolha: ", answer);
 	}
 	
 	if (queue_count > 1) {
@@ -880,28 +991,46 @@ int main(void) {
 	
 	int kof = 0;
 	
+	printf("> Manter o nome original de arquivos e diretórios? (S/n) ");
+	
 	while (1) {
-		char answer[MAX_INPUT_SIZE] = {'\0'};
-		input("> Manter o nome original de arquivos e diretórios? (S/n) ", answer);
+		const struct CIKey* const key = cir_get(&cir);
 		
-		switch (*answer) {
-			case 's':
-			case 'y':
-			case 'S':
-			case 'Y':
+		switch (key->type) {
+			case KEY_SHIFT_S:
+			case KEY_S:
+			case KEY_SHIFT_Y:
+			case KEY_Y: {
+				printf("%s", cir.tmp);
 				kof = 1;
 				break;
-			case 'n':
-			case 'N':
+			}
+			case KEY_ENTER: {
+				printf("s");
+				kof = 1;
+				break;
+			}
+			case KEY_SHIFT_N:
+			case KEY_N: {
+				printf("%s", cir.tmp);
 				kof = 0;
 				break;
+			}
+			case KEY_CTRL_BACKSLASH:
+			case KEY_CTRL_C:
+			case KEY_CTRL_D:
+				printf("\r\n");
+				return EXIT_FAILURE;
 			default:
-				fprintf(stderr, "- O valor inserido é inválido ou não reconhecido!\r\n");
 				continue;
 		}
 		
 		break;
 	}
+	
+	printf("\r\n");
+	
+	cir_free(&cir);
 	
 	fclose(stdin);
 	
@@ -1091,7 +1220,7 @@ int main(void) {
 						
 						const CURLcode code = curl_easy_perform(curl_easy);
 						
-						printf("\n");
+						erase_line();
 						
 						fstream_close(stream);
 						
@@ -1342,7 +1471,7 @@ int main(void) {
 										
 										const CURLcode code = curl_easy_perform(curl_easy);
 										
-										printf("\n");
+										erase_line();
 										
 										fstream_close(stream);
 										
@@ -1410,7 +1539,7 @@ int main(void) {
 										
 										const CURLcode code = curl_easy_perform(curl_easy);
 										
-										printf("\n");
+										erase_line();
 										
 										fstream_close(stream);
 										
@@ -1547,7 +1676,7 @@ int main(void) {
 							
 							const CURLcode code = curl_easy_perform(curl_easy);
 							
-							printf("\n");
+							erase_line();
 							
 							fstream_close(stream);
 							

@@ -581,10 +581,15 @@ int iaexpert_get_resources(
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, IAEXPERT_COURSES_ENDPOINT);
+	curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 1L);
+	curl_easy_setopt(curl_easy, CURLOPT_MAXREDIRS, 1L);
 	
 	if (curl_easy_perform(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
+	
+	curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 0L);
+	curl_easy_setopt(curl_easy, CURLOPT_MAXREDIRS, -1);
 	
 	const char* const pattern = "data-nonce=\"";
 	

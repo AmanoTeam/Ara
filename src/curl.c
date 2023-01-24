@@ -20,7 +20,7 @@
 		"cert.pem";
 #endif
 
-static const char HTTP_DEFAULT_USER_AGENT[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36";
+static const char HTTP_DEFAULT_USER_AGENT[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.5414.119 Safari/537.36";
 static const long HTTP_MAX_CONCURRENT_CONNECTIONS = 30L;
 
 static char CURL_ERROR_MESSAGE[CURL_ERROR_SIZE] = {'\0'};

@@ -10,13 +10,15 @@
 #include "fstream.h"
 #include "errors.h"
 
-static const char CA_CERT_FILENAME[] = 
-	PATH_SEPARATOR
-	"etc"
-	PATH_SEPARATOR
-	"tls"
-	PATH_SEPARATOR
-	"cert.pem";
+#ifndef SPARKLEC_DISABLE_CERTIFICATE_VALIDATION
+	static const char CA_CERT_FILENAME[] = 
+		PATH_SEPARATOR
+		"etc"
+		PATH_SEPARATOR
+		"tls"
+		PATH_SEPARATOR
+		"cert.pem";
+#endif
 
 static const char HTTP_DEFAULT_USER_AGENT[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36";
 static const long HTTP_MAX_CONCURRENT_CONNECTIONS = 30L;
@@ -56,39 +58,41 @@ static int globals_initialize(void) {
 	
 	atexit(globals_destroy);
 	
-	char app_filename[PATH_MAX];
-	get_app_filename(app_filename);
-	
-	char app_root_directory[PATH_MAX];
-	get_parent_directory(app_filename, app_root_directory, 2);
-	
-	char ca_bundle[strlen(app_root_directory) + strlen(CA_CERT_FILENAME) + 1];
-	strcpy(ca_bundle, app_root_directory);
-	strcat(ca_bundle, CA_CERT_FILENAME);
-	
-	const long long file_size = get_file_size(ca_bundle);
-	
-	struct FStream* const stream = fstream_open(ca_bundle, "r");
-	
-	if (stream == NULL) {
-		return UERR_FSTREAM_FAILURE;
-	}
-	
-	curl_blob_global.data = malloc((size_t) file_size);
-	
-	if (curl_blob_global.data == NULL) {
-		return UERR_MEMORY_ALLOCATE_FAILURE;
-	}
-	
-	const ssize_t rsize = fstream_read(stream, curl_blob_global.data, (size_t) file_size);
-	
-	fstream_close(stream);
-	
-	if (rsize != (ssize_t) file_size) {
-		return UERR_FSTREAM_FAILURE;
-	}
-	
-	curl_blob_global.len = (size_t) rsize;
+	#ifndef SPARKLEC_DISABLE_CERTIFICATE_VALIDATION
+		char app_filename[PATH_MAX];
+		get_app_filename(app_filename);
+		
+		char app_root_directory[PATH_MAX];
+		get_parent_directory(app_filename, app_root_directory, 2);
+		
+		char ca_bundle[strlen(app_root_directory) + strlen(CA_CERT_FILENAME) + 1];
+		strcpy(ca_bundle, app_root_directory);
+		strcat(ca_bundle, CA_CERT_FILENAME);
+		
+		const long long file_size = get_file_size(ca_bundle);
+		
+		struct FStream* const stream = fstream_open(ca_bundle, "r");
+		
+		if (stream == NULL) {
+			return UERR_FSTREAM_FAILURE;
+		}
+		
+		curl_blob_global.data = malloc((size_t) file_size);
+		
+		if (curl_blob_global.data == NULL) {
+			return UERR_MEMORY_ALLOCATE_FAILURE;
+		}
+		
+		const ssize_t rsize = fstream_read(stream, curl_blob_global.data, (size_t) file_size);
+		
+		fstream_close(stream);
+		
+		if (rsize != (ssize_t) file_size) {
+			return UERR_FSTREAM_FAILURE;
+		}
+		
+		curl_blob_global.len = (size_t) rsize;
+	#endif
 	
 	GLOBALS_INITIALIZED = 1;
 	
@@ -108,8 +112,16 @@ static int curl_set_options(CURL* handle) {
 	curl_easy_setopt(handle, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 	curl_easy_setopt(handle, CURLOPT_CAINFO, NULL);
 	curl_easy_setopt(handle, CURLOPT_CAPATH, NULL);
-	curl_easy_setopt(handle, CURLOPT_CAINFO_BLOB, &curl_blob_global);
-	curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 1L);
+	
+	#ifdef SPARKLEC_DISABLE_CERTIFICATE_VALIDATION
+		curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
+	#else
+		if (curl_blob_global.data == NULL) {
+			curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
+		} else {
+			curl_easy_setopt(handle, CURLOPT_CAINFO_BLOB, &curl_blob_global);
+		}
+	#endif
 	
 	return UERR_SUCCESS;
 	

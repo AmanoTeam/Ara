@@ -661,7 +661,7 @@ int iaexpert_get_resources(
 		
 		tidy_buffer_t buffer __attribute__((__cleanup__(tidy_buffer_free))) = {0};
 		tidy_buffer_init(&buffer);
-		tidy_buffer_append(&buffer, (char*) content, strlen(content));
+		tidy_buffer_append(&buffer, (char*) content, (uint) strlen(content));
 		
 		if (tidy_parse_buffer(document, &buffer) < 0) {
 			return UERR_TIDY_FAILURE;
@@ -791,7 +791,7 @@ int iaexpert_get_modules(
 	
 	tidy_buffer_t buffer __attribute__((__cleanup__(tidy_buffer_free))) = {0};
 	tidy_buffer_init(&buffer);
-	tidy_buffer_append(&buffer, string.s, string.slength);
+	tidy_buffer_append(&buffer, string.s, (uint) string.slength);
 	
 	if (tidy_parse_buffer(document, &buffer) < 0) {
 		return UERR_TIDY_FAILURE;
@@ -855,7 +855,7 @@ int iaexpert_get_page(
 	
 	tidy_buffer_t buffer __attribute__((__cleanup__(tidy_buffer_free))) = {0};
 	tidy_buffer_init(&buffer);
-	tidy_buffer_append(&buffer, string.s, string.slength);
+	tidy_buffer_append(&buffer, string.s, (uint) string.slength);
 	
 	if (tidy_parse_buffer(document, &buffer) < 0) {
 		return UERR_TIDY_FAILURE;

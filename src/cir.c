@@ -36,7 +36,7 @@ int cir_init(struct CIR* const obj) {
 		
 		obj->attributes = attributes;
 		
-		attributes &= ~ENABLE_PROCESSED_INPUT;
+		attributes &= (DWORD) ~ENABLE_PROCESSED_INPUT;
 		
 		if (SetConsoleMode(handle, attributes) == 0) {
 			return -1;

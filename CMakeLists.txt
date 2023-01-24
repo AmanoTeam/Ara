@@ -14,6 +14,7 @@ option(SPARKLEC_DISABLE_HOTMART "Disable support for Hotmart" OFF)
 option(SPARKLEC_DISABLE_ESTRATEGIA "Disable support for Estratégia Concursos" OFF)
 option(SPARKLEC_DISABLE_CYBERCLASS "Disable support for CyberClass" OFF)
 option(SPARKLEC_DISABLE_IAEXPERT "Disable support for IA Expert Academy" OFF)
+option(SPARKLEC_DISABLE_CERTIFICATE_VALIDATION "Disable SSL certificate validation in libcurl" OFF)
 
 set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
 
@@ -437,6 +438,14 @@ else()
 		sparklec
 		PRIVATE
 		src/estrategia.c
+	)
+endif()
+
+if (SPARKLEC_DISABLE_CERTIFICATE_VALIDATION) 
+	target_compile_definitions(
+		sparklec
+		PRIVATE
+		SPARKLEC_DISABLE_CERTIFICATE_VALIDATION
 	)
 endif()
 

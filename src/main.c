@@ -742,6 +742,10 @@ int main(void) {
 		
 		printf("+ Selecione o que deseja baixar:\r\n\r\n");
 		
+		if (end > resources.offset) {
+			end = resources.offset;
+		}
+		
 		for (size_t index = start; index < end; index++) {
 			const struct Resource* const resource = &resources.items[index];
 			printf("%zu. \r\nNome: %s\r\nQualificação: %s\r\nURL: %s\r\n\r\n", index + 1, resource->name, resource->qualification.name == NULL ? "N/A" : resource->qualification.name, resource->url);

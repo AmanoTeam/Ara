@@ -307,7 +307,17 @@ static int estrategia_get_exclusives(
 			return UERR_JSON_CANNOT_PARSE;
 		}
 		
-		const json_t* meta = json_object_get(tree, "meta");
+		const json_t* const data = json_object_get(tree, "data");
+		
+		if (data == NULL) {
+			return UERR_JSON_MISSING_REQUIRED_KEY;
+		}
+		
+		if (!json_is_array(data)) {
+			return UERR_JSON_NON_MATCHING_TYPE;
+		}
+		
+		const json_t* const meta = json_object_get(tree, "meta");
 		
 		if (meta == NULL) {
 			return UERR_JSON_MISSING_REQUIRED_KEY;
@@ -318,7 +328,54 @@ static int estrategia_get_exclusives(
 		}
 		
 		if (index == 1) {
-			const json_t* obj = json_object_get(meta, "total");
+			const json_t* const item = json_array_get(data, 0);
+			
+			const json_t* obj = json_object_get(item, "id");
+			
+			if (obj == NULL) {
+				return UERR_JSON_MISSING_REQUIRED_KEY;
+			}
+			
+			if (!json_is_integer(obj)) {
+				return UERR_JSON_NON_MATCHING_TYPE;
+			}
+			
+			const json_int_t id = json_integer_value(obj);
+			
+			char sid[intlen(id) + 1];
+			snprintf(sid, sizeof(sid), "%llu", id);
+			
+			obj = json_object_get(item, "nome");
+			
+			if (obj == NULL) {
+				return UERR_JSON_MISSING_REQUIRED_KEY;
+			}
+			
+			if (!json_is_string(obj)) {
+				return UERR_JSON_NON_MATCHING_TYPE;
+			}
+			
+			char url[strlen(ESTRATEGIA_COURSE_ENDPOINT) + strlen(SLASH) + strlen(sid) + 1];
+			strcpy(url, ESTRATEGIA_COURSE_ENDPOINT);
+			strcat(url, SLASH);
+			strcat(url, sid);
+			
+			curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_discard_body_cb);
+			curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, NULL);
+			curl_easy_setopt(curl_easy, CURLOPT_URL, url);
+			
+			switch (curl_easy_perform(curl_easy)) {
+				case CURLE_OK:
+					break;
+				case CURLE_HTTP_RETURNED_ERROR:
+					return UERR_UNSUPPORTED;
+				default:
+					return UERR_CURL_FAILURE;
+			}
+			
+			curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
+			
+			obj = json_object_get(meta, "total");
 			
 			if (obj == NULL) {
 				return UERR_JSON_MISSING_REQUIRED_KEY;
@@ -354,7 +411,7 @@ static int estrategia_get_exclusives(
 		size_t index = 0;
 		const json_t* item = NULL;
 		
-		json_array_foreach(obj, index, item) {
+		json_array_foreach(data, index, item) {
 			if (!json_is_object(item)) {
 				return UERR_JSON_NON_MATCHING_TYPE;
 			}
@@ -656,8 +713,12 @@ int estrategia_get_resources(
 	
 	const int code = estrategia_get_exclusives(resources);
 	
-	if (code != UERR_SUCCESS) {
-		return code;
+	switch (code) {
+		case UERR_SUCCESS:
+		case UERR_UNSUPPORTED:
+			break;
+		default:
+			return code;
 	}
 	
 	curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, NULL);

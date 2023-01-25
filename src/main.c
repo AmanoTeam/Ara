@@ -8,7 +8,6 @@
 	#include <io.h>
 	#include <locale.h>
 #else
-	#include <termios.h>
 	#include <sys/resource.h>
 #endif
 
@@ -752,6 +751,7 @@ int main(void) {
 		}
 		
 		printf("> Digite sua escolha: %s", answer);
+		fflush(stdout);
 		
 		int enter_pressed = 0;
 		
@@ -816,6 +816,7 @@ int main(void) {
 				case KEY_COMMA: {
 					strcat(answer, cir.tmp);
 					printf("%s", cir.tmp);
+					fflush(stdout);
 					break;
 				}
 				case KEY_ENTER: {
@@ -996,6 +997,7 @@ int main(void) {
 	int kof = 0;
 	
 	printf("> Manter o nome original de arquivos e diretórios? (S/n) ");
+	fflush(stdout);
 	
 	while (1) {
 		const struct CIKey* const key = cir_get(&cir);
@@ -1006,17 +1008,20 @@ int main(void) {
 			case KEY_SHIFT_Y:
 			case KEY_Y: {
 				printf("%s", cir.tmp);
+				fflush(stdout);
 				kof = 1;
 				break;
 			}
 			case KEY_ENTER: {
 				printf("s");
+				fflush(stdout);
 				kof = 1;
 				break;
 			}
 			case KEY_SHIFT_N:
 			case KEY_N: {
 				printf("%s", cir.tmp);
+				fflush(stdout);
 				kof = 0;
 				break;
 			}
@@ -1024,6 +1029,7 @@ int main(void) {
 			case KEY_CTRL_C:
 			case KEY_CTRL_D:
 				printf("\r\n");
+				fflush(stdout);
 				return EXIT_FAILURE;
 			default:
 				continue;
@@ -1272,10 +1278,10 @@ int main(void) {
 			for (size_t index = 0; index < module->pages.offset; index++) {
 				struct Page* const page = &module->pages.items[index];
 				
-				printf("+ Obtendo informações sobre a aula '%s'\r\n", page->name);
+				printf("+ Obtendo informações sobre a página '%s'\r\n", page->name);
 				
 				if (page->is_locked) {
-					fprintf(stderr, "- Aula inacessível, pulando para a próxima\r\n");
+					fprintf(stderr, "- Página inacessível, pulando para a próxima\r\n");
 					continue;
 				}
 				
@@ -1295,7 +1301,7 @@ int main(void) {
 						return EXIT_FAILURE;
 				}
 				
-				printf("+ Verificando estado da aula '%s'\r\n", page->name);
+				printf("+ Verificando estado da página '%s'\r\n", page->name);
 				
 				page->path = malloc(strlen(module->path) + strlen(PATH_SEPARATOR) + (kof ? strlen(page->dirname) : strlen(page->short_dirname)) + 1);
 				

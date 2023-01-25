@@ -7,6 +7,7 @@
 	#include <conio.h>
 #else
 	#include <termios.h>
+	#include <unistd.h>
 #endif
 
 #include "cir.h"
@@ -59,7 +60,7 @@ int cir_init(struct CIR* const obj) {
 		cfmakeraw(&attributes);
 		
 		attributes.c_cc[VTIME] = 0;
-		attributes.c_cc[VMIN] = 0;
+		attributes.c_cc[VMIN] = 1;
 		
 		int actions = TCSAFLUSH;
 		
@@ -70,6 +71,8 @@ int cir_init(struct CIR* const obj) {
 		if (tcsetattr(fd, actions, &attributes) == -1) {
 			return -1;
 		}
+		
+		fflush(stdin);
 	#endif
 	
 	return 0;
@@ -81,6 +84,8 @@ const struct CIKey* cir_get(struct CIR* const obj) {
 	Listen for key presses on keyboard.
 	*/
 	
+	memset(obj->tmp, '\0', sizeof(obj->tmp));
+	
 	#ifdef _WIN32
 		const HANDLE handle = GetStdHandle(STD_INPUT_HANDLE);
 		
@@ -89,82 +94,50 @@ const struct CIKey* cir_get(struct CIR* const obj) {
 		}
 	#endif
 	
-	size_t offset = 0;
-	
-	while (1) {
-		#ifdef _WIN32
-			INPUT_RECORD input = {0};
-			DWORD count = 0;
-			
-			#ifdef _UNICODE
-				const BOOL status = ReadConsoleInputW(handle, &input, 1, &count);
-			#else
-				const BOOL status = ReadConsoleInputA(handle, &input, 1, &count);
-			#endif
-			
-			if (status == 0) {
-				return NULL;
-			}
-			
-			const KEY_EVENT_RECORD* const event = (KEY_EVENT_RECORD*) &input.Event;
-			
-			if (!(input.EventType == KEY_EVENT && event->bKeyDown)) {
-				return &KEYBOARD_KEY_EMPTY;
-			}
-			
-			#ifdef _UNICODE
-				if (event->uChar.UnicodeChar == L'\0') {
-					if ((offset + 1) > sizeof(obj->tmp)) {
-						return NULL;
-					}
-					
-					obj->tmp[offset++] = (char) event->wVirtualKeyCode;
-				} else {
-					const wchar_t ws[] = {event->uChar.UnicodeChar, L'\0'};
-					
-					const int ssize = WideCharToMultiByte(CP_UTF8, 0, ws, -1, NULL, 0, NULL, NULL);
-					
-					if (ssize == 0) {
-						return NULL;
-					}
-					
-					char s[(size_t) ssize];
-					
-					if (WideCharToMultiByte(CP_UTF8, 0, ws, -1, s, ssize, NULL, NULL) == 0) {
-						return NULL;
-					}
-					
-					if ((offset + strlen(s)) > sizeof(obj->tmp)) {
-						return NULL;
-					}
-					
-					memcpy(obj->tmp + offset, s, strlen(s));
-					offset += strlen(s);
-				}
-			#else
-				const int ch = event->uChar.AsciiChar == '\0' ? event->wVirtualKeyCode : event->uChar.AsciiChar;
-				obj->tmp[offset++] = ch;
-			#endif
-			
-			break;
+	#ifdef _WIN32
+		INPUT_RECORD input = {0};
+		DWORD count = 0;
+		
+		#ifdef _UNICODE
+			const BOOL status = ReadConsoleInputW(handle, &input, 1, &count);
 		#else
-			const int ch = getchar();
-			
-			if ((offset + 1) > sizeof(obj->tmp)) {
-				return NULL;
-			}
-			
-			obj->tmp[offset++] = ch == EOF ? '\0' : ch;
-			
-			if (ch == EOF) {
-				break;
-			}
+			const BOOL status = ReadConsoleInputA(handle, &input, 1, &count);
 		#endif
-	}
-	
-	#ifndef _WIN32
-		if (offset == 1) {
+		
+		if (status == 0) {
+			return NULL;
+		}
+		
+		const KEY_EVENT_RECORD* const event = (KEY_EVENT_RECORD*) &input.Event;
+		
+		if (!(input.EventType == KEY_EVENT && event->bKeyDown)) {
 			return &KEYBOARD_KEY_EMPTY;
+		}
+		
+		#ifdef _UNICODE
+			if (event->uChar.UnicodeChar == L'\0') {
+				obj->tmp[0] = (char) event->wVirtualKeyCode;
+			} else {
+				const wchar_t ws[] = {event->uChar.UnicodeChar, L'\0'};
+				
+				if (WideCharToMultiByte(CP_UTF8, 0, ws, -1, obj->tmp, sizeof(obj->tmp), NULL, NULL) == 0) {
+					return NULL;
+				}
+			}
+		#else
+			obj->tmp[0] = event->uChar.AsciiChar == '\0' ? event->wVirtualKeyCode : event->uChar.AsciiChar;
+		#endif
+	#else
+		const int fd = fileno(stdin);
+		
+		if (fd == -1) {
+			return NULL;
+		}
+		
+		const ssize_t size = read(fd, obj->tmp, sizeof(obj->tmp));
+		
+		if (size == -1) {
+			return NULL;
 		}
 	#endif
 	
@@ -176,7 +149,7 @@ const struct CIKey* cir_get(struct CIR* const obj) {
 				return key;
 			}
 		#else
-			if (memcmp(key->code, obj->tmp, offset) == 0) {
+			if (memcmp(key->code, obj->tmp, strlen(obj->tmp)) == 0) {
 				return key;
 			}
 		#endif

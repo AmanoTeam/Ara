@@ -12,7 +12,7 @@ struct CIR {
 #else
 	struct termios attributes;
 #endif
-	char tmp[128];
+	char tmp[16];
 };
 
 enum CIKeyType {
@@ -88,7 +88,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x21
 	#else
-		.code = {0x1b, 0x5b, 0x35, 0x7e, 0x0}
+		.code = {0x1b, 0x5b, 0x35, 0x7e}
 	#endif
 	},
 	{
@@ -97,7 +97,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x22
 	#else
-		.code = {0x1b, 0x5b, 0x36, 0x7e, 0x0}
+		.code = {0x1b, 0x5b, 0x36, 0x7e}
 	#endif
 	},
 	{
@@ -106,7 +106,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x26
 	#else
-		.code = {0x1b, 0x5b, 0x41, 0x0}
+		.code = {0x1b, 0x5b, 0x41}
 	#endif
 	},
 	{
@@ -115,7 +115,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x28
 	#else
-		.code = {0x1b, 0x5b, 0x42, 0x0}
+		.code = {0x1b, 0x5b, 0x42}
 	#endif
 	},
 	{
@@ -124,7 +124,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x25
 	#else
-		.code = {0x1b, 0x5b, 0x44, 0x0}
+		.code = {0x1b, 0x5b, 0x44}
 	#endif
 	},
 	{
@@ -133,7 +133,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x27
 	#else
-		.code = {0x1b, 0x5b, 0x43, 0x0}
+		.code = {0x1b, 0x5b, 0x43}
 	#endif
 	},
 	{
@@ -142,7 +142,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0xd
 	#else
-		.code = {0xd, 0x0}
+		.code = {0xd}
 	#endif
 	},
 	{
@@ -151,7 +151,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x24
 	#else
-		.code = {0x1b, 0x5b, 0x48, 0x0}
+		.code = {0x1b, 0x5b, 0x48}
 	#endif
 	},
 	{
@@ -160,7 +160,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x23
 	#else
-		.code = {0x1b, 0x5b, 0x46, 0x0}
+		.code = {0x1b, 0x5b, 0x46}
 	#endif
 	},
 	{
@@ -169,7 +169,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x8
 	#else
-		.code = {0x7f, 0x0}
+		.code = {0x7f}
 	#endif
 	},
 	{
@@ -178,7 +178,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x999
 	#else
-		.code = {0x3, 0x0}
+		.code = {0x3}
 	#endif
 	},
 	{
@@ -187,7 +187,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x999
 	#else
-		.code = {0x1c, 0x0}
+		.code = {0x1c}
 	#endif
 	},
 	{
@@ -196,7 +196,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x999
 	#else
-		.code = {0x4, 0x0}
+		.code = {0x4}
 	#endif
 	},
 	{
@@ -205,7 +205,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x30
 	#else
-		.code = {0x30, 0x0}
+		.code = {0x30}
 	#endif
 	},
 	{
@@ -214,7 +214,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x31
 	#else
-		.code = {0x31, 0x0}
+		.code = {0x31}
 	#endif
 	},
 	{
@@ -223,7 +223,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x32
 	#else
-		.code = {0x32, 0x0}
+		.code = {0x32}
 	#endif
 	},
 	{
@@ -232,7 +232,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x33
 	#else
-		.code = {0x33, 0x0}
+		.code = {0x33}
 	#endif
 	},
 	{
@@ -241,7 +241,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x34
 	#else
-		.code = {0x34, 0x0}
+		.code = {0x34}
 	#endif
 	},
 	{
@@ -250,7 +250,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x35
 	#else
-		.code = {0x35, 0x0}
+		.code = {0x35}
 	#endif
 	},
 	{
@@ -259,7 +259,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x36
 	#else
-		.code = {0x36, 0x0}
+		.code = {0x36}
 	#endif
 	},
 	{
@@ -268,7 +268,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x37
 	#else
-		.code = {0x37, 0x0}
+		.code = {0x37}
 	#endif
 	},
 	{
@@ -277,7 +277,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x38
 	#else
-		.code = {0x38, 0x0}
+		.code = {0x38}
 	#endif
 	},
 	{
@@ -286,7 +286,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x39
 	#else
-		.code = {0x39, 0x0}
+		.code = {0x39}
 	#endif
 	},
 	{
@@ -295,7 +295,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x2d
 	#else
-		.code = {0x2d, 0x0}
+		.code = {0x2d}
 	#endif
 	},
 	{
@@ -304,7 +304,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x2c
 	#else
-		.code = {0x2c, 0x0}
+		.code = {0x2c}
 	#endif
 	},
 	{
@@ -313,7 +313,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x53
 	#else
-		.code = {0x53, 0x0}
+		.code = {0x53}
 	#endif
 	},
 	{
@@ -322,7 +322,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x73
 	#else
-		.code = {0x73, 0x0}
+		.code = {0x73}
 	#endif
 	},
 	{
@@ -331,7 +331,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x4e
 	#else
-		.code = {0x4e, 0x0}
+		.code = {0x4e}
 	#endif
 	},
 	{
@@ -340,7 +340,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x6e
 	#else
-		.code = {0x6e, 0x0}
+		.code = {0x6e}
 	#endif
 	},
 	{
@@ -349,7 +349,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x59
 	#else
-		.code = {0x59, 0x0}
+		.code = {0x59}
 	#endif
 	},
 	{
@@ -358,7 +358,7 @@ static const struct CIKey keys[] = {
 	#ifdef _WIN32
 		.code = 0x79
 	#else
-		.code = {0x79, 0x0}
+		.code = {0x79}
 	#endif
 	}
 };

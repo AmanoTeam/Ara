@@ -284,7 +284,7 @@ static int tidy_extract_modules(
 				strcpy(module.short_dirname, module_id);
 				
 				resource->modules.items[resource->modules.offset++] = module;
-			} else if (strcmp(value, "ld-table-list-item") == 0) {
+			} else if (strncmp(value, "ld-table-list-item ", 19) == 0) {
 				const tidy_node_t* children = tidy_get_child(root);
 				
 				if (children == NULL) {
@@ -474,10 +474,15 @@ int iaexpert_authorize(
 	
 	curl_easy_setopt(curl_easy, CURLOPT_HTTPGET, 1L);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, IAEXPERT_PROFILE_ENDPOINT);
+	curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 1L);
+	curl_easy_setopt(curl_easy, CURLOPT_MAXREDIRS, 1L);
 	
 	if (curl_easy_perform(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
+	
+	curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 0L);
+	curl_easy_setopt(curl_easy, CURLOPT_MAXREDIRS, -1);
 	
 	const tidy_doc_t* const document = tidy_create();
 	
@@ -710,10 +715,15 @@ int iaexpert_get_modules(
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 	curl_easy_setopt(curl_easy, CURLOPT_COOKIEFILE, credentials->cookie_jar);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, resource->url);
+	curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 1L);
+	curl_easy_setopt(curl_easy, CURLOPT_MAXREDIRS, 1L);
 	
 	if (curl_easy_perform(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
+	
+	curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 0L);
+	curl_easy_setopt(curl_easy, CURLOPT_MAXREDIRS, -1);
 	
 	const char* const pattern = ">Não Matriculado<";
 	

@@ -12,6 +12,10 @@ jobs:
     - uses: actions/checkout@main
       with:
         submodules: true
+    - name: Cancel previous runs
+      uses: n1hility/cancel-previous-runs@v2
+      with: 
+        token: ${{ secrets.GITHUB_TOKEN }}
     - name: Setup Linux cross compiler
       run: |
         sudo apt update

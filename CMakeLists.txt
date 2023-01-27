@@ -413,6 +413,14 @@ add_executable(
 	src/cir.c
 )
 
+if (SPARKLEC_DISABLE_CERTIFICATE_VALIDATION) 
+	target_compile_definitions(
+		sparklec
+		PRIVATE
+		SPARKLEC_DISABLE_CERTIFICATE_VALIDATION
+	)
+endif()
+
 if (SPARKLEC_DISABLE_HOTMART)
 	target_compile_definitions(
 		sparklec
@@ -441,14 +449,6 @@ else()
 	)
 endif()
 
-if (SPARKLEC_DISABLE_CERTIFICATE_VALIDATION) 
-	target_compile_definitions(
-		sparklec
-		PRIVATE
-		SPARKLEC_DISABLE_CERTIFICATE_VALIDATION
-	)
-endif()
-
 if (SPARKLEC_DISABLE_CYBERCLASS)
 	target_compile_definitions(
 		sparklec
@@ -474,6 +474,20 @@ else()
 		sparklec
 		PRIVATE
 		src/iaexpert.c
+	)
+endif()
+
+if (SPARKLEC_DISABLE_QCONCURSOS)
+	target_compile_definitions(
+		sparklec
+		PRIVATE
+		SPARKLEC_DISABLE_QCONCURSOS
+	)
+else()
+	target_sources(
+		sparklec
+		PRIVATE
+		src/qconcursos.c
 	)
 endif()
 

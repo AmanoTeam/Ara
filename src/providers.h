@@ -16,6 +16,10 @@
 	#include "iaexpert.h"
 #endif
 
+#ifndef SPARKLEC_DISABLE_QCONCURSOS
+	#include "qconcursos.h"
+#endif
+
 struct ProviderMethods {
 	int (*authorize)(const char* const, const char* const, struct Credentials* const);
 	int (*get_resources)(const struct Credentials* const, struct Resources* const);
@@ -80,6 +84,19 @@ static const struct Provider PROVIDERS[] = {
 			.get_modules = &iaexpert_get_modules,
 			.get_module = &iaexpert_get_module,
 			.get_page = &iaexpert_get_page
+		}
+	},
+#endif
+#ifndef SPARKLEC_DISABLE_QCONCURSOS
+	{
+		.label = "QConcursos",
+		.url = "https://www.qconcursos.com",
+		.methods = {
+			.authorize = &qconcursos_authorize,
+			.get_resources = &qconcursos_get_resources,
+			.get_modules = &qconcursos_get_modules,
+			.get_module = &qconcursos_get_module,
+			.get_page = &qconcursos_get_page
 		}
 	}
 #endif

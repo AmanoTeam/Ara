@@ -10,6 +10,7 @@ static const char LF[] = "\n";
 static const char COMMA[] = ",";
 static const char HASHTAG[] = "#";
 static const char GREATER_THAN[] = ">";
+static const char LESS_THAN[] = "<";
 static const char HYPHEN[] = "-";
 static const char UNDERSCORE[] = "_";
 

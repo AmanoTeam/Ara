@@ -68,15 +68,6 @@ if (CMAKE_C_COMPILER_ID STREQUAL "Clang" AND CMAKE_BUILD_TYPE STREQUAL "MinSizeR
 	add_compile_options(-Oz)
 endif()
 
-# Workaround for build issues of Tidy on MacOS
-if (APPLE)
-	file(READ "${CMAKE_SOURCE_DIR}/submodules/tidy/include/tidyplatform.h" FILE_CONTENTS)
-	string(REPLACE "TIDY_THREAD_LOCAL __thread" "TIDY_THREAD_LOCAL" FILE_CONTENTS "${FILE_CONTENTS}")
-	file(WRITE "${CMAKE_SOURCE_DIR}/submodules/tidy/include/tidyplatform.h" "${FILE_CONTENTS}")
-	
-	add_compile_options(-Wno-undef-prefix)
-endif()
-
 include_directories(
 	src
 	submodules/bearssl/src

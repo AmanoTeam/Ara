@@ -19,7 +19,31 @@ jobs:
     - name: Setup Linux cross compiler
       run: |
         sudo apt update
-        sudo apt install --assume-yes gcc-arm-linux-gnueabi gcc-aarch64-linux-gnu gcc-i686-linux-gnu
+        sudo apt install --assume-yes \
+            gcc-arm-linux-gnueabi \
+            gcc-arm-linux-gnueabihf \
+            gcc-aarch64-linux-gnu \
+            gcc-i686-linux-gnu \
+            gcc-powerpc-linux-gnu \
+            gcc-powerpc64-linux-gnu \
+            gcc-powerpc64le-linux-gnu \
+            gcc-s390x-linux-gnu \
+            gcc-mips-linux-gnu \
+            gcc-mips64-linux-gnuabi64 \
+            gcc-mips64el-linux-gnuabi64 \
+            gcc-mipsel-linux-gnu \
+            gcc-mipsisa32r6-linux-gnu \
+            gcc-mipsisa32r6el-linux-gnu \
+            gcc-mipsisa64r6-linux-gnuabi64 \
+            gcc-mipsisa64r6el-linux-gnuabi64 \
+            gcc-sparc64-linux-gnu \
+            gcc-riscv64-linux-gnu \
+            gcc-alpha-linux-gnu \
+            gcc-hppa-linux-gnu \
+            gcc-hppa64-linux-gnu \
+            gcc-m68k-linux-gnu \
+            gcc-sh4-linux-gnu \
+            gcc-x86-64-linux-gnux32
     - name: Setup Android cross compiler
       uses: nttld/setup-ndk@main
       id: setup-ndk
@@ -96,19 +120,24 @@ jobs:
         declare -r MACHINE_HOST="$(gcc -dumpmachine)"
         
         declare -r targets=(
-            aarch64-linux-android
-            aarch64-linux-gnu
-            aarch64-w64-mingw32
-            aarch64-apple-darwin
-            aarch64-unknown-freebsd
             arm-linux-gnueabi
+            arm-linux-gnueabihf
             armv7-w64-mingw32
             armv7a-linux-androideabi
+            powerpc-linux-gnu
             i686-linux-android
             i686-linux-gnu
             i686-w64-mingw32
             i386-unknown-netbsdelf
             i386-unknown-freebsd
+            sh4-linux-gnu
+            m68k-linux-gnu
+            hppa-linux-gnu
+            alpha-linux-gnu
+            mipsisa32r6el-linux-gnu
+            mipsisa32r6-linux-gnu
+            mipsel-linux-gnu
+            mips-linux-gnu
             x86_64-apple-darwin
             x86_64h-apple-darwin
             x86_64-linux-android
@@ -117,6 +146,21 @@ jobs:
             x86_64-unknown-freebsd
             x86_64-unknown-dragonfly
             x86_64-unknown-haiku
+            x86_64-linux-gnux32
+            aarch64-linux-android
+            aarch64-linux-gnu
+            aarch64-w64-mingw32
+            aarch64-apple-darwin
+            aarch64-unknown-freebsd
+            powerpc64-linux-gnu
+            powerpc64le-linux-gnu
+            s390x-linux-gnu
+            riscv64-linux-gnu
+            sparc64-linux-gnu
+            mipsisa64r6el-linux-gnuabi64
+            mipsisa64r6-linux-gnuabi64
+            mips64-linux-gnuabi64
+            mips64el-linux-gnuabi64
             "${MACHINE_HOST}"
         )
         

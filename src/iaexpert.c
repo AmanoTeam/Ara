@@ -1002,7 +1002,7 @@ int iaexpert_get_modules(
 	curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 0L);
 	curl_easy_setopt(curl_easy, CURLOPT_MAXREDIRS, -1);
 	
-	const char* const pattern = ">Não Matriculado<";
+	const char* const pattern = "> Não Matriculado<";
 	
 	if (strstr(string.s, pattern) != NULL) {
 		const char* pattern = "/sfwd-courses/";
@@ -1131,10 +1131,15 @@ int iaexpert_get_page(
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 	curl_easy_setopt(curl_easy, CURLOPT_COOKIEFILE, credentials->cookie_jar);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, page->url);
+	curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 1L);
+	curl_easy_setopt(curl_easy, CURLOPT_MAXREDIRS, 1L);
 	
 	if (curl_easy_perform(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
+	
+	curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 0L);
+	curl_easy_setopt(curl_easy, CURLOPT_MAXREDIRS, -1);
 	
 	const tidy_doc_t* const document = tidy_create();
 	

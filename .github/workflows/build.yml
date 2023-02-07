@@ -40,7 +40,6 @@ jobs:
             gcc-riscv64-linux-gnu \
             gcc-alpha-linux-gnu \
             gcc-hppa-linux-gnu \
-            gcc-hppa64-linux-gnu \
             gcc-m68k-linux-gnu \
             gcc-sh4-linux-gnu \
             gcc-x86-64-linux-gnux32
@@ -48,7 +47,7 @@ jobs:
       uses: nttld/setup-ndk@main
       id: setup-ndk
       with:
-        ndk-version: r25b
+        ndk-version: r25c
     - name: Post setup settings for Android cross compiler
       run: |
         echo 'ANDROID_HOME=${{ steps.setup-ndk.outputs.ndk-path }}' >> "${GITHUB_ENV}"

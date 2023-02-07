@@ -6,10 +6,10 @@ on:
         - '**'
 
 jobs:
-  concurrency:
-    group: ${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true
   build:
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@main
@@ -203,17 +203,20 @@ jobs:
       uses: actions/upload-artifact@main
       with:
         path: ./output
-    - name: Get tag name
-      if: startsWith(github.ref, 'refs/tags/')
-      run: echo "VERSION_TAG=${GITHUB_REF/refs\/tags\//}" >> "${GITHUB_ENV}"
+    - name: Get tag name for release
+      if: startsWith(github.event.head_commit.message, 'Bump version')
+      run: echo "VERSION_TAG=${COMMIT_MESSAGE/* }" >> "${GITHUB_ENV}"
+      env:
+        COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
     - name: Create release
-      if: startsWith(github.ref, 'refs/tags/')
+      if: startsWith(github.event.head_commit.message, 'Bump version')
       uses: softprops/action-gh-release@master
       with:
-        tag_name: ${{ env.VERSION_TAG }}
-        name: SparkleC ${{ env.VERSION_TAG }}
+        tag_name: v${{ env.VERSION_TAG }}
+        name: SparkleC v${{ env.VERSION_TAG }}
         files: ./output/*
         draft: true
         prerelease: false
+        fail_on_unmatched_files: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

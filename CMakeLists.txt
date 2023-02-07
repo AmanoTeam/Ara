@@ -14,6 +14,7 @@ option(SPARKLEC_DISABLE_HOTMART "Disable support for Hotmart" OFF)
 option(SPARKLEC_DISABLE_ESTRATEGIA "Disable support for Estratégia Concursos" OFF)
 option(SPARKLEC_DISABLE_CYBERCLASS "Disable support for CyberClass" OFF)
 option(SPARKLEC_DISABLE_IAEXPERT "Disable support for IA Expert Academy" OFF)
+option(SPARKLEC_DISABLE_QCONCURSOS "Disable support for QConcursos" OFF)
 option(SPARKLEC_DISABLE_CERTIFICATE_VALIDATION "Disable SSL certificate validation in libcurl" OFF)
 
 set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
@@ -42,8 +43,8 @@ set(CURL_DISABLE_DOH ON)
 
 include(FetchContent)
 
-set(CACERT_FILENAME "cacert-2022-10-11.pem")
-set(CACERT_SHA256 "2cff03f9efdaf52626bd1b451d700605dc1ea000c5da56bd0fc59f8f43071040")
+set(CACERT_FILENAME "cacert-2023-01-10.pem")
+set(CACERT_SHA256 "fb1ecd641d0a02c01bc9036d513cb658bbda62a75e246bedbc01764560a639f0")
 
 FetchContent_Declare(
 	CACERT

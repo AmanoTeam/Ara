@@ -6,16 +6,15 @@ on:
         - '**'
 
 jobs:
+  concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
   build:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@main
       with:
         submodules: true
-    - name: Cancel previous runs
-      uses: n1hility/cancel-previous-runs@v2
-      with: 
-        token: ${{ secrets.GITHUB_TOKEN }}
     - name: Setup Linux cross compiler
       run: |
         sudo apt update
@@ -204,3 +203,17 @@ jobs:
       uses: actions/upload-artifact@main
       with:
         path: ./output
+    - name: Get tag name
+      if: startsWith(github.ref, 'refs/tags/')
+      run: echo "VERSION_TAG=${GITHUB_REF/refs\/tags\//}" >> "${GITHUB_ENV}"
+    - name: Create release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@master
+      with:
+        tag_name: ${{ env.VERSION_TAG }}
+        name: SparkleC ${{ env.VERSION_TAG }}
+        files: ./output/*
+        draft: true
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

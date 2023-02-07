@@ -64,7 +64,17 @@ int vimeo_parse(
 	
 	start += strlen(JSON_TREE_PATTERN);
 	
-	const char* end = strstr(start, "}; ");
+	const char* const patterns[] = {"}; ", "}\n"};
+	
+	const char* end = NULL;
+	
+	for (size_t index = 0; index < sizeof(patterns) / sizeof(*patterns); index++) {
+		const char* const pattern = patterns[index];
+		
+		if ((end = strstr(start, pattern)) != NULL) {
+			break;
+		}
+	}
 	
 	if (end == NULL) {
 		return UERR_STRSTR_FAILURE;

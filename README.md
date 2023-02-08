@@ -18,10 +18,10 @@ Abaixo estão os links para download do SparkleC para diversas arquiteturas. Voc
 
 A grande maioria dos computadores atuais são fabricados com processadores `x86_64`.
 
-- [SparkleC para Windows x86_64](https://github.com/Kartatz/SparkleC/releases/download/v0.3/x86_64-w64-mingw32.zip)
-- [SparkleC para Windows x86](https://github.com/Kartatz/SparkleC/releases/download/v0.3/i686-w64-mingw32.zip)
-- [SparkleC para Windows arm](https://github.com/Kartatz/SparkleC/releases/download/v0.3/armv7-w64-mingw32.zip)
-- [SparkleC para Windows arm64](https://github.com/Kartatz/SparkleC/releases/download/v0.3/aarch64-w64-mingw32.zip)
+- [SparkleC para Windows x86_64](https://github.com/Kartatz/SparkleC/releases/download/v0.4/x86_64-w64-mingw32.zip)
+- [SparkleC para Windows x86](https://github.com/Kartatz/SparkleC/releases/download/v0.4/i686-w64-mingw32.zip)
+- [SparkleC para Windows arm](https://github.com/Kartatz/SparkleC/releases/download/v0.4/armv7-w64-mingw32.zip)
+- [SparkleC para Windows arm64](https://github.com/Kartatz/SparkleC/releases/download/v0.4/aarch64-w64-mingw32.zip)
 
 Após baixar o arquivo compactado correspondente, extraía-io usando o WinRAR. Após isso, navegue através das pastas que foram criadas até encontrar um arquivo nomeado `sparklec.exe`.
 

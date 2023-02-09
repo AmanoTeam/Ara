@@ -119,6 +119,7 @@ static int curl_set_options(CURL* handle) {
 	curl_easy_setopt(handle, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 	curl_easy_setopt(handle, CURLOPT_CAINFO, NULL);
 	curl_easy_setopt(handle, CURLOPT_CAPATH, NULL);
+	curl_easy_setopt(handle, CURLOPT_DNS_CACHE_TIMEOUT, -1);
 	
 	#ifdef SPARKLEC_DISABLE_CERTIFICATE_VALIDATION
 		curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);

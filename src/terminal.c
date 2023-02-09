@@ -52,7 +52,7 @@ int erase_screen(void) {
 			return -1;
 		}
 	#else
-		if (printf("\e[2J") < 1) {
+		if (printf("\033[2J") < 1) {
 			return -1;
 		}
 	#endif
@@ -105,11 +105,11 @@ int erase_line(void) {
 			return -1;
 		}
 	#else
-		if (printf("\e[2K") < 1) {
+		if (printf("\033[2K") < 1) {
 			return -1;
 		}
 		
-		if (printf("\e[1G") < 1) {
+		if (printf("\033[1G") < 1) {
 			return -1;
 		}
 	#endif

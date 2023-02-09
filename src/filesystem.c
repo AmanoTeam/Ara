@@ -19,14 +19,6 @@
 	#elif defined(__Haiku__)
 		#include <FindDirectory.h>
 	#endif
-	
-	#ifdef __linux__
-		#ifndef PATH_MAX
-			#define PATH_MAX 4096
-		#endif
-	#endif
-	
-	#define FSTREAM_CHUNK_SIZE 8192
 #endif
 
 #include "fstream.h"

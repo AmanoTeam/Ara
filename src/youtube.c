@@ -155,7 +155,7 @@ int youtube_parse(
 	
 	curl_easy_setopt(curl_easy, CURLOPT_COPYPOSTFIELDS, post_fields);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	

@@ -109,7 +109,7 @@ int hotmart_authorize(
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, HOTMART_TOKEN_ENDPOINT);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	
@@ -176,7 +176,7 @@ int hotmart_authorize(
 	curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, list);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, HOTMART_PROFILE_ENDPOINT);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	
@@ -261,7 +261,7 @@ int hotmart_get_resources(
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 	curl_easy_setopt(curl_easy, CURLOPT_HTTPGET, 1L);
 	
-	switch (curl_easy_perform(curl_easy)) {
+	switch (curl_easy_perform_retry(curl_easy)) {
 		case CURLE_OK:
 			break;
 		case CURLE_HTTP_RETURNED_ERROR:
@@ -362,7 +362,7 @@ int hotmart_get_resources(
 		curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 		curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, list);
 		
-		if (curl_easy_perform(curl_easy) != CURLE_OK) {
+		if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 			return UERR_CURL_FAILURE;
 		}
 		
@@ -466,7 +466,7 @@ int hotmart_get_modules(
 	curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, list);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, HOTMART_NAVIGATION_ENDPOINT);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	
@@ -725,7 +725,7 @@ int hotmart_get_page(
 	
 	curl_easy_setopt(curl_easy, CURLOPT_URL, url);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	
@@ -811,7 +811,7 @@ int hotmart_get_page(
 			curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 			curl_easy_setopt(curl_easy, CURLOPT_URL, media_page);
 			
-			if (curl_easy_perform(curl_easy) != CURLE_OK) {
+			if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 				return UERR_CURL_FAILURE;
 			}
 			
@@ -862,7 +862,7 @@ int hotmart_get_page(
 				
 				string_free(&string);
 				
-				if (curl_easy_perform(curl_easy) != CURLE_OK) {
+				if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 					return UERR_CURL_FAILURE;
 				}
 				
@@ -1059,7 +1059,7 @@ int hotmart_get_page(
 			curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 			curl_easy_setopt(curl_easy, CURLOPT_URL, url);
 			
-			if (curl_easy_perform(curl_easy) != CURLE_OK) {
+			if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 				return UERR_CURL_FAILURE;
 			}
 			
@@ -1124,7 +1124,7 @@ int hotmart_get_page(
 				curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, sublist);
 				curl_easy_setopt(curl_easy, CURLOPT_URL, lambda_url);
 				
-				if (curl_easy_perform(curl_easy) != CURLE_OK) {
+				if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 					return UERR_CURL_FAILURE;
 				}
 				

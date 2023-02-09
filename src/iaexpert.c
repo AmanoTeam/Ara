@@ -507,7 +507,7 @@ static int tidy_extract_modules(
 				curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 				curl_easy_setopt(curl_easy, CURLOPT_URL, url);
 				
-				if (curl_easy_perform(curl_easy) != CURLE_OK) {
+				if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 					return UERR_CURL_FAILURE;
 				}
 				
@@ -721,7 +721,7 @@ int iaexpert_authorize(
 	curl_easy_setopt(curl_easy, CURLOPT_COPYPOSTFIELDS, post_fields);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, IAEXPERT_AJAX_ENDPOINT);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	
@@ -754,7 +754,7 @@ int iaexpert_authorize(
 	curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 1L);
 	curl_easy_setopt(curl_easy, CURLOPT_MAXREDIRS, 1L);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	
@@ -866,7 +866,7 @@ int iaexpert_get_resources(
 	curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 1L);
 	curl_easy_setopt(curl_easy, CURLOPT_MAXREDIRS, 1L);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	
@@ -915,7 +915,7 @@ int iaexpert_get_resources(
 		curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 		curl_easy_setopt(curl_easy, CURLOPT_COPYPOSTFIELDS, post_fields);
 		
-		if (curl_easy_perform(curl_easy) != CURLE_OK) {
+		if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 			return UERR_CURL_FAILURE;
 		}
 		
@@ -995,7 +995,7 @@ int iaexpert_get_modules(
 	curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 1L);
 	curl_easy_setopt(curl_easy, CURLOPT_MAXREDIRS, 1L);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	
@@ -1065,7 +1065,7 @@ int iaexpert_get_modules(
 		
 		string_free(&string);
 		
-		if (curl_easy_perform(curl_easy) != CURLE_OK) {
+		if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 			return UERR_CURL_FAILURE;
 		}
 		
@@ -1134,7 +1134,7 @@ int iaexpert_get_page(
 	curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 1L);
 	curl_easy_setopt(curl_easy, CURLOPT_MAXREDIRS, 1L);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	

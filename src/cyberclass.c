@@ -103,7 +103,7 @@ int cyberclass_authorize(
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, CYBERCLASS_LOGIN_ENDPOINT);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	
@@ -223,7 +223,7 @@ int cyberclass_get_resources(
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, CYBERCLASS_COURSE_CATEGORIES_ENDPOINT);
 	
-	const CURLcode code = curl_easy_perform(curl_easy);
+	const CURLcode code = curl_easy_perform_retry(curl_easy);
 	
 	if (code == CURLE_HTTP_RETURNED_ERROR) {
 		return UERR_PROVIDER_SESSION_EXPIRED;
@@ -351,7 +351,7 @@ int cyberclass_get_resources(
 			
 			curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 			
-			const CURLcode code = curl_easy_perform(curl_easy);
+			const CURLcode code = curl_easy_perform_retry(curl_easy);
 			
 			if (code == CURLE_HTTP_RETURNED_ERROR) {
 				return UERR_PROVIDER_SESSION_EXPIRED;
@@ -543,7 +543,7 @@ int cyberclass_get_modules(
 	curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, list);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, url);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	

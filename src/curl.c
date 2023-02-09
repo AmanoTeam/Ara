@@ -1,6 +1,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+	#include <synchapi.h>
+#else
+	#include <unistd.h>
+#endif
+
 #include <curl/curl.h>
 
 #include "curl.h"
@@ -22,6 +28,7 @@
 
 static const char HTTP_DEFAULT_USER_AGENT[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.5414.119 Safari/537.36";
 static const long HTTP_MAX_CONCURRENT_CONNECTIONS = 30L;
+static const size_t HTTP_MAX_RETRIES = 10;
 
 static char CURL_ERROR_MESSAGE[CURL_ERROR_SIZE] = {'\0'};
 
@@ -193,5 +200,47 @@ CURLM* get_global_curl_multi(void) {
 const char* get_global_curl_error(void) {
 	
 	return CURL_ERROR_MESSAGE;
+	
+}
+
+CURLcode curl_easy_perform_retry(CURL* const curl) {
+	
+	size_t retry_after = 1;
+	size_t retries = 0;
+	
+	while (1) {
+		const CURLcode code = curl_easy_perform(curl);
+		
+		switch (code) {
+			case CURLE_HTTP_RETURNED_ERROR: {
+				long status_code = 0;
+				curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status_code);
+				
+				if (!(status_code == 408 || status_code == 429 || status_code == 500 || status_code == 502 || status_code == 503 || status_code == 504)) {
+					return code;
+				}
+				
+				break;
+			}
+			case CURLE_OPERATION_TIMEDOUT:
+				break;
+			default:
+				return code;
+		}
+		
+		retries++;
+		
+		if (retries > HTTP_MAX_RETRIES) {
+			return code;
+		}
+		
+		retry_after += retry_after;
+		
+		#ifdef _WIN32
+			Sleep((DWORD) (retry_after * 1000));
+		#else
+			sleep(retry_after);
+		#endif
+	}
 	
 }

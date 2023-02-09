@@ -115,7 +115,7 @@ static int m3u8_download(const char* const url, const char* const output) {
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	
@@ -1228,7 +1228,7 @@ int main(void) {
 						curl_easy_setopt(curl_easy, CURLOPT_URL, attachment->url);
 						curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, (void*) stream);
 						
-						const CURLcode code = curl_easy_perform(curl_easy);
+						const CURLcode code = curl_easy_perform_retry(curl_easy);
 						
 						erase_line();
 						
@@ -1479,7 +1479,7 @@ int main(void) {
 										curl_easy_setopt(curl_easy, CURLOPT_URL, media->audio.url);
 										curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 1L);
 										
-										const CURLcode code = curl_easy_perform(curl_easy);
+										const CURLcode code = curl_easy_perform_retry(curl_easy);
 										
 										erase_line();
 										
@@ -1547,7 +1547,7 @@ int main(void) {
 										curl_easy_setopt(curl_easy, CURLOPT_URL, media->video.url);
 										curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 1L);
 										
-										const CURLcode code = curl_easy_perform(curl_easy);
+										const CURLcode code = curl_easy_perform_retry(curl_easy);
 										
 										erase_line();
 										
@@ -1684,7 +1684,7 @@ int main(void) {
 							curl_easy_setopt(curl_easy, CURLOPT_URL, attachment->url);
 							curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, (void*) stream);
 							
-							const CURLcode code = curl_easy_perform(curl_easy);
+							const CURLcode code = curl_easy_perform_retry(curl_easy);
 							
 							erase_line();
 							

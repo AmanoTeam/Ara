@@ -36,7 +36,7 @@ int vimeo_parse(
 	curl_easy_setopt(curl_easy, CURLOPT_URL, url);
 	curl_easy_setopt(curl_easy, CURLOPT_REFERER, referer);
 	
-	const CURLcode code = curl_easy_perform(curl_easy);
+	const CURLcode code = curl_easy_perform_retry(curl_easy);
 	
 	if (code == CURLE_HTTP_RETURNED_ERROR) {
 		long status_code = 0;
@@ -303,7 +303,7 @@ int vimeo_parse(
 		curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 		curl_easy_setopt(curl_easy, CURLOPT_URL, url);
 		
-		if (curl_easy_perform(curl_easy) != CURLE_OK) {
+		if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 			return UERR_CURL_FAILURE;
 		}
 			

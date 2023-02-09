@@ -113,7 +113,7 @@ int estrategia_authorize(
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, ESTRATEGIA_LOGIN_ENDPOINT);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	
@@ -185,7 +185,7 @@ int estrategia_authorize(
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, NULL);
 	curl_easy_setopt(curl_easy, CURLOPT_COPYPOSTFIELDS, post_fields);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	
@@ -196,7 +196,7 @@ int estrategia_authorize(
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, ESTRATEGIA_TOKEN_ENDPOINT);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	
@@ -292,7 +292,7 @@ static int estrategia_get_exclusives(
 		
 		curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 		
-		switch (curl_easy_perform(curl_easy)) {
+		switch (curl_easy_perform_retry(curl_easy)) {
 			case CURLE_OK:
 				break;
 			case CURLE_HTTP_RETURNED_ERROR:
@@ -364,7 +364,7 @@ static int estrategia_get_exclusives(
 			curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, NULL);
 			curl_easy_setopt(curl_easy, CURLOPT_URL, url);
 			
-			switch (curl_easy_perform(curl_easy)) {
+			switch (curl_easy_perform_retry(curl_easy)) {
 				case CURLE_OK:
 					break;
 				case CURLE_HTTP_RETURNED_ERROR:
@@ -551,7 +551,7 @@ int estrategia_get_resources(
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, ESTRATEGIA_COURSE_ENDPOINT);
 	
-	switch (curl_easy_perform(curl_easy)) {
+	switch (curl_easy_perform_retry(curl_easy)) {
 		case CURLE_OK:
 			break;
 		case CURLE_HTTP_RETURNED_ERROR:
@@ -780,7 +780,7 @@ int estrategia_get_modules(
 	curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, list);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, url);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	
@@ -952,7 +952,7 @@ int estrategia_get_module(
 	
 	curl_easy_setopt(curl_easy, CURLOPT_URL, url);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	

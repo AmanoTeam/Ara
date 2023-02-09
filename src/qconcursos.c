@@ -475,7 +475,7 @@ static int tidy_extract_streams(
 			curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 			curl_easy_setopt(curl_easy, CURLOPT_URL, stream_url);
 			
-			if (curl_easy_perform(curl_easy) != CURLE_OK) {
+			if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 				return UERR_CURL_FAILURE;
 			}
 				
@@ -757,7 +757,7 @@ int qconcursos_authorize(
 	curl_easy_setopt(curl_easy, CURLOPT_COOKIEFILE, "");
 	curl_easy_setopt(curl_easy, CURLOPT_URL, QCONCURSOS_LOGIN_ENDPOINT);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	
@@ -825,7 +825,7 @@ int qconcursos_authorize(
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, NULL);
 	curl_easy_setopt(curl_easy, CURLOPT_COPYPOSTFIELDS, post_fields);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	
@@ -850,7 +850,7 @@ int qconcursos_authorize(
 	curl_easy_setopt(curl_easy, CURLOPT_HTTPGET, 1L);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, QCONCURSOS_PROFILE_ENDPOINT);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	
@@ -978,7 +978,7 @@ int qconcursos_get_resources(
 		curl_easy_setopt(curl_easy, CURLOPT_COPYPOSTFIELDS, post_fields);
 		curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 		
-		if (curl_easy_perform(curl_easy) != CURLE_OK) {
+		if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 			return UERR_CURL_FAILURE;
 		}
 		
@@ -1076,7 +1076,7 @@ int qconcursos_get_modules(
 	curl_easy_setopt(curl_easy, CURLOPT_COOKIEFILE, credentials->cookie_jar);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, resource->url);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	
@@ -1177,7 +1177,7 @@ int qconcursos_get_module(
 	
 	curl_easy_setopt(curl_easy, CURLOPT_COPYPOSTFIELDS, post_fields);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	
@@ -1247,7 +1247,7 @@ int qconcursos_get_page(
 	
 	curl_easy_setopt(curl_easy, CURLOPT_URL, url);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	
@@ -1337,7 +1337,7 @@ int qconcursos_get_page(
 	curl_easy_setopt(curl_easy, CURLOPT_COPYPOSTFIELDS, post_fields);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, QCONCURSOS_STREAMS_ENDPOINT);
 	
-	if (curl_easy_perform(curl_easy) != CURLE_OK) {
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
 	}
 	

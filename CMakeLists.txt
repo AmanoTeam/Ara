@@ -565,6 +565,12 @@ if (WIN32)
 		src/fstream.c
 	)
 	
+	target_compile_options(
+		win10lp
+		PRIVATE
+		-Wall -Wextra
+	)
+	
 	foreach(target sparklec win10lp)
 		target_compile_definitions(
 			${target}

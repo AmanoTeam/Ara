@@ -498,14 +498,6 @@ target_compile_options(
 	-Wall -Wextra
 )
 
-if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
-	target_compile_options(
-		sparklec
-		PRIVATE
-		-Weverything -Wno-declaration-after-statement -Wno-shadow -Wno-disabled-macro-expansion -Wno-declaration-after-statement -Wno-vla -Wno-switch-enum -Wno-padded -Wno-cast-qual -Wno-reserved-identifier -Wno-attribute-warning -Wno-used-but-marked-unused
-	)
-endif()
-
 if (APPLE)
 	foreach(property BUILD_RPATH INSTALL_RPATH)
 		set_target_properties(

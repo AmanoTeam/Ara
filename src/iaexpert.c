@@ -1162,8 +1162,13 @@ int iaexpert_get_page(
 	
 	int code = tidy_extract_page_content(document, root, page);
 	
-	if (code != UERR_SUCCESS) {
-		return code;
+	switch (code) {
+		case UERR_SUCCESS:
+			break;
+		case UERR_TIDY_ELEMENT_NOT_FOUND:
+			return UERR_SUCCESS;
+		default:
+			return code;
 	}
 	
 	string_array_t items __attribute__((__cleanup__(string_array_free))) = {0};

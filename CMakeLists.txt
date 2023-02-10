@@ -56,8 +56,10 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(CACERT)
 
 # jansson
-option(JANSSON_BUILD_DOCS OFF)
+set(JANSSON_BUILD_DOCS OFF CACHE BOOL "")
 set(JANSSON_BUILD_SHARED_LIBS ON CACHE BOOL "")
+set(SYMVER_WORKS OFF CACHE BOOL "")
+set(VSCRIPT_WORKS OFF CACHE BOOL "")
 
 if (NOT APPLE)
 	if (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
@@ -413,6 +415,14 @@ add_executable(
 	src/terminal.c
 	src/cir.c
 )
+
+foreach(target jansson libcurl tidy-share)
+	set_target_properties(
+		${target}
+		PROPERTIES
+		NO_SONAME 1
+	)
+endforeach()
 
 if (SPARKLEC_DISABLE_CERTIFICATE_VALIDATION) 
 	target_compile_definitions(

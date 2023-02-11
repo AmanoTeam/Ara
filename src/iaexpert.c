@@ -1138,6 +1138,10 @@ int iaexpert_get_page(
 		return UERR_CURL_FAILURE;
 	}
 	
+	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, NULL);
+	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, NULL);
+	curl_easy_setopt(curl_easy, CURLOPT_COOKIEFILE, NULL);
+	curl_easy_setopt(curl_easy, CURLOPT_URL, NULL);
 	curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 0L);
 	curl_easy_setopt(curl_easy, CURLOPT_MAXREDIRS, -1);
 	

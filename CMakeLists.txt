@@ -553,39 +553,17 @@ if (WIN32)
 		src/wio.c
 	)
 	
-	add_executable(
-		win10lp
-		src/win10lp.c
-		src/errors.c
-		src/os.c
-		src/fstream.c
-	)
-	
-	target_compile_options(
-		win10lp
+	target_compile_definitions(
+		sparklec
 		PRIVATE
-		-Wall -Wextra
+		UNICODE _UNICODE
 	)
 	
-	foreach(target sparklec win10lp)
-		target_compile_definitions(
-			${target}
-			PRIVATE
-			UNICODE _UNICODE
-		)
-		
-		target_link_options(
-			${target}
-			BEFORE
-			PRIVATE
-			-municode
-		)
-	endforeach()
-	
-	install(
-		TARGETS win10lp
-		RUNTIME DESTINATION bin
-		LIBRARY DESTINATION lib NAMELINK_SKIP
+	target_link_options(
+		sparklec
+		BEFORE
+		PRIVATE
+		-municode
 	)
 endif()
 

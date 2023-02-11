@@ -597,7 +597,7 @@ char* get_app_filename(char* const filename) {
 				return NULL;
 			}
 		#else
-			if (GetModuleFileNameA(0, filename, (DWORD) size) == 0) {
+			if (GetModuleFileNameA(0, filename, PATH_MAX) == 0) {
 				return NULL;
 			}
 		#endif

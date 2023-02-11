@@ -41,20 +41,6 @@ set(CURL_CA_PATH "none")
 set(CURL_WERROR OFF)
 set(CURL_DISABLE_DOH ON)
 
-include(FetchContent)
-
-set(CACERT_FILENAME "cacert-2023-01-10.pem")
-set(CACERT_SHA256 "fb1ecd641d0a02c01bc9036d513cb658bbda62a75e246bedbc01764560a639f0")
-
-FetchContent_Declare(
-	CACERT
-	URL "https://curl.se/ca/${CACERT_FILENAME}"
-	URL_HASH SHA256=${CACERT_SHA256}
-	DOWNLOAD_NO_EXTRACT 1
-)
-
-FetchContent_MakeAvailable(CACERT)
-
 # jansson
 set(JANSSON_BUILD_DOCS OFF CACHE BOOL "")
 set(JANSSON_BUILD_SHARED_LIBS ON CACHE BOOL "")
@@ -645,7 +631,7 @@ foreach(target sparklec bearssl jansson libcurl tidy-share)
 endforeach()
 
 install(
-	FILES "${CMAKE_BINARY_DIR}/_deps/cacert-src/${CACERT_FILENAME}"
+	FILES "${CMAKE_SOURCE_DIR}/submodules/cabundle/pem/cert.pem"
 	DESTINATION etc/tls
 	RENAME cert.pem
 )

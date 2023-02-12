@@ -53,11 +53,11 @@ jobs:
         sudo sed -i '/CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG/d' /usr/local/share/cmake-*/Modules/Platform/Android.cmake
     - name: Setup Windows cross compiler
       run: |
-        declare -r LLVM_MINGW_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --silent --url 'https://api.github.com/repos/mstorsjo/llvm-mingw/releases/latest')")"
+        declare -r LLVM_MINGW_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/mstorsjo/llvm-mingw/releases/latest')")"
         declare -r LLVM_MINGW_TARBALL='/tmp/llvm-mingw.tar.xz'
         declare -r LLVM_MINGW_URL="https://github.com/mstorsjo/llvm-mingw/releases/download/${LLVM_MINGW_TAG}/llvm-mingw-${LLVM_MINGW_TAG}-msvcrt-ubuntu-18.04-x86_64.tar.xz"
         
-        curl --silent --location --url "${LLVM_MINGW_URL}" --output "${LLVM_MINGW_TARBALL}"
+        curl --retry 10 --retry-delay 3 --silent --location --url "${LLVM_MINGW_URL}" --output "${LLVM_MINGW_TARBALL}"
         tar --directory="$(dirname "${LLVM_MINGW_TARBALL}")" --extract --file="${LLVM_MINGW_TARBALL}"
         
         echo "LLVM_MINGW_HOME=$(dirname "${LLVM_MINGW_TARBALL}")/$(basename "${LLVM_MINGW_URL}" '.tar.xz')" >> "${GITHUB_ENV}"
@@ -65,7 +65,7 @@ jobs:
       run: |
         git clone --depth='1' 'https://github.com/tpoechtrager/osxcross.git'
         
-        curl --silent --location --url 'https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.3.sdk.tar.xz' --output './osxcross/tarballs/MacOSX11.3.sdk.tar.xz'
+        curl --retry 10 --retry-delay 3 --silent --location --url 'https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.3.sdk.tar.xz' --output './osxcross/tarballs/MacOSX11.3.sdk.tar.xz'
         
         cd './osxcross'
         
@@ -75,44 +75,48 @@ jobs:
         echo "$(realpath './target/bin')" >> "${GITHUB_PATH}"
     - name: Setup NetBSD cross compiler
       run: | 
-        declare -r NETBSD_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --silent --url 'https://api.github.com/repos/AmanoTeam/NetBSD-Cross/releases/latest')")"
+        declare -r NETBSD_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/NetBSD-Cross/releases/latest')")"
         declare -r NETBSD_CROSS_TARBALL='/tmp/netbsd-cross.tar.xz'
         declare -r NETBSD_CROSS_URL="https://github.com/AmanoTeam/NetBSD-Cross/releases/download/${NETBSD_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
         
-        curl --silent --location --url "${NETBSD_CROSS_URL}" --output "${NETBSD_CROSS_TARBALL}"
+        curl --retry 10 --retry-delay 3 --silent --location --url "${NETBSD_CROSS_URL}" --output "${NETBSD_CROSS_TARBALL}"
         tar --directory="$(dirname "${NETBSD_CROSS_TARBALL}")" --extract --file="${NETBSD_CROSS_TARBALL}"
         
         echo 'NETBSD_TOOLCHAIN=/tmp/unknown-unknown-netbsd' >> "${GITHUB_ENV}"
     - name: Setup FreeBSD cross compiler
       run: |
-        declare -r FREEBSD_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --silent --url 'https://api.github.com/repos/AmanoTeam/FreeBSD-Cross/releases/latest')")"
+        declare -r FREEBSD_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl  --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/FreeBSD-Cross/releases/latest')")"
         declare -r FREEBSD_CROSS_TARBALL='/tmp/freebsd-cross.tar.xz'
         declare -r FREEBSD_CROSS_URL="https://github.com/AmanoTeam/FreeBSD-Cross/releases/download/${FREEBSD_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
         
-        curl --silent --location --url "${FREEBSD_CROSS_URL}" --output "${FREEBSD_CROSS_TARBALL}"
+        curl --silent --retry 10 --retry-delay 3 --location --url "${FREEBSD_CROSS_URL}" --output "${FREEBSD_CROSS_TARBALL}"
         tar --directory="$(dirname "${FREEBSD_CROSS_TARBALL}")" --extract --file="${FREEBSD_CROSS_TARBALL}"
         
         echo 'FREEBSD_TOOLCHAIN=/tmp/unknown-unknown-freebsd' >> "${GITHUB_ENV}"
     - name: Setup DragonFly cross compiler
       run: |
-        declare -r DRAGONFLY_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --silent --url 'https://api.github.com/repos/AmanoTeam/DragonFlyBSD-Cross/releases/latest')")"
+        declare -r DRAGONFLY_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/DragonFlyBSD-Cross/releases/latest')")"
         declare -r DRAGONFLY_CROSS_TARBALL='/tmp/freebsd-cross.tar.xz'
         declare -r DRAGONFLY_CROSS_URL="https://github.com/AmanoTeam/DragonFlyBSD-Cross/releases/download/${DRAGONFLY_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
         
-        curl --silent --location --url "${DRAGONFLY_CROSS_URL}" --output "${DRAGONFLY_CROSS_TARBALL}"
+        curl --retry 10 --retry-delay 3 --silent --location --url "${DRAGONFLY_CROSS_URL}" --output "${DRAGONFLY_CROSS_TARBALL}"
         tar --directory="$(dirname "${DRAGONFLY_CROSS_TARBALL}")" --extract --file="${DRAGONFLY_CROSS_TARBALL}"
         
         echo 'DRAGONFLY_TOOLCHAIN=/tmp/unknown-unknown-dragonfly' >> "${GITHUB_ENV}"
     - name: Setup Haiku cross compiler
       run: |
-        declare -r HAIKU_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --silent --url 'https://api.github.com/repos/AmanoTeam/Haiku-Cross/releases/latest')")"
+        declare -r HAIKU_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Haiku-Cross/releases/latest')")"
         declare -r HAIKU_CROSS_TARBALL='/tmp/haiku-cross.tar.xz'
         declare -r HAIKU_CROSS_URL="https://github.com/AmanoTeam/Haiku-Cross/releases/download/${HAIKU_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
         
-        curl --silent --location --url "${HAIKU_CROSS_URL}" --output "${HAIKU_CROSS_TARBALL}"
+        curl --retry 10 --retry-delay 3 --silent --location --url "${HAIKU_CROSS_URL}" --output "${HAIKU_CROSS_TARBALL}"
         tar --directory="$(dirname "${HAIKU_CROSS_TARBALL}")" --extract --file="${HAIKU_CROSS_TARBALL}"
         
         echo 'HAIKU_TOOLCHAIN=/tmp/unknown-unknown-haiku' >> "${GITHUB_ENV}"
+    - name: Setup Theos (Apple iOS/tvOS cross compiler)
+      run: |
+        bash -c "$(curl --retry 10 --retry-delay 3 --silent --location --url 'https://raw.githubusercontent.com/theos/theos/master/bin/install-theos' --output '-')" <<< 'n'
+        echo "THEOS_HOME=${HOME}/theos" >> "${GITHUB_ENV}"
     - name: Build with CMake
       run: |
         declare -r MACHINE_HOST="$(gcc -dumpmachine)"
@@ -122,6 +126,7 @@ jobs:
             arm-linux-gnueabihf
             armv7-w64-mingw32
             armv7a-linux-androideabi
+            armv7-appleios-darwin
             powerpc-linux-gnu
             i686-linux-android
             i686-linux-gnu
@@ -150,6 +155,8 @@ jobs:
             aarch64-w64-mingw32
             aarch64-apple-darwin
             aarch64-unknown-freebsd
+            aarch64-appletv-darwin
+            aarch64-appleios-darwin
             powerpc64-linux-gnu
             powerpc64le-linux-gnu
             s390x-linux-gnu

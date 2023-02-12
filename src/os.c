@@ -6,7 +6,11 @@
 #else
 	#include <unistd.h>
 	
-	#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+	#if defined(__AppleiOS__) || defined(__AppleTV__)
+		#include <spawn.h>
+	#endif
+	
+	#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__AppleiOS__) || defined(__AppleTV__)
 		#include <sys/wait.h>
 	#endif
 #endif
@@ -36,7 +40,32 @@ int execute_shell_command(const char* const command) {
 		
 		const int code = _wsystem(wcommand);
 	#else
-		const int code = system(command);
+		#if defined(__AppleiOS__) || defined(__AppleTV__)
+			char* const argv[] = {
+				"sh",
+				"-c",
+				(char* const) command,
+				NULL
+			};
+			
+			pid_t pid = 0;
+			
+			if (posix_spawnp(&pid, "/bin/sh", 0, NULL, argv, NULL) != 0) {
+				return -1;
+			}
+			
+			int code = 0;
+			
+			do {
+				const int status = waitpid(pid, &code, WUNTRACED | WCONTINUED);
+				
+				if (status == -1) {
+					return -1;
+				}
+			} while (!WIFEXITED(code) && !WIFSIGNALED(code));
+		#else
+			const int code = system(command);
+		#endif
 	#endif
 	
 	#ifndef _WIN32

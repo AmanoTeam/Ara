@@ -63,7 +63,7 @@ if (APPLE)
 	string(REPLACE "TIDY_THREAD_LOCAL __thread" "TIDY_THREAD_LOCAL" FILE_CONTENTS "${FILE_CONTENTS}")
 	file(WRITE "${CMAKE_SOURCE_DIR}/submodules/tidy/include/tidyplatform.h" "${FILE_CONTENTS}")
 	
-	add_compile_options(-Wno-undef-prefix)
+	add_compile_options(-Wno-undef-prefix -Wno-unknown-warning-option)
 endif()
 
 include_directories(

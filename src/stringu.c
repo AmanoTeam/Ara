@@ -65,6 +65,10 @@ char* get_file_extension(const char* const filename) {
 	
 	start++;
 	
+	if (*start == '\0') {
+		return NULL;
+	}
+	
 	return start;
 	
 }

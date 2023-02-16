@@ -13,6 +13,8 @@ static const char GREATER_THAN[] = ">";
 static const char LESS_THAN[] = "<";
 static const char HYPHEN[] = "-";
 static const char UNDERSCORE[] = "_";
+static const char SEMICOLON[] = ";";
+static const char APOSTROPHE[] = "'";
 
 #ifdef _WIN32
 	#define PATH_SEPARATOR "\\"
@@ -39,7 +41,7 @@ static const char HTML_HEADER_START[] =
 	"<!DOCTYPE html>"
 	"<html lang=\"pt-BR\">"
 	"<head>"
-	"<title>Hotmart content</title>"
+	"<title>Content</title>"
 	"<meta charset=\"utf-8\">"
 	"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">"
 	"</head>"
@@ -49,15 +51,23 @@ static const char HTML_HEADER_END[] =
 	"</body>"
 	"</html>";
 
-static const char HTML_UL_START[] = "<ul>";
-static const char HTML_UL_END[] = "</ul>";
-static const char HTML_LI_START[] = "<li>";
-static const char HTML_LI_END[] = "</li>";
-
-static const char HTML_A_START[] = "<a";
-static const char HTML_A_END[] = "</a>";
-static const char HTML_HREF_ATTRIBUTE[] = "href";
-
 #if defined(_WIN32) && defined(_UNICODE)
 	static const wchar_t WIN10LP_PREFIX[] = L"\\\\?\\";
+#endif
+
+#define EXECUTABLE_DIRECTORY "bin"
+#define CONFIGURATION_DIRECTORY "etc"
+
+#if defined(_WIN32)
+	#define SHARED_LIBRARY_EXTENSION ".dll"
+	#define EXECUTABLE_EXTENSION ".exe"
+	#define SHARED_LIBRARY_DIRECTORY "bin"
+#elif defined(APPLE)
+	#define SHARED_LIBRARY_EXTENSION ".dylib"
+	#define EXECUTABLE_EXTENSION ""
+	#define SHARED_LIBRARY_DIRECTORY "lib"
+#else
+	#define SHARED_LIBRARY_EXTENSION ".so"
+	#define EXECUTABLE_EXTENSION ""
+	#define SHARED_LIBRARY_DIRECTORY "lib"
 #endif

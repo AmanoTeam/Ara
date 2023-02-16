@@ -168,11 +168,11 @@ static int m3u8_download(const char* const url, const char* const output) {
 			
 			curl_easy_setopt(handle, CURLOPT_URL, key_url);
 			
-			struct FStream* stream = fstream_open(filename, "wb");
+			struct FStream* stream = fstream_open(filename, FSTREAM_WRITE);
 			
 			if (stream == NULL && errno == EMFILE) {
 				curl_poll(dl_queue, dl_total, &dl_done);
-				stream = fstream_open(filename, "wb");
+				stream = fstream_open(filename, FSTREAM_WRITE);
 			}
 			
 			if (stream == NULL) {
@@ -221,11 +221,11 @@ static int m3u8_download(const char* const url, const char* const output) {
 			
 			tag_set_uri(tag, segment_filename);
 			
-			stream = fstream_open(segment_filename, "wb");
+			stream = fstream_open(segment_filename, FSTREAM_WRITE);
 			
 			if (stream == NULL && errno == EMFILE) {
 				curl_poll(dl_queue, dl_total, &dl_done);
-				stream = fstream_open(segment_filename, "wb");
+				stream = fstream_open(segment_filename, FSTREAM_WRITE);
 			}
 			
 			if (stream == NULL) {
@@ -276,11 +276,11 @@ static int m3u8_download(const char* const url, const char* const output) {
 			
 			curl_easy_setopt(handle, CURLOPT_URL, segment_url);
 			
-			struct FStream* stream = fstream_open(filename, "wb");
+			struct FStream* stream = fstream_open(filename, FSTREAM_WRITE);
 			
 			if (stream == NULL && errno == EMFILE) {
 				curl_poll(dl_queue, dl_total, &dl_done);
-				stream = fstream_open(filename, "wb");
+				stream = fstream_open(filename, FSTREAM_WRITE);
 			}
 			
 			if (stream == NULL) {
@@ -313,7 +313,7 @@ static int m3u8_download(const char* const url, const char* const output) {
 	
 	printf("+ Exportando lista de reprodução M3U8 para '%s'\r\n", playlist_filename);
 	 
-	struct FStream* const stream = fstream_open(playlist_filename, "wb");
+	struct FStream* const stream = fstream_open(playlist_filename, FSTREAM_WRITE);
 	
 	if (stream == NULL) {
 		const struct SystemError error = get_system_error();
@@ -322,17 +322,20 @@ static int m3u8_download(const char* const url, const char* const output) {
 		return UERR_FAILURE;
 	}
 			
-	const int ok = tags_dumpf(&tags, stream);
+	const int status = tags_dumpf(&tags, stream);
 	
-	fstream_close(stream);
 	m3u8_free(&tags);
 	
-	if (!ok) {
+	if (status == -1) {
 		const struct SystemError error = get_system_error();
+		
+		fstream_close(stream);
 		
 		fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar exportar a lista de reprodução para '%s': %s\r\n", playlist_filename, error.message);
 		return UERR_FAILURE;
 	}
+	
+	fstream_close(stream);
 	
 	printf("+ Concatenando seguimentos de mídia baixados para um único arquivo em '%s'\r\n", output);
 	
@@ -502,7 +505,7 @@ int main(void) {
 	};
 	
 	if (file_exists(accounts_file)) {
-		struct FStream* const stream = fstream_open(accounts_file, "r");
+		struct FStream* const stream = fstream_open(accounts_file, FSTREAM_READ);
 		
 		if (stream == NULL) {
 			const struct SystemError error = get_system_error();
@@ -615,7 +618,7 @@ int main(void) {
 					return EXIT_FAILURE;
 			}
 			
-			struct FStream* const stream = fstream_open(accounts_file, "wb");
+			struct FStream* const stream = fstream_open(accounts_file, FSTREAM_WRITE);
 			
 			if (stream == NULL) {
 				const struct SystemError error = get_system_error();
@@ -666,7 +669,7 @@ int main(void) {
 				return EXIT_FAILURE;
 		}
 		
-		struct FStream* const stream = fstream_open(accounts_file, "wb");
+		struct FStream* const stream = fstream_open(accounts_file, FSTREAM_WRITE);
 		
 		if (stream == NULL) {
 			const struct SystemError error = get_system_error();
@@ -1216,7 +1219,7 @@ int main(void) {
 						fprintf(stderr, "- O arquivo '%s' não existe, ele será baixado\r\n", attachment->path);
 						printf("+ Baixando de '%s' para '%s'\r\n", attachment->url, download_location);
 						
-						struct FStream* const stream = fstream_open(download_location, "wb");
+						struct FStream* const stream = fstream_open(download_location, FSTREAM_WRITE);
 						
 						if (stream == NULL) {
 							const struct SystemError error = get_system_error();
@@ -1359,7 +1362,7 @@ int main(void) {
 						case 0: {
 							fprintf(stderr, "- O arquivo '%s' não existe, salvando-o\r\n", page->document.path);
 							
-							struct FStream* const stream = fstream_open(page->document.path, "wb");
+							struct FStream* const stream = fstream_open(page->document.path, FSTREAM_WRITE);
 							
 							if (stream == NULL) {
 								const struct SystemError error = get_system_error();
@@ -1462,7 +1465,7 @@ int main(void) {
 									case MEDIA_SINGLE: {
 										printf("+ Baixando arquivo de mídia de '%s' para '%s'\r\n", media->audio.url, audio_path);
 										
-										struct FStream* const stream = fstream_open(audio_path, "wb");
+										struct FStream* const stream = fstream_open(audio_path, FSTREAM_WRITE);
 										
 										if (stream == NULL) {
 											const struct SystemError error = get_system_error();
@@ -1530,7 +1533,7 @@ int main(void) {
 									case MEDIA_SINGLE: {
 										printf("+ Baixando arquivo de mídia de '%s' para '%s'\r\n", media->video.url, video_path);
 										
-										struct FStream* const stream = fstream_open(video_path, "wb");
+										struct FStream* const stream = fstream_open(video_path, FSTREAM_WRITE);
 										
 										if (stream == NULL) {
 											const struct SystemError error = get_system_error();
@@ -1672,7 +1675,7 @@ int main(void) {
 							fprintf(stderr, "- O arquivo '%s' não existe, ele será baixado\r\n", attachment->path);
 							printf("+ Baixando de '%s' para '%s'\r\n", attachment->url, download_location);
 							
-							struct FStream* const stream = fstream_open(download_location, "wb");
+							struct FStream* const stream = fstream_open(download_location, FSTREAM_WRITE);
 							
 							if (stream == NULL) {
 								const struct SystemError error = get_system_error();
@@ -1913,7 +1916,7 @@ int main(void) {
 		
 		printf("- Exportando árvore de objetos para '%s'\r\n", filename);
 		
-		struct FStream* const stream = fstream_open(filename, "wb");
+		struct FStream* const stream = fstream_open(filename, FSTREAM_WRITE);
 		
 		if (stream == NULL) {
 			const struct SystemError error = get_system_error();

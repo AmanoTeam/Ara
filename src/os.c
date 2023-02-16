@@ -17,6 +17,7 @@
 
 #include "symbols.h"
 #include "os.h"
+#include "filesystem.h"
 
 int execute_shell_command(const char* const command) {
 	/*
@@ -318,5 +319,149 @@ char* get_temporary_directory(void) {
 	}
 	
 	return temporary_directory;
+	
+}
+
+char* get_home_directory(void) {
+	/*
+	Returns the home directory of the current user.
+	
+	On Windows, it returns the value from "USERPROFILE" environment variable.
+	On Posix based platforms, it returns the value from "HOME" environment variable.
+	
+	Returns NULL on error.
+	*/
+	
+	#ifdef _WIN32
+		#ifdef _UNICODE
+			const wchar_t* const wdirectory = _wgetenv(L"USERPROFILE");
+			
+			if (wdirectory == NULL) {
+				return NULL;
+			}
+			
+			const int directorys = WideCharToMultiByte(CP_UTF8, 0, wdirectory, -1, NULL, 0, NULL, NULL);
+			
+			if (directorys == 0) {
+				return NULL;
+			}
+			
+			char directory[(size_t) directorys];
+			
+			if (WideCharToMultiByte(CP_UTF8, 0, wdirectory, -1, directory, directorys, NULL, NULL) == 0) {
+				return NULL;
+			}
+		#else
+			const char* const directory = getenv("USERPROFILE");
+			
+			if (directory == NULL) {
+				return NULL;
+			}
+		#endif
+	#else
+		const char* const directory = getenv("HOME");
+		
+		if (directory == NULL) {
+			return NULL;
+		}
+	#endif
+	
+	if (*directory == '\0') {
+		return NULL;
+	}
+	
+	char* const home = malloc(strlen(directory) + 1);
+	
+	if (home == NULL) {
+		return NULL;
+	}
+	
+	strcpy(home, directory);
+	
+	return home;
+	
+}
+
+char* find_exe(const char* const name) {
+	/*
+	Returns the home directory of the current user.
+	
+	On Windows, it returns the value from "USERPROFILE" environment variable.
+	On Posix based platforms, it returns the value from "HOME" environment variable.
+	
+	Returns NULL on error.
+	*/
+	
+	#if defined(_WIN32) && defined(_UNICODE)
+		const wchar_t* const wpath = _wgetenv(L"PATH");
+		
+		if (wpath == NULL) {
+			return NULL;
+		}
+		
+		const int paths = WideCharToMultiByte(CP_UTF8, 0, wpath, -1, NULL, 0, NULL, NULL);
+		
+		if (paths == 0) {
+			return NULL;
+		}
+		
+		char path[(size_t) paths];
+		
+		if (WideCharToMultiByte(CP_UTF8, 0, wpath, -1, path, paths, NULL, NULL) == 0) {
+			return NULL;
+		}
+	#else
+		const char* const path = getenv("PATH");
+		
+		if (path == NULL) {
+			return NULL;
+		}
+	#endif
+	
+	#ifdef _WIN32
+		const char* const separator = SEMICOLON;
+	#else
+		const char* const separator = COLON;
+	#endif
+	
+	const char* start = path;
+	
+	for (size_t index = 0; index < strlen(path) + 1; index++) {
+		const char* const ch = &path[index];
+		
+		if (!(*ch == *separator || *ch == '\0')) {
+			continue;
+		}
+		
+		const size_t size = (size_t) (ch - start);
+		
+		char filename[size + strlen(PATH_SEPARATOR) + strlen(name) + strlen(EXECUTABLE_EXTENSION) + 1];
+		memcpy(filename, start, size);
+		filename[size] = '\0';
+		
+		strcat(filename, PATH_SEPARATOR);
+		strcat(filename, name);
+		strcat(filename, EXECUTABLE_EXTENSION);
+		
+		switch (file_exists(filename)) {
+			case 1: {
+				char* const executable = malloc(strlen(filename) + 1);
+				
+				if (executable == NULL) {
+					return NULL;
+				}
+				
+				strcpy(executable, filename);
+				
+				return executable;
+			}
+			case -1:
+				return NULL;
+		}
+		
+		start = ch + 1;
+	}
+	
+	return NULL;
 	
 }

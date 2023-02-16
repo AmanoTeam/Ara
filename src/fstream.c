@@ -13,24 +13,26 @@
 	#include "symbols.h"
 #endif
 
-struct FStream* fstream_open(const char* const filename, const char* const mode) {
+struct FStream* fstream_open(const char* const filename, const enum FStreamMode mode) {
 	
 	#ifdef _WIN32
 		DWORD dwDesiredAccess = 0;
 		DWORD dwCreationDisposition = 0;
 		const DWORD dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL;
 		
-		switch (*mode) {
-			case 'w':
+		switch (mode) {
+			case FSTREAM_WRITE:
 				dwDesiredAccess |= GENERIC_WRITE;
 				dwCreationDisposition |= CREATE_ALWAYS;
 				break;
-			case 'r':
+			case FSTREAM_READ:
 				dwDesiredAccess |= GENERIC_READ;
 				dwCreationDisposition |= OPEN_EXISTING;
 				break;
-			default:
-				return NULL;
+			case FSTREAM_APPEND:
+				dwDesiredAccess |= FILE_APPEND_DATA;
+				dwCreationDisposition |= OPEN_EXISTING;
+				break;
 		}
 		
 		#ifdef _UNICODE
@@ -71,8 +73,29 @@ struct FStream* fstream_open(const char* const filename, const char* const mode)
 		if (handle == INVALID_HANDLE_VALUE) {
 			return NULL;
 		}
+		
+		if (mode == FSTREAM_APPEND) {
+			if (SetFilePointer(handle, 0, NULL, FILE_END) == INVALID_SET_FILE_POINTER) {
+				CloseHandle(handle);
+				return NULL;
+			}
+		}
 	#else
-		FILE* handle = fopen(filename, mode);
+		const char* smode = NULL;
+		
+		switch (mode) {
+			case FSTREAM_WRITE:
+				smode = "wb";
+				break;
+			case FSTREAM_READ:
+				smode = "r";
+				break;
+			case FSTREAM_APPEND:
+				smode = "a";
+				break;
+		}
+		
+		FILE* handle = fopen(filename, smode);
 		
 		if (handle == NULL) {
 			return NULL;
@@ -130,17 +153,17 @@ int fstream_write(struct FStream* const stream, const char* const buffer, const 
 		const BOOL status = WriteFile(stream->stream, buffer, (DWORD) size, &wsize, NULL);
 		
 		if (status == 0 || wsize != (DWORD) size) {
-			return 0;
+			return -1;
 		}
 	#else
 		const size_t wsize = fwrite(buffer, sizeof(*buffer), size, stream->stream);
 		
 		if (wsize != size) {
-			return 0;
+			return -1;
 		}
 	#endif
 	
-	return 1;
+	return 0;
 	
 }
 
@@ -162,7 +185,7 @@ int fstream_seek(struct FStream* const stream, const long int offset, const enum
 		}
 		
 		if (SetFilePointer(stream->stream, offset, NULL, whence) == INVALID_SET_FILE_POINTER) {
-			return 0;
+			return -1;
 		}
 	#else
 		int whence = 0;
@@ -180,11 +203,11 @@ int fstream_seek(struct FStream* const stream, const long int offset, const enum
 		}
 		
 		if (fseek(stream->stream, offset, whence) != 0) {
-			return 0;
+			return -1;
 		}
 	#endif
 	
-	return 1;
+	return 0;
 	
 }
 	
@@ -195,7 +218,7 @@ int fstream_close(struct FStream* const stream) {
 			const BOOL status = CloseHandle(stream->stream);
 			
 			if (status == 0) {
-				return 0;
+				return -1;
 			}
 			
 			stream->stream = 0;
@@ -203,7 +226,7 @@ int fstream_close(struct FStream* const stream) {
 	#else
 		if (stream->stream != NULL) {
 			if (fclose(stream->stream) != 0) {
-				return 0;
+				return -1;
 			}
 			
 			stream->stream = NULL;
@@ -212,6 +235,6 @@ int fstream_close(struct FStream* const stream) {
 	
 	free(stream);
 	
-	return 1;
+	return 0;
 	
 }

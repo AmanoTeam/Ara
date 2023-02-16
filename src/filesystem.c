@@ -397,7 +397,7 @@ int create_directory(const char* const directory) {
 	
 }
 
-static int copy_file(const char* const source, const char* const destination) {
+int copy_file(const char* const source, const char* const destination) {
 	/*
 	Copies a file from source to destination.
 	
@@ -456,13 +456,13 @@ static int copy_file(const char* const source, const char* const destination) {
 		}
 	#else
 		// Generic version which works for any platform
-		struct FStream* const istream = fstream_open(source, "r");
+		struct FStream* const istream = fstream_open(source, FSTREAM_READ);
 		
 		if (istream == NULL) {
 			return -1;
 		}
 		
-		struct FStream* const ostream = fstream_open(destination, "wb");
+		struct FStream* const ostream = fstream_open(destination, FSTREAM_WRITE);
 		
 		if (ostream == NULL) {
 			fstream_close(istream);
@@ -481,7 +481,7 @@ static int copy_file(const char* const source, const char* const destination) {
 			}
 			
 			if (size == 0) {
-				if (fstream_close(istream) == 0 || fstream_close(ostream) == 0) {
+				if (fstream_close(istream) == -1 || fstream_close(ostream) == -1) {
 					return -1;
 				}
 				break;
@@ -489,7 +489,7 @@ static int copy_file(const char* const source, const char* const destination) {
 			
 			const int status = fstream_write(ostream, chunk, (size_t) size);
 			
-			if (!status) {
+			if (status == -1) {
 				fstream_close(istream);
 				fstream_close(ostream);
 				return -1;
@@ -550,7 +550,7 @@ int move_file(const char* const source, const char* const destination) {
 					return -1;
 				}
 				
-				if (remove_file(source) == 1) {
+				if (remove_file(source) == 0) {
 					return 0;
 				}
 			}

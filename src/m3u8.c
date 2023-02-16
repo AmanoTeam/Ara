@@ -345,41 +345,41 @@ int tags_dumpf(const struct Tags* const tags, struct FStream* stream) {
 	for (size_t index = 0; index < tags->offset; index++) {
 		struct Tag* tag = &tags->items[index];
 		
-		if (!fstream_write(stream, HASHTAG, strlen(HASHTAG))) {
-			return 0;
+		if (fstream_write(stream, HASHTAG, strlen(HASHTAG)) == -1) {
+			return -1;
 		}
 		
 		const char* const name = tag_stringify(tag->type);
 		
-		if (!fstream_write(stream, name, strlen(name))) {
-			return 0;
+		if (fstream_write(stream, name, strlen(name)) == -1) {
+			return -1;
 		}
 		
 		if (tag->value == NULL) {
 			for (size_t index = 0; index < tag->attributes.offset; index++) {
 				if (index == 0) {
-					if (!fstream_write(stream, COLON, strlen(COLON))) {
-						return 0;
+					if (fstream_write(stream, COLON, strlen(COLON)) == -1) {
+						return -1;
 					}
 				} else {
-					if (!fstream_write(stream, COMMA, strlen(COMMA))) {
-						return 0;
+					if (fstream_write(stream, COMMA, strlen(COMMA)) == -1) {
+						return -1;
 					}
 				}
 				
 				const struct Attribute* const attribute = &tag->attributes.items[index];
 				
-				if (!fstream_write(stream, attribute->key, strlen(attribute->key))) {
-					return 0;
+				if (fstream_write(stream, attribute->key, strlen(attribute->key)) == -1) {
+					return -1;
 				}
 				
-				if (!fstream_write(stream, EQUAL, strlen(EQUAL))) {
-					return 0;
+				if (fstream_write(stream, EQUAL, strlen(EQUAL)) == -1) {
+					return -1;
 				}
 				
 				if (attribute->is_quoted) {
-					if (!fstream_write(stream, QUOTATION_MARK, strlen(QUOTATION_MARK))) {
-						return 0;
+					if (fstream_write(stream, QUOTATION_MARK, strlen(QUOTATION_MARK)) == -1) {
+						return -1;
 					}
 				}
 				
@@ -395,34 +395,34 @@ int tags_dumpf(const struct Tags* const tags, struct FStream* stream) {
 						}
 					}
 					
-					if (!fstream_write(stream, value, strlen(value))) {
-						return 0;
+					if (fstream_write(stream, value, strlen(value)) == -1) {
+						return -1;
 					}
 				} else {
-					if (!fstream_write(stream, attribute->value, strlen(attribute->value))) {
-						return 0;
+					if (fstream_write(stream, attribute->value, strlen(attribute->value)) == -1) {
+						return -1;
 					}
 				}
 				
 				if (attribute->is_quoted) {
-					if (!fstream_write(stream, QUOTATION_MARK, strlen(QUOTATION_MARK))) {
-						return 0;
+					if (fstream_write(stream, QUOTATION_MARK, strlen(QUOTATION_MARK)) == -1) {
+						return -1;
 					}
 				}
 			}
 		} else {
-			if (!fstream_write(stream, COLON, strlen(COLON))) {
-				return 0;
+			if (fstream_write(stream, COLON, strlen(COLON)) == -1) {
+				return -1;
 			}
 			
-			if (!fstream_write(stream, tag->value, strlen(tag->value))) {
-				return 0;
+			if (fstream_write(stream, tag->value, strlen(tag->value)) == -1) {
+				return -1;
 			}
 		}
 		
 		if (tag->uri != NULL) {
-			if (!fstream_write(stream, LF, strlen(LF))) {
-				return 0;
+			if (fstream_write(stream, LF, strlen(LF)) == -1) {
+				return -1;
 			}
 			
 			char uri[strlen(tag->uri) + 1];
@@ -436,17 +436,17 @@ int tags_dumpf(const struct Tags* const tags, struct FStream* stream) {
 				}
 			}
 			
-			if (!fstream_write(stream, uri, strlen(uri))) {
-				return 0;
+			if (fstream_write(stream, uri, strlen(uri)) == -1) {
+				return -1;
 			}
 		}
 		
-		if (!fstream_write(stream, LF, strlen(LF))) {
-			return 0;
+		if (fstream_write(stream, LF, strlen(LF)) == -1) {
+			return -1;
 		}
 	}
 	
-	return 1;
+	return 0;
 	
 }
 

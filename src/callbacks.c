@@ -54,7 +54,7 @@ size_t curl_write_file_cb(char* ptr, size_t size, size_t nmemb, void* userdata) 
 	
 	const size_t chunk_size = size * nmemb;
 	
-	if (!fstream_write(stream, ptr, chunk_size)) {
+	if (fstream_write(stream, ptr, chunk_size) == -1) {
 		return 0;
 	}
 	

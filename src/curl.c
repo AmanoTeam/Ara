@@ -78,7 +78,7 @@ static int globals_initialize(void) {
 		
 		const long long file_size = get_file_size(ca_bundle);
 		
-		struct FStream* const stream = fstream_open(ca_bundle, "r");
+		struct FStream* const stream = fstream_open(ca_bundle, FSTREAM_READ);
 		
 		if (stream == NULL) {
 			return UERR_FSTREAM_FAILURE;

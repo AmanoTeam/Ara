@@ -4,8 +4,17 @@
 	#include "hotmart.h"
 #endif
 
-#ifndef SPARKLEC_DISABLE_ESTRATEGIA
-	#include "estrategia.h"
+#ifdef SPARKLEC_DISABLE_ESTRATEGIA
+	#define SPARKLEC_DISABLE_ESTRATEGIA_CONCURSOS
+	#define SPARKLEC_DISABLE_ESTRATEGIA_VESTIBULARES
+#endif
+
+#ifndef SPARKLEC_DISABLE_ESTRATEGIA_CONCURSOS
+	#include "estrategia_concursos.h"
+#endif
+
+#ifndef SPARKLEC_DISABLE_ESTRATEGIA_VESTIBULARES
+	#include "estrategia_vestibulares.h"
 #endif
 
 #ifndef SPARKLEC_DISABLE_CYBERCLASS
@@ -32,6 +41,7 @@ struct Provider {
 	const char* label;
 	const char* url;
 	struct ProviderMethods methods;
+	const char* directory;
 };
 
 static const struct Provider PROVIDERS[] = {
@@ -45,20 +55,36 @@ static const struct Provider PROVIDERS[] = {
 			.get_modules = &hotmart_get_modules,
 			.get_module = &hotmart_get_module,
 			.get_page = &hotmart_get_page
-		}
+		},
+		.directory = "Hotmart"
 	},
 #endif
-#ifndef SPARKLEC_DISABLE_ESTRATEGIA
+#ifndef SPARKLEC_DISABLE_ESTRATEGIA_CONCURSOS
 	{
 		.label = "Estratégia Concursos",
 		.url = "https://www.estrategiaconcursos.com.br",
 		.methods = {
-			.authorize = &estrategia_authorize,
-			.get_resources = &estrategia_get_resources,
-			.get_modules = &estrategia_get_modules,
-			.get_module = &estrategia_get_module,
-			.get_page = &estrategia_get_page
-		}
+			.authorize = &estrategia_concursos_authorize,
+			.get_resources = &estrategia_concursos_get_resources,
+			.get_modules = &estrategia_concursos_get_modules,
+			.get_module = &estrategia_concursos_get_module,
+			.get_page = &estrategia_concursos_get_page
+		},
+		.directory = "Estratégia"
+	},
+#endif
+#ifndef SPARKLEC_DISABLE_ESTRATEGIA_VESTIBULARES
+	{
+		.label = "Estratégia Vestibulares",
+		.url = "https://vestibulares.estrategia.com",
+		.methods = {
+			.authorize = &estrategia_vestibulares_authorize,
+			.get_resources = &estrategia_vestibulares_get_resources,
+			.get_modules = &estrategia_vestibulares_get_modules,
+			.get_module = &estrategia_vestibulares_get_module,
+			.get_page = &estrategia_vestibulares_get_page
+		},
+		.directory = "Estratégia"
 	},
 #endif
 #ifndef SPARKLEC_DISABLE_CYBERCLASS
@@ -84,7 +110,8 @@ static const struct Provider PROVIDERS[] = {
 			.get_modules = &iaexpert_get_modules,
 			.get_module = &iaexpert_get_module,
 			.get_page = &iaexpert_get_page
-		}
+		},
+		.directory = "IA Expert Academy"
 	},
 #endif
 #ifndef SPARKLEC_DISABLE_QCONCURSOS

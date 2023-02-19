@@ -82,6 +82,6 @@ int json_dump_cb(const char *buffer, size_t size, void* data) {
 	
 	const int status = fstream_write((struct FStream*) data, buffer, size);
 	
-	return (status) ? 0 : -1;
+	return status;
 	
 }

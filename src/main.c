@@ -425,7 +425,7 @@ int main(void) {
 	strcat(configuration_directory, PATH_SEPARATOR);
 	strcat(configuration_directory, PROGRAM_NAME);
 	strcat(configuration_directory, PATH_SEPARATOR);
-	strcat(configuration_directory, provider.label);
+	strcat(configuration_directory, provider.directory);
 	
 	free(directory);
 	
@@ -640,6 +640,7 @@ int main(void) {
 				const struct SystemError error = get_system_error();
 				
 				fstream_close(stream);
+				remove_file(accounts_file);
 				
 				fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar exportar o arquivo de credenciais para '%s': %s\r\n", accounts_file, error.message);
 				return EXIT_FAILURE;
@@ -698,6 +699,7 @@ int main(void) {
 			const struct SystemError error = get_system_error();
 			
 			fstream_close(stream);
+			remove_file(accounts_file);
 			
 			fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar exportar o arquivo de credenciais para '%s': %s\r\n", accounts_file, error.message);
 			return EXIT_FAILURE;
@@ -1373,7 +1375,7 @@ int main(void) {
 							
 							const int status = fstream_write(stream, page->document.content, strlen(page->document.content));
 							
-							if (!status) {
+							if (status == -1) {
 								const struct SystemError error = get_system_error();
 								
 								fstream_close(stream);
@@ -1931,6 +1933,7 @@ int main(void) {
 			const struct SystemError error = get_system_error();
 			
 			fstream_close(stream);
+			remove_file(filename);
 			
 			fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar exportar a árvore de objetos para '%s': %s\r\n", filename, error.message);
 			return EXIT_FAILURE;

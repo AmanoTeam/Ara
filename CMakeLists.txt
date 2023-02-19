@@ -11,7 +11,13 @@ project(
 option(SPARKLEC_ENABLE_LTO "Turn on compiler Link Time Optimizations" OFF)
 
 option(SPARKLEC_DISABLE_HOTMART "Disable support for Hotmart" OFF)
-option(SPARKLEC_DISABLE_ESTRATEGIA "Disable support for Estratégia Concursos" OFF)
+option(SPARKLEC_DISABLE_ESTRATEGIA "Disable support for Estratégia websites" OFF)
+
+if (NOT SPARKLEC_DISABLE_ESTRATEGIA)
+	option(SPARKLEC_DISABLE_ESTRATEGIA_CONCURSOS "Disable support for Estratégia Concursos" OFF)
+	option(SPARKLEC_DISABLE_ESTRATEGIA_VESTIBULARES "Disable support for Estratégia Vestibulares" OFF)
+endif()
+
 option(SPARKLEC_DISABLE_CYBERCLASS "Disable support for CyberClass" OFF)
 option(SPARKLEC_DISABLE_IAEXPERT "Disable support for IA Expert Academy" OFF)
 option(SPARKLEC_DISABLE_QCONCURSOS "Disable support for QConcursos" OFF)
@@ -432,17 +438,45 @@ else()
 	)
 endif()
 
-if (SPARKLEC_DISABLE_ESTRATEGIA)
-	target_compile_definitions(
-		sparklec
-		PRIVATE
-		SPARKLEC_DISABLE_ESTRATEGIA
-	)
-else()
+if (NOT SPARKLEC_DISABLE_ESTRATEGIA)
 	target_sources(
 		sparklec
 		PRIVATE
 		src/estrategia.c
+	)
+	
+	if (SPARKLEC_DISABLE_ESTRATEGIA_CONCURSOS)
+		target_compile_definitions(
+			sparklec
+			PRIVATE
+			SPARKLEC_DISABLE_ESTRATEGIA_CONCURSOS
+		)
+	else()
+		target_sources(
+			sparklec
+			PRIVATE
+			src/estrategia_concursos.c
+		)
+	endif()
+	
+	if (SPARKLEC_DISABLE_ESTRATEGIA_VESTIBULARES)
+		target_compile_definitions(
+			sparklec
+			PRIVATE
+			SPARKLEC_DISABLE_ESTRATEGIA_VESTIBULARES
+		)
+	else()
+		target_sources(
+			sparklec
+			PRIVATE
+			src/estrategia_vestibulares.c
+		)
+	endif()
+else()
+	target_compile_definitions(
+		sparklec
+		PRIVATE
+		SPARKLEC_DISABLE_ESTRATEGIA
 	)
 endif()
 

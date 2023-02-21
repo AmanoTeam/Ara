@@ -1,4 +1,4 @@
-set(CMAKE_SYSTEM_NAME iOS)
+set(CMAKE_SYSTEM_NAME Darwin)
 set(TOOLCHAIN_PREFIX armv7-apple-darwin)
 
 set(TOOLCHAIN_PATH $ENV{THEOS_HOME})

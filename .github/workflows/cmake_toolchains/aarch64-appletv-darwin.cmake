@@ -1,4 +1,4 @@
-set(CMAKE_SYSTEM_NAME tvOS)
+set(CMAKE_SYSTEM_NAME Darwin)
 set(TOOLCHAIN_PREFIX arm64-apple-darwin)
 
 set(TOOLCHAIN_PATH $ENV{THEOS_HOME})

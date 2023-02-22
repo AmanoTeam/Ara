@@ -1,8 +1,10 @@
 #include <stdio.h>
+#include <string.h>
 
 #include <curl/curl.h>
 #include <jansson.h>
 
+#include "buffer.h"
 #include "credentials.h"
 #include "cleanup.h"
 #include "errors.h"
@@ -12,6 +14,9 @@
 #include "query.h"
 #include "symbols.h"
 #include "curl.h"
+#include "curl_cleanup.h"
+#include "query_cleanup.h"
+#include "buffer_cleanup.h"
 #include "estrategia.h"
 
 static const char HTTP_HEADER_CONTENT_TYPE[] = "Content-Type";
@@ -47,19 +52,19 @@ int estrategia_authorize(
 	json_object_set_new(tree, "email", json_string(username));
 	json_object_set_new(tree, "password", json_string(password));
 	
-	char* post_fields __attribute__((__cleanup__(charpp_free))) = json_dumps(tree, JSON_COMPACT);
+	char* post_fields __free__ = json_dumps(tree, JSON_COMPACT);
 	
 	if (post_fields == NULL) {
 		return UERR_MEMORY_ALLOCATE_FAILURE;
 	}
 	
-	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	buffer_t string __buffer_free__ = {0};
 	
 	const char* const headers[][2] = {
 		{HTTP_HEADER_CONTENT_TYPE, CONTENT_TYPE_JSON}
 	};
 	
-	struct curl_slist* list __attribute__((__cleanup__(curl_slistp_free_all))) = NULL;
+	struct curl_slist* list __curl_slist_free_all__ = NULL;
 	
 	for (size_t index = 0; index < sizeof(headers) / sizeof(*headers); index++) {
 		const char* const* const header = headers[index];
@@ -72,7 +77,7 @@ int estrategia_authorize(
 		strcat(item, HTTP_HEADER_SEPARATOR);
 		strcat(item, value);
 		
-		struct curl_slist* tmp = curl_slist_append(list, item);
+		struct curl_slist* const tmp = curl_slist_append(list, item);
 		
 		if (tmp == NULL) {
 			return UERR_CURL_FAILURE;
@@ -140,7 +145,7 @@ int estrategia_authorize(
 	
 	strcpy(credentials->username, full_name);
 	
-	struct Query query __attribute__((__cleanup__(query_free))) = {0};
+	struct Query query __query_free__ = {0};
 	
 	add_parameter(&query, "access_token", access_token);
 	
@@ -163,7 +168,7 @@ int estrategia_authorize(
 		return UERR_CURL_FAILURE;
 	}
 	
-	string_free(&string);
+	buffer_free(&string);
 	
 	curl_easy_setopt(curl_easy, CURLOPT_HTTPGET, 1L);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);

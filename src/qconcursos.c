@@ -469,7 +469,7 @@ static int tidy_extract_streams(
 		if (!(stream_id == NULL || stream_url == NULL)) {
 			CURL* curl_easy = get_global_curl_easy();
 			
-			struct String string __attribute__((__cleanup__(string_free))) = {0};
+			buffer_t string __buffer_free__ = {0};
 			
 			curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
 			curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
@@ -750,7 +750,7 @@ int qconcursos_authorize(
 	
 	CURL* curl_easy = get_global_curl_easy();
 	
-	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	buffer_t string __buffer_free__ = {0};
 	
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
@@ -774,7 +774,7 @@ int qconcursos_authorize(
 	tidy_buffer_init(&buffer);
 	tidy_buffer_append(&buffer, string.s, (uint) string.slength);
 	
-	string_free(&string);
+	buffer_free(&string);
 	
 	if (tidy_parse_buffer(document, &buffer) < 0) {
 		return UERR_TIDY_FAILURE;
@@ -807,14 +807,14 @@ int qconcursos_authorize(
 		return UERR_CURL_FAILURE;
 	}
 	
-	struct Query query __attribute__((__cleanup__(query_free))) = {0};
+	struct Query query __query_free__ = {0};
 	
 	add_parameter(&query, "authenticity_token", token);
 	add_parameter(&query, "user[email]", user);
 	add_parameter(&query, "user[password]", pass);
 	add_parameter(&query, "commit", "Entrar");
 	
-	char* post_fields __attribute__((__cleanup__(charpp_free))) = NULL;
+	char* post_fields __free__ = NULL;
 	code = query_stringify(query, &post_fields);
 	
 	if (code != UERR_SUCCESS) {
@@ -857,7 +857,7 @@ int qconcursos_authorize(
 	tidy_buffer_free(&buffer);
 	tidy_buffer_append(&buffer, string.s, (uint) string.slength);
 	
-	string_free(&string);
+	buffer_free(&string);
 	
 	if (tidy_parse_buffer(document, &buffer) < 0) {
 		return UERR_TIDY_FAILURE;
@@ -967,13 +967,13 @@ int qconcursos_get_resources(
 		json_object_set_new(data, "per_page", json_integer(100));
 		json_object_set_new(tree, "data", data);
 		
-		char* post_fields __attribute__((__cleanup__(charpp_free))) = json_dumps(tree, JSON_COMPACT);
+		char* post_fields __free__ = json_dumps(tree, JSON_COMPACT);
 		
 		if (post_fields == NULL) {
 			return UERR_MEMORY_ALLOCATE_FAILURE;
 		}
 		
-		struct String string __attribute__((__cleanup__(string_free))) = {0};
+		buffer_t string __buffer_free__ = {0};
 		
 		curl_easy_setopt(curl_easy, CURLOPT_COPYPOSTFIELDS, post_fields);
 		curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
@@ -1069,7 +1069,7 @@ int qconcursos_get_modules(
 	
 	CURL* curl_easy = get_global_curl_easy();
 	
-	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	buffer_t string __buffer_free__ = {0};
 	
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
@@ -1127,7 +1127,7 @@ int qconcursos_get_module(
 	
 	CURL* curl_easy = get_global_curl_easy();
 	
-	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	buffer_t string __buffer_free__ = {0};
 	
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
@@ -1169,7 +1169,7 @@ int qconcursos_get_module(
 	json_object_set_new(data, "track_id", json_string(resource->id));
 	json_object_set_new(tree, "data", data);
 	
-	char* post_fields __attribute__((__cleanup__(charpp_free))) = json_dumps(tree, JSON_COMPACT);
+	char* post_fields __free__ = json_dumps(tree, JSON_COMPACT);
 	
 	if (post_fields == NULL) {
 		return UERR_MEMORY_ALLOCATE_FAILURE;
@@ -1230,7 +1230,7 @@ int qconcursos_get_page(
 	
 	CURL* curl_easy = get_global_curl_easy();
 	
-	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	buffer_t string __buffer_free__ = {0};
 	
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
@@ -1264,7 +1264,7 @@ int qconcursos_get_page(
 	tidy_buffer_init(&buffer);
 	tidy_buffer_append(&buffer, string.s, (uint) string.slength);
 	
-	string_free(&string);
+	buffer_free(&string);
 	
 	if (tidy_parse_buffer(document, &buffer) < 0) {
 		return UERR_TIDY_FAILURE;
@@ -1328,7 +1328,7 @@ int qconcursos_get_page(
 	json_object_set_new(data, "topic_id", json_string(topic_id));
 	json_object_set_new(tree, "data", data);
 	
-	char* post_fields __attribute__((__cleanup__(charpp_free))) = json_dumps(tree, JSON_COMPACT);
+	char* post_fields __free__ = json_dumps(tree, JSON_COMPACT);
 	
 	if (post_fields == NULL) {
 		return UERR_MEMORY_ALLOCATE_FAILURE;
@@ -1352,7 +1352,7 @@ int qconcursos_get_page(
 	tidy_buffer_free(&buffer);
 	tidy_buffer_append(&buffer, string.s, (uint) string.slength);
 	
-	string_free(&string);
+	buffer_free(&string);
 	
 	if (tidy_parse_buffer(document, &buffer) < 0) {
 		return UERR_TIDY_FAILURE;

@@ -13,6 +13,9 @@
 #include "query.h"
 #include "symbols.h"
 #include "curl.h"
+#include "curl_cleanup.h"
+#include "buffer.h"
+#include "buffer_cleanup.h"
 #include "estrategia.h"
 
 #define ESTRATEGIA_API_ENDPOINT "https://api.estrategia.com"
@@ -52,7 +55,7 @@ int estrategia_vestibulares_get_resources(
 	
 	CURL* curl_easy = get_global_curl_easy();
 	
-	struct curl_slist* list __attribute__((__cleanup__(curl_slistp_free_all))) = NULL;
+	struct curl_slist* list __curl_slist_free_all__ = NULL;
 	
 	for (size_t index = 0; index < sizeof(DEFAULT_HEADERS) / sizeof(*DEFAULT_HEADERS); index++) {
 		const char* const* const header = DEFAULT_HEADERS[index];
@@ -74,7 +77,7 @@ int estrategia_vestibulares_get_resources(
 		list = tmp;
 	}
 	
-	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	buffer_t string __buffer_free__ = {0};
 	
 	curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, list);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
@@ -198,7 +201,7 @@ int estrategia_vestibulares_get_modules(
 	
 	CURL* curl_easy = get_global_curl_easy();
 	
-	struct curl_slist* list __attribute__((__cleanup__(curl_slistp_free_all))) = NULL;
+	struct curl_slist* list __curl_slist_free_all__ = NULL;
 	
 	for (size_t index = 0; index < sizeof(DEFAULT_HEADERS) / sizeof(*DEFAULT_HEADERS); index++) {
 		const char* const* const header = DEFAULT_HEADERS[index];
@@ -220,7 +223,7 @@ int estrategia_vestibulares_get_modules(
 		list = tmp;
 	}
 	
-	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	buffer_t string __buffer_free__ = {0};
 	
 	char url[strlen(ESTRATEGIA_COURSE_ENDPOINT) + strlen(SLASH) + strlen(resource->id) + 1];
 	strcpy(url, ESTRATEGIA_COURSE_ENDPOINT);

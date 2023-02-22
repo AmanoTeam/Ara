@@ -18,18 +18,12 @@ typedef struct jint_array_t {
 	json_int_t* items;
 } jint_array_t;
 
-struct String {
-	char *s;
-	size_t slength;
-};
-
 struct Download {
 	CURL* handle;
 	char* filename;
 	struct FStream* stream;
 };
 
-void string_free(struct String* obj);
 void string_array_free(string_array_t* obj);
 void jint_array_free(jint_array_t* obj);
 

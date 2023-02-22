@@ -2,14 +2,25 @@
 #include <stdio.h>
 #include <limits.h>
 
-#ifndef _WIN32
+#ifdef _WIN32
+	#include <windows.h>
+	
+	#ifdef _UNICODE
+		#include <fcntl.h>
+		#include <io.h>
+	#endif
+#else
 	#include <sys/stat.h>
 #endif
 
 #include <bearssl.h>
 
-#if defined(_WIN32) && defined(_UNICODE)
-	#include "wio.h"
+#ifdef _WIN32
+	#include "wregistry.h"
+
+	#ifdef _UNICODE
+		#include "wio.h"
+	#endif
 #endif
 
 #include "filesystem.h"
@@ -18,6 +29,7 @@
 #include "errors.h"
 #include "os.h"
 #include "fstream.h"
+#include "cleanup.h"
 
 #ifndef _WIN32
 	struct Shell {
@@ -107,13 +119,13 @@ int main(void) {
 		_setmode(_fileno(stdin), _O_WTEXT);
 	#endif
 	
-	char app_filename[PATH_MAX];
+	char app_filename[PATH_MAX] = {'\0'};
 	get_app_filename(app_filename);
 	
-	char app_root_directory[PATH_MAX];
+	char app_root_directory[PATH_MAX] = {'\0'};
 	get_parent_directory(app_filename, app_root_directory, 2);
 	
-	char* const home = get_home_directory();
+	char* home __free__ = get_home_directory();
 	
 	if (home == NULL) {
 		fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar obter o diretório de usuário!\r\n");
@@ -125,49 +137,27 @@ int main(void) {
 	strcat(install_directory, PATH_SEPARATOR);
 	strcat(install_directory, ".sparklec");
 	
-	//free(home);
-	
-	switch (directory_exists(install_directory)) {
-		case 0: {
-			printf("- Diretório de instalação não encontrado, criando-o em '%s'\r\n", install_directory);
-			
-			if (create_directory(install_directory) == -1) {
-				const struct SystemError error = get_system_error();
-				
-				fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o diretório em '%s': %s\r\n", install_directory, error.message);
-				return EXIT_FAILURE;
-			}
-			
-			break;
-		}
-		case -1: {
-			 const struct SystemError error = get_system_error();
-			
-			fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar obter informações sobre o diretório em '%s': %s\r\n", install_directory, error.message);
-			return EXIT_FAILURE;
-		}
-	};
-	
-	char target_directory[PATH_MAX];
-	strcpy(target_directory, install_directory);
-	strcat(target_directory, PATH_SEPARATOR);
-	
-	const size_t slength = strlen(target_directory);
-	
 	for (size_t index = 0; index < sizeof(INSTALL_FILES) / sizeof(*INSTALL_FILES); index++) {
 		const char* const filename = INSTALL_FILES[index];
-		get_parent_directory(filename, target_directory + slength, 1);
 		
-		switch (directory_exists(target_directory)) {
-			case 1:
-				break;
+		char parent_directory[strlen(filename) + 1];
+		*parent_directory = '\0';
+		
+		get_parent_directory(filename, parent_directory, 1);
+		
+		char destination_directory[strlen(install_directory) + strlen(PATH_SEPARATOR) + strlen(parent_directory) + 1];
+		strcpy(destination_directory, install_directory);
+		strcat(destination_directory, PATH_SEPARATOR);
+		strcat(destination_directory, parent_directory);
+		
+		switch (directory_exists(destination_directory)) {
 			case 0: {
-				fprintf(stderr, "- O diretório '%s' não existe, criando-o\r\n", target_directory);
+				fprintf(stderr, "- O diretório '%s' não existe, criando-o\r\n", destination_directory);
 				
-				if (create_directory(target_directory) == -1) {
+				if (create_directory(destination_directory) == -1) {
 					const struct SystemError error = get_system_error();
 					
-					fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o diretório em '%s': %s\r\n", target_directory, error.message);
+					fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar criar o diretório em '%s': %s\r\n", destination_directory, error.message);
 					return EXIT_FAILURE;
 				}
 				
@@ -176,7 +166,7 @@ int main(void) {
 			case -1: {
 				const struct SystemError error = get_system_error();
 				
-				fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar obter informações sobre o diretório em '%s': %s\r\n", target_directory, error.message);
+				fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar obter informações sobre o diretório em '%s': %s\r\n", destination_directory, error.message);
 				return EXIT_FAILURE;
 			}
 		}
@@ -185,6 +175,19 @@ int main(void) {
 		strcpy(source_file, app_root_directory);
 		strcat(source_file, PATH_SEPARATOR);
 		strcat(source_file, filename);
+		
+		switch (file_exists(source_file)) {
+			case 0: {
+				fprintf(stderr, "- O arquivo '%s' não existe, abortando instalação\r\n", source_file);
+				return EXIT_FAILURE;
+			}
+			case -1: {
+				const struct SystemError error = get_system_error();
+				
+				fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar obter informações sobre o arquivo em '%s': %s\r\n", source_file, error.message);
+				return EXIT_FAILURE;
+			}
+		}
 		
 		char destination_file[strlen(install_directory) + strlen(PATH_SEPARATOR) + strlen(filename) + 1];
 		strcpy(destination_file, install_directory);
@@ -198,8 +201,19 @@ int main(void) {
 				char isha256[br_sha256_SIZE] = {'\0'};
 				char osha256[br_sha256_SIZE] = {'\0'};
 				
-				sha256_digest(source_file, isha256);
-				sha256_digest(destination_file, osha256);
+				if (sha256_digest(source_file, isha256) == -1) {
+					const struct SystemError error = get_system_error();
+					
+					fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar calcular o SHA256 do arquivo em '%s': %s\r\n", source_file, error.message);
+					return EXIT_FAILURE;
+				};
+				
+				if (sha256_digest(destination_file, osha256) == -1) {
+					const struct SystemError error = get_system_error();
+					
+					fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar calcular o SHA256 do arquivo em '%s': %s\r\n", destination_file, error.message);
+					return EXIT_FAILURE;
+				};
 				
 				if (memcmp(isha256, osha256, sizeof(isha256)) == 0) {
 					printf("- O arquivo '%s' não sofreu alterações desde a última instalação, ignorando-o\r\n", source_file);
@@ -247,78 +261,111 @@ int main(void) {
 	
 	char* const executable = find_exe("sparklec");
 	
-	if (executable == NULL) {
-		printf("+ Verificando a possibilidade de adicionar o diretório de executáveis ao PATH do sistema\r\n");
-		
-		#ifndef _WIN32
-			const char* const shell_executable = getenv("SHELL");
-			
-			if (shell_executable == NULL) {
-				fprintf(stderr, "- Não foi possível determinar qual implementação de shell está sendo usada!\r\n");
-				return EXIT_FAILURE;
-			}
-			
-			const char* const name = basename(shell_executable);
-			
-			const struct Shell* shell = NULL;
-			
-			for (size_t index = 0; index < sizeof(SHELLS) / sizeof(*SHELLS); index++) {
-				const struct Shell* const sh = &SHELLS[index];
-				
-				if (strcmp(sh->name, name) != 0) {
-					continue;
-				}
-				
-				shell = sh;
-				
-				break;
-			}
-			
-			if (shell == NULL) {
-				fprintf(stderr, "- A implementação de shell atualmente sendo usada ('%s') não é suportada!\r\n", name);
-				return EXIT_FAILURE;
-			}
-			
-			char shellrc_filename[strlen(home) + strlen(PATH_SEPARATOR) + strlen(shell->rc) + 1];
-			strcpy(shellrc_filename, home);
-			strcat(shellrc_filename, PATH_SEPARATOR);
-			strcat(shellrc_filename, shell->rc);
-			
-			char executable_directory[strlen(install_directory) + strlen(PATH_SEPARATOR) + strlen(EXECUTABLE_DIRECTORY) + 1];
-			strcpy(executable_directory, install_directory);
-			strcat(executable_directory, PATH_SEPARATOR);
-			strcat(executable_directory, EXECUTABLE_DIRECTORY);
-			
-			char pathset[strlen(shell->pathset) + strlen(APOSTROPHE) * 2 + strlen(executable_directory) + 1];
-			strcpy(pathset, shell->pathset);
-			strcat(pathset, APOSTROPHE);
-			strcat(pathset, executable_directory);
-			strcat(pathset, APOSTROPHE);
-			
-			printf("+ Modificando o arquivo de configurações em '%s'\r\n", shellrc_filename);
-			
-			struct FStream* const stream = fstream_open(shellrc_filename, FSTREAM_APPEND);
-			
-			if (stream == NULL) {
-				const struct SystemError error = get_system_error();
-				
-				fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar abrir o arquivo em '%s': %s\r\n", shellrc_filename, error.message);
-				return EXIT_FAILURE;
-			}
-			
-			if (fstream_write(stream, pathset, strlen(pathset)) == -1) {
-				const struct SystemError error = get_system_error();
-				
-				fstream_close(stream);
-				
-				fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar salvar o documento em '%s': %s\r\n", shellrc_filename, error.message);
-				return EXIT_FAILURE;
-			}
-			
-			fstream_close(stream);
-		#endif
+	free(executable);
+	
+	if (executable != NULL) {
+		return EXIT_SUCCESS;
 	}
 	
+	printf("+ Verificando a possibilidade de adicionar o diretório de executáveis ao PATH do sistema\r\n");
+	
+	char executable_directory[strlen(install_directory) + strlen(PATH_SEPARATOR) + strlen(EXECUTABLE_DIRECTORY) + 1];
+	strcpy(executable_directory, install_directory);
+	strcat(executable_directory, PATH_SEPARATOR);
+	strcat(executable_directory, EXECUTABLE_DIRECTORY);
+	
+	#ifdef _WIN32
+		char* const current_path = wregistry_get(HKEY_CURRENT_USER, "Environment", "Path");
+		
+		const struct SystemError error = get_system_error();
+		
+		if (current_path == NULL && error.code != ERROR_FILE_NOT_FOUND) {
+			fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar consultar as chaves de registro do Windows: %s\r\n", error.message);	
+			return EXIT_FAILURE;
+		}
+		
+		printf("Modificando o valor da chave de registro %%PATH%%\r\n");
+		
+		char new_path[(current_path == NULL ? 0 : strlen(current_path) + strlen(SEMICOLON)) + strlen(executable_directory) + 1];
+		*new_path = '\0';
+		
+		if (current_path != NULL) {
+			strcat(new_path, current_path);
+			strcat(new_path, SEMICOLON);
+		}
+		
+		strcat(new_path, executable_directory);
+		
+		free(current_path);
+		
+		if (wregistry_put(HKEY_CURRENT_USER, "Environment", "Path", new_path) == -1) {
+			const struct SystemError error = get_system_error();
+		
+			fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar modificar as chaves de registro do Windows: %s\r\n", error.message);
+			return EXIT_FAILURE;
+		};
+	#else
+		const char* const shell_executable = getenv("SHELL");
+		
+		if (shell_executable == NULL) {
+			fprintf(stderr, "- Não foi possível determinar qual implementação de shell está sendo usada!\r\n");
+			return EXIT_FAILURE;
+		}
+		
+		const char* const name = basename(shell_executable);
+		
+		const struct Shell* shell = NULL;
+		
+		for (size_t index = 0; index < sizeof(SHELLS) / sizeof(*SHELLS); index++) {
+			const struct Shell* const sh = &SHELLS[index];
+			
+			if (strcmp(sh->name, name) != 0) {
+				continue;
+			}
+			
+			shell = sh;
+			
+			break;
+		}
+		
+		if (shell == NULL) {
+			fprintf(stderr, "- A implementação de shell atualmente sendo usada ('%s') não é suportada!\r\n", name);
+			return EXIT_FAILURE;
+		}
+		
+		char shellrc_filename[strlen(home) + strlen(PATH_SEPARATOR) + strlen(shell->rc) + 1];
+		strcpy(shellrc_filename, home);
+		strcat(shellrc_filename, PATH_SEPARATOR);
+		strcat(shellrc_filename, shell->rc);
+		
+		char pathset[strlen(shell->pathset) + strlen(APOSTROPHE) * 2 + strlen(executable_directory) + 1];
+		strcpy(pathset, shell->pathset);
+		strcat(pathset, APOSTROPHE);
+		strcat(pathset, executable_directory);
+		strcat(pathset, APOSTROPHE);
+		
+		printf("+ Modificando o arquivo de configurações em '%s'\r\n", shellrc_filename);
+		
+		struct FStream* const stream = fstream_open(shellrc_filename, FSTREAM_APPEND);
+		
+		if (stream == NULL) {
+			const struct SystemError error = get_system_error();
+			
+			fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar abrir o arquivo em '%s': %s\r\n", shellrc_filename, error.message);
+			return EXIT_FAILURE;
+		}
+		
+		if (fstream_write(stream, pathset, strlen(pathset)) == -1) {
+			const struct SystemError error = get_system_error();
+			
+			fstream_close(stream);
+			
+			fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar salvar o documento em '%s': %s\r\n", shellrc_filename, error.message);
+			return EXIT_FAILURE;
+		}
+		
+		fstream_close(stream);
+	#endif
 	
 	return EXIT_SUCCESS;
 	

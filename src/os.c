@@ -383,14 +383,6 @@ char* get_home_directory(void) {
 }
 
 char* find_exe(const char* const name) {
-	/*
-	Returns the home directory of the current user.
-	
-	On Windows, it returns the value from "USERPROFILE" environment variable.
-	On Posix based platforms, it returns the value from "HOME" environment variable.
-	
-	Returns NULL on error.
-	*/
 	
 	#if defined(_WIN32) && defined(_UNICODE)
 		const wchar_t* const wpath = _wgetenv(L"PATH");

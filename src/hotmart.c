@@ -20,9 +20,14 @@
 #include "vimeo.h"
 #include "youtube.h"
 #include "curl.h"
+#include "curl_cleanup.h"
+#include "query_cleanup.h"
+#include "buffer.h"
+#include "buffer_cleanup.h"
 #include "hotmart.h"
 #include "html.h"
 #include "ttidy.h"
+#include "tidy_cleanup.h"
 
 static const char HTTP_HEADER_AUTHORIZATION[] = "Authorization";
 static const char HTTP_HEADER_REFERER[] = "Referer";
@@ -77,32 +82,32 @@ int hotmart_authorize(
 	
 	CURL* curl_easy = get_global_curl_easy();
 	
-	char* user __attribute__((__cleanup__(curlcharpp_free))) = curl_easy_escape(NULL, username, 0);
+	char* user __curl_free__ = curl_easy_escape(NULL, username, 0);
 	
 	if (user == NULL) {
 		return UERR_CURL_FAILURE;
 	}
 	
-	char* pass __attribute__((__cleanup__(curlcharpp_free))) = curl_easy_escape(NULL, password, 0);
+	char* pass __curl_free__ = curl_easy_escape(NULL, password, 0);
 	
 	if (pass == NULL) {
 		return UERR_CURL_FAILURE;
 	}
 	
-	struct Query query __attribute__((__cleanup__(query_free))) = {0};
+	struct Query query __query_free__ = {0};
 	
 	add_parameter(&query, "grant_type", "password");
 	add_parameter(&query, "username", user);
 	add_parameter(&query, "password", pass);
 	
-	char* post_fields __attribute__((__cleanup__(charpp_free))) = NULL;
+	char* post_fields __free__ = NULL;
 	const int code = query_stringify(query, &post_fields);
 	
 	if (code != UERR_SUCCESS) {
 		return code;
 	}
 	
-	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	buffer_t string __buffer_free__ = {0};
 	
 	curl_easy_setopt(curl_easy, CURLOPT_COPYPOSTFIELDS, post_fields);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
@@ -139,7 +144,7 @@ int hotmart_authorize(
 	
 	strcpy(credentials->access_token, access_token);
 	
-	string_free(&string);
+	buffer_free(&string);
 	
 	char authorization[strlen(HTTP_AUTHENTICATION_BEARER) + strlen(SPACE) + strlen(credentials->access_token) + 1];
 	strcpy(authorization, HTTP_AUTHENTICATION_BEARER);
@@ -150,7 +155,7 @@ int hotmart_authorize(
 		{HTTP_HEADER_AUTHORIZATION, authorization}
 	};
 	
-	struct curl_slist* list __attribute__((__cleanup__(curl_slistp_free_all))) = NULL;
+	struct curl_slist* list __curl_slist_free_all__ = NULL;
 	
 	for (size_t index = 0; index < sizeof(headers) / sizeof(*headers); index++) {
 		const char* const* const header = headers[index];
@@ -163,7 +168,7 @@ int hotmart_authorize(
 		strcat(item, HTTP_HEADER_SEPARATOR);
 		strcat(item, value);
 		
-		struct curl_slist* tmp = curl_slist_append(list, item);
+		struct curl_slist* const tmp = curl_slist_append(list, item);
 		
 		if (tmp == NULL) {
 			return UERR_CURL_FAILURE;
@@ -222,18 +227,18 @@ int hotmart_get_resources(
 	
 	CURL* curl_easy = get_global_curl_easy();
 	
-	struct Query query __attribute__((__cleanup__(query_free))) = {0};
+	struct Query query __query_free__ = {0};
 	
 	add_parameter(&query, "token", credentials->access_token);
 	
-	char* squery __attribute__((__cleanup__(charpp_free))) = NULL;
+	char* squery __free__ = NULL;
 	const int code = query_stringify(query, &squery);
 	
 	if (code != UERR_SUCCESS) {
 		return code;
 	}
 	
-	CURLU* cu __attribute__((__cleanup__(curlupp_free))) = curl_url();
+	CURLU* cu __curl_url_cleanup__ = curl_url();
 	
 	if (cu == NULL) {
 		return UERR_CURLU_FAILURE;
@@ -247,7 +252,7 @@ int hotmart_get_resources(
 		return UERR_CURLU_FAILURE;
 	}
 	
-	char* url __attribute__((__cleanup__(curlcharpp_free))) = NULL;
+	char* url __curl_free__ = NULL;
 	
 	if (curl_url_get(cu, CURLUPART_URL, &url, 0) != CURLUE_OK) {
 		return UERR_CURLU_FAILURE;
@@ -255,7 +260,7 @@ int hotmart_get_resources(
 	
 	curl_easy_setopt(curl_easy, CURLOPT_URL, url);
 	
-	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	buffer_t string __buffer_free__ = {0};
 	
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
@@ -336,7 +341,7 @@ int hotmart_get_resources(
 			{HTTP_HEADER_CLUB, id}
 		};
 		
-		struct curl_slist* list __attribute__((__cleanup__(curl_slistp_free_all))) = NULL;
+		struct curl_slist* list __curl_slist_free_all__ = NULL;
 		
 		for (size_t index = 0; index < sizeof(headers) / sizeof(*headers); index++) {
 			const char** const header = (const char**) headers[index];
@@ -348,7 +353,7 @@ int hotmart_get_resources(
 			strcat(item, HTTP_HEADER_SEPARATOR);
 			strcat(item, value);
 			
-			struct curl_slist* tmp = curl_slist_append(list, item);
+			struct curl_slist* const tmp = curl_slist_append(list, item);
 			
 			if (tmp == NULL) {
 				return UERR_CURL_FAILURE;
@@ -357,7 +362,7 @@ int hotmart_get_resources(
 			list = tmp;
 		}
 		
-		struct String string __attribute__((__cleanup__(string_free))) = {0};
+		buffer_t string __buffer_free__ = {0};
 		
 		curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 		curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, list);
@@ -437,7 +442,7 @@ int hotmart_get_modules(
 		{HTTP_HEADER_CLUB, resource->id}
 	};
 	
-	struct curl_slist* list __attribute__((__cleanup__(curl_slistp_free_all))) = NULL;
+	struct curl_slist* list __curl_slist_free_all__ = NULL;
 	
 	for (size_t index = 0; index < sizeof(headers) / sizeof(*headers); index++) {
 		const char* const* const header = headers[index];
@@ -450,7 +455,7 @@ int hotmart_get_modules(
 		strcat(item, HTTP_HEADER_SEPARATOR);
 		strcat(item, value);
 		
-		struct curl_slist* tmp = curl_slist_append(list, item);
+		struct curl_slist* const tmp = curl_slist_append(list, item);
 		
 		if (tmp == NULL) {
 			return UERR_CURL_FAILURE;
@@ -459,7 +464,7 @@ int hotmart_get_modules(
 		list = tmp;
 	}
 	
-	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	buffer_t string __buffer_free__ = {0};
 	
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
@@ -690,7 +695,7 @@ int hotmart_get_page(
 		{HTTP_HEADER_REFERER, HOTMART_HOMEPAGE}
 	};
 	
-	struct curl_slist* list __attribute__((__cleanup__(curl_slistp_free_all))) = NULL;
+	struct curl_slist* list __curl_slist_free_all__ = NULL;
 	
 	for (size_t index = 0; index < sizeof(headers) / sizeof(*headers); index++) {
 		const char* const* const header = headers[index];
@@ -703,7 +708,7 @@ int hotmart_get_page(
 		strcat(item, HTTP_HEADER_SEPARATOR);
 		strcat(item, value);
 		
-		struct curl_slist* tmp = curl_slist_append(list, item);
+		struct curl_slist* const tmp = curl_slist_append(list, item);
 		
 		if (tmp == NULL) {
 			return UERR_CURL_FAILURE;
@@ -712,7 +717,7 @@ int hotmart_get_page(
 		list = tmp;
 	}
 	
-	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	buffer_t string __buffer_free__ = {0};
 	
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
@@ -806,7 +811,7 @@ int hotmart_get_page(
 			
 			const char* const media_type = json_string_value(obj);
 			
-			struct String string __attribute__((__cleanup__(string_free))) = {0};
+			buffer_t string __buffer_free__ = {0};
 			
 			curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 			curl_easy_setopt(curl_easy, CURLOPT_URL, media_page);
@@ -860,7 +865,7 @@ int hotmart_get_page(
 				curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, NULL);
 				curl_easy_setopt(curl_easy, CURLOPT_URL, url);
 				
-				string_free(&string);
+				buffer_free(&string);
 				
 				if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 					return UERR_CURL_FAILURE;
@@ -903,7 +908,7 @@ int hotmart_get_page(
 					}
 				}
 				
-				CURLU* cu __attribute__((__cleanup__(curlupp_free))) = curl_url();
+				CURLU* cu __curl_url_cleanup__ = curl_url();
 				
 				if (cu == NULL) {
 					return UERR_CURLU_FAILURE;
@@ -1054,7 +1059,7 @@ int hotmart_get_page(
 			strcat(url, SLASH);
 			strcat(url, "download");
 			
-			struct String string __attribute__((__cleanup__(string_free))) = {0};
+			buffer_t string __buffer_free__ = {0};
 			
 			curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 			curl_easy_setopt(curl_easy, CURLOPT_URL, url);
@@ -1065,7 +1070,7 @@ int hotmart_get_page(
 			
 			json_auto_t* subtree = json_loads(string.s, 0, NULL);
 			
-			string_free(&string);
+			buffer_free(&string);
 			
 			if (tree == NULL) {
 				return UERR_JSON_CANNOT_PARSE;
@@ -1106,7 +1111,7 @@ int hotmart_get_page(
 				
 				const char* const lambda_url = json_string_value(obj);
 				
-				struct curl_slist* sublist __attribute__((__cleanup__(curl_slistp_free_all))) = NULL;
+				struct curl_slist* sublist __curl_slist_free_all__ = NULL;
 				
 				char header[strlen(HTTP_HEADER_TOKEN) + strlen(HTTP_HEADER_SEPARATOR) + strlen(drm_token) + 1];
 				strcpy(header, HTTP_HEADER_TOKEN);
@@ -1183,7 +1188,7 @@ int hotmart_get_page(
 		
 		const char* const content = json_string_value(obj);
 		
-		const tidy_doc_t* const document __attribute__((__cleanup__(tidy_releasep))) = tidy_create();
+		const tidy_doc_t* const document __tidy_release__ = tidy_create();
 		
 		if (document == NULL) {
 			return UERR_TIDY_FAILURE;

@@ -2,14 +2,6 @@
 
 #include "types.h"
 
-void string_free(struct String* obj) {
-	
-	free(obj->s);
-	obj->s = NULL;
-	obj->slength = 0;
-	
-}
-
 void string_array_free(string_array_t* obj) {
 	
 	for (size_t index = 0; index < obj->offset; index++) {

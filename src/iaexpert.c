@@ -17,6 +17,10 @@
 #include "query.h"
 #include "symbols.h"
 #include "curl.h"
+#include "curl_cleanup.h"
+#include "tidy_cleanup.h"
+#include "query_cleanup.h"
+#include "buffer_cleanup.h"
 #include "iaexpert.h"
 #include "html.h"
 #include "vimeo.h"
@@ -465,7 +469,7 @@ static int tidy_extract_modules(
 					return code;
 				}
 				
-				struct Query query __attribute__((__cleanup__(query_free))) = {0};
+				struct Query query __query_free__ = {0};
 				
 				add_parameter(&query, "action", "ld30_ajax_pager");
 				add_parameter(&query, "ld-topic-page", paged);
@@ -474,14 +478,14 @@ static int tidy_extract_modules(
 				add_parameter(&query, "lesson_id", lesson_id);
 				add_parameter(&query, "course_id", course_id);
 				
-				char* query_fields __attribute__((__cleanup__(charpp_free))) = NULL;
+				char* query_fields __free__ = NULL;
 				code = query_stringify(query, &query_fields);
 				
 				if (code != UERR_SUCCESS) {
 					return code;
 				}
 							
-				CURLU* cu __attribute__((__cleanup__(curlupp_free))) = curl_url();
+				CURLU* cu __curl_url_cleanup__ = curl_url();
 				
 				if (cu == NULL) {
 					return UERR_CURLU_FAILURE;
@@ -495,13 +499,13 @@ static int tidy_extract_modules(
 					return UERR_CURLU_FAILURE;
 				}
 				
-				char* url __attribute__((__cleanup__(curlcharpp_free))) = NULL;
+				char* url __curl_free__ = NULL;
 				
 				if (curl_url_get(cu, CURLUPART_URL, &url, 0) != CURLUE_OK) {
 					return UERR_CURLU_FAILURE;
 				}
 				
-				struct String string __attribute__((__cleanup__(string_free))) = {0};
+				buffer_t string __buffer_free__ = {0};
 				
 				curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
 				curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
@@ -543,7 +547,7 @@ static int tidy_extract_modules(
 				
 				const char* const topics = json_string_value(obj);
 						
-				const tidy_doc_t* const subdocument = tidy_create();
+				const tidy_doc_t* const subdocument __tidy_release__ = tidy_create();
 				
 				if (subdocument == NULL) {
 					return UERR_TIDY_FAILURE;
@@ -687,33 +691,33 @@ int iaexpert_authorize(
 	
 	CURL* curl_easy = get_global_curl_easy();
 	
-	char* user __attribute__((__cleanup__(curlcharpp_free))) = curl_easy_escape(NULL, username, 0);
+	char* user __curl_free__ = curl_easy_escape(NULL, username, 0);
 	
 	if (user == NULL) {
 		return UERR_CURL_FAILURE;
 	}
 	
-	char* pass __attribute__((__cleanup__(curlcharpp_free))) = curl_easy_escape(NULL, password, 0);
+	char* pass __curl_free__ = curl_easy_escape(NULL, password, 0);
 	
 	if (pass == NULL) {
 		return UERR_CURL_FAILURE;
 	}
 	
-	struct Query query __attribute__((__cleanup__(query_free))) = {0};
+	struct Query query __query_free__ = {0};
 	
 	add_parameter(&query, "action", "arm_shortcode_form_ajax_action");
 	add_parameter(&query, "user_login", user);
 	add_parameter(&query, "user_pass", pass);
 	add_parameter(&query, "arm_action", "please-login");
 	
-	char* post_fields __attribute__((__cleanup__(charpp_free))) = NULL;
+	char* post_fields __free__ = NULL;
 	const int code = query_stringify(query, &post_fields);
 	
 	if (code != UERR_SUCCESS) {
 		return code;
 	}
 	
-	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	buffer_t string __buffer_free__ = {0};
 	
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
@@ -747,7 +751,7 @@ int iaexpert_authorize(
 		return UERR_PROVIDER_LOGIN_FAILURE;
 	}
 	
-	string_free(&string);
+	buffer_free(&string);
 	
 	curl_easy_setopt(curl_easy, CURLOPT_HTTPGET, 1L);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, IAEXPERT_PROFILE_ENDPOINT);
@@ -761,7 +765,7 @@ int iaexpert_authorize(
 	curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 0L);
 	curl_easy_setopt(curl_easy, CURLOPT_MAXREDIRS, -1);
 	
-	const tidy_doc_t* const document = tidy_create();
+	const tidy_doc_t* const document __tidy_release__ = tidy_create();
 	
 	if (document == NULL) {
 		return UERR_TIDY_FAILURE;
@@ -858,7 +862,7 @@ int iaexpert_get_resources(
 	
 	CURL* curl_easy = get_global_curl_easy();
 	
-	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	buffer_t string __buffer_free__ = {0};
 	
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
@@ -897,20 +901,20 @@ int iaexpert_get_resources(
 		char value[intlen(page_number) + 1];
 		snprintf(value, sizeof(value), "%zu", page_number);
 		
-		struct Query query __attribute__((__cleanup__(query_free))) = {0};
+		struct Query query __query_free__ = {0};
 		
 		add_parameter(&query, "action", "ld_course_list_shortcode_pager");
 		add_parameter(&query, "nonce", nonce);
 		add_parameter(&query, "paged", value);
 		
-		char* post_fields __attribute__((__cleanup__(charpp_free))) = NULL;
+		char* post_fields __free__ = NULL;
 		int code = query_stringify(query, &post_fields);
 		
 		if (code != UERR_SUCCESS) {
 			return code;
 		}
 		
-		struct String string __attribute__((__cleanup__(string_free))) = {0};
+		buffer_t string __buffer_free__ = {0};
 		
 		curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 		curl_easy_setopt(curl_easy, CURLOPT_COPYPOSTFIELDS, post_fields);
@@ -937,7 +941,7 @@ int iaexpert_get_resources(
 		
 		const char* const content = json_string_value(obj);
 		
-		const tidy_doc_t* const document = tidy_create();
+		const tidy_doc_t* const document __tidy_release__ = tidy_create();
 		
 		if (document == NULL) {
 			return UERR_TIDY_FAILURE;
@@ -986,7 +990,7 @@ int iaexpert_get_modules(
 	
 	CURL* curl_easy = get_global_curl_easy();
 	
-	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	buffer_t string __buffer_free__ = {0};
 	
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
@@ -1049,12 +1053,12 @@ int iaexpert_get_modules(
 		memcpy(course_join, start, size);
 		course_join[size] = '\0';
 		
-		struct Query query __attribute__((__cleanup__(query_free))) = {0};
+		struct Query query __query_free__ = {0};
 		
 		add_parameter(&query, "course_id", course_id);
 		add_parameter(&query, "course_join", course_join);
 		
-		char* post_fields __attribute__((__cleanup__(charpp_free))) = NULL;
+		char* post_fields __free__ = NULL;
 		const int code = query_stringify(query, &post_fields);
 		
 		if (code != UERR_SUCCESS) {
@@ -1063,7 +1067,7 @@ int iaexpert_get_modules(
 		
 		curl_easy_setopt(curl_easy, CURLOPT_COPYPOSTFIELDS, post_fields);
 		
-		string_free(&string);
+		buffer_free(&string);
 		
 		if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 			return UERR_CURL_FAILURE;
@@ -1072,7 +1076,7 @@ int iaexpert_get_modules(
 		curl_easy_setopt(curl_easy, CURLOPT_HTTPGET, 1L);
 	}
 	
-	const tidy_doc_t* const document = tidy_create();
+	const tidy_doc_t* const document __tidy_release__ = tidy_create();
 	
 	if (document == NULL) {
 		return UERR_TIDY_FAILURE;
@@ -1125,7 +1129,7 @@ int iaexpert_get_page(
 	
 	CURL* curl_easy = get_global_curl_easy();
 	
-	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	buffer_t string __buffer_free__ = {0};
 	
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
@@ -1145,7 +1149,7 @@ int iaexpert_get_page(
 	curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 0L);
 	curl_easy_setopt(curl_easy, CURLOPT_MAXREDIRS, -1);
 	
-	const tidy_doc_t* const document = tidy_create();
+	const tidy_doc_t* const document __tidy_release__ = tidy_create();
 	
 	if (document == NULL) {
 		return UERR_TIDY_FAILURE;

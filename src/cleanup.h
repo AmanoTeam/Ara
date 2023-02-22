@@ -1,11 +1,5 @@
-#include <curl/curl.h>
+void _free_(char** ptr);
 
-#include "ttidy.h"
-
-void curl_slistp_free_all(struct curl_slist** ptr);
-void charpp_free(char** ptr);
-void curlupp_free(CURLU** ptr);
-void curlcharpp_free(char** ptr);
-void tidy_releasep(const tidy_doc_t* const* ptr);
+#define __free__ __attribute__((__cleanup__(_free_)))
 
 #pragma once

@@ -63,13 +63,13 @@ int cyberclass_authorize(
 	json_object_set_new(tree, "email", json_string(username));
 	json_object_set_new(tree, "password", json_string(password));
 	
-	char* post_fields __attribute__((__cleanup__(charpp_free))) = json_dumps(tree, JSON_COMPACT);
+	char* post_fields __free__ = json_dumps(tree, JSON_COMPACT);
 	
 	if (post_fields == NULL) {
 		return UERR_MEMORY_ALLOCATE_FAILURE;
 	}
 	
-	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	buffer_t string __buffer_free__ = {0};
 	
 	const char* const headers[][2] = {
 		{HTTP_HEADER_CONTENT_TYPE, CONTENT_TYPE_JSON}
@@ -189,7 +189,7 @@ int cyberclass_get_resources(
 	strcat(authorization, SPACE);
 	strcat(authorization, credentials->access_token);
 	
-	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	buffer_t string __buffer_free__ = {0};
 	
 	const char* const headers[][2] = {
 		{HTTP_HEADER_AUTHORIZATION, authorization}
@@ -347,7 +347,7 @@ int cyberclass_get_resources(
 		curl_easy_setopt(curl_easy, CURLOPT_URL, url);
 		
 		while (1) {
-			struct String string __attribute__((__cleanup__(string_free))) = {0};
+			buffer_t string __buffer_free__ = {0};
 			
 			curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 			
@@ -531,7 +531,7 @@ int cyberclass_get_modules(
 		list = tmp;
 	}
 	
-	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	buffer_t string __buffer_free__ = {0};
 	
 	char url[strlen(CYBERCLASS_COURSE_ENDPOINT) + strlen(SLASH) + strlen(resource->id) + 1];
 	strcpy(url, CYBERCLASS_COURSE_ENDPOINT);

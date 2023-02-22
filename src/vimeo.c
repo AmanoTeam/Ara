@@ -12,7 +12,10 @@
 #include "stringu.h"
 #include "types.h"
 #include "vimeo.h"
+#include "buffer.h"
+#include "buffer_cleanup.h"
 #include "curl.h"
+#include "curl_cleanup.h"
 
 static const char JSON_TREE_PATTERN[] = "window.playerConfig = ";
 
@@ -29,7 +32,7 @@ int vimeo_parse(
 	
 	CURL* const curl_easy = get_global_curl_easy();
 	
-	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	buffer_t string __buffer_free__ = {0};
 	
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
@@ -297,7 +300,7 @@ int vimeo_parse(
 		
 		const char* const url = json_string_value(obj);
 		
-		struct String string __attribute__((__cleanup__(string_free))) = {0};
+		buffer_t string __buffer_free__ = {0};
 		
 		curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
 		curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
@@ -382,7 +385,7 @@ int vimeo_parse(
 			return UERR_NO_STREAMS_AVAILABLE;
 		}
 		
-		CURLU* cu __attribute__((__cleanup__(curlupp_free))) = curl_url();
+		CURLU* cu __curl_url_cleanup__ = curl_url();
 		
 		if (cu == NULL) {
 			return UERR_CURLU_FAILURE;

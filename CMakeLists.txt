@@ -389,10 +389,28 @@ add_subdirectory(submodules/curl EXCLUDE_FROM_ALL)
 add_subdirectory(submodules/jansson EXCLUDE_FROM_ALL)
 add_subdirectory(submodules/tidy EXCLUDE_FROM_ALL)
 
+set_target_properties(
+	libcurl
+	PROPERTIES
+	IMPORTED_LOCATION $<TARGET_FILE:bearssl>
+)
+
+# Disable SO versioning for all third-party packages
+foreach(target jansson libcurl tidy-share)
+	set_target_properties(
+		${target}
+		PROPERTIES
+		NO_SONAME 1
+	)
+endforeach()
+
 add_executable(
 	sparklec
 	src/callbacks.c
 	src/cleanup.c
+	src/buffer.c
+	src/curl_cleanup.c
+	src/tidy_cleanup.c
 	src/curl.c
 	src/errors.c
 	src/html.c
@@ -412,13 +430,16 @@ add_executable(
 	src/cir.c
 )
 
-foreach(target jansson libcurl tidy-share)
-	set_target_properties(
-		${target}
-		PROPERTIES
-		NO_SONAME 1
-	)
-endforeach()
+add_executable(
+	sparklec-install
+	src/install.c
+	src/filesystem.c
+	src/os.c
+	src/stringu.c
+	src/errors.c
+	src/fstream.c
+	src/cleanup.c
+)
 
 if (SPARKLEC_DISABLE_CERTIFICATE_VALIDATION) 
 	target_compile_definitions(
@@ -526,35 +547,40 @@ else()
 	)
 endif()
 
-target_compile_options(
-	sparklec
-	PRIVATE
-	-Wall -Wextra
-)
-
-if (APPLE)
-	foreach(property BUILD_RPATH INSTALL_RPATH)
-		set_target_properties(
-			sparklec
-			PROPERTIES
-			${property} "@loader_path/../lib:@loader_path"
+foreach(target sparklec sparklec-install)
+	target_compile_options(
+		${target}
+		PRIVATE
+		-Wall -Wextra
+	)
+	
+	if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
+		target_link_options(
+			${target}
+			BEFORE
+			PRIVATE
+			-Wl,-rpath-link,.
 		)
-	endforeach()
-elseif (UNIX)
-	foreach(property BUILD_RPATH INSTALL_RPATH)
-		set_target_properties(
-			sparklec
-			PROPERTIES
-			${property} "$ORIGIN/../lib:$ORIGIN"
-		)
-	endforeach()
-endif()
-
-set_target_properties(
-	libcurl
-	PROPERTIES
-	IMPORTED_LOCATION $<TARGET_FILE:bearssl>
-)
+	endif()
+	
+	if (APPLE)
+		foreach(property BUILD_RPATH INSTALL_RPATH)
+			set_target_properties(
+				${target}
+				PROPERTIES
+				${property} "@loader_path/../lib:@loader_path"
+			)
+		endforeach()
+	elseif (UNIX)
+		foreach(property BUILD_RPATH INSTALL_RPATH)
+			set_target_properties(
+				${target}
+				PROPERTIES
+				${property} "$ORIGIN/../lib:$ORIGIN"
+			)
+		endforeach()
+	endif()
+endforeach()
 
 if (APPLE)
 	foreach(property BUILD_RPATH INSTALL_RPATH)
@@ -584,24 +610,33 @@ foreach(property RUNTIME_OUTPUT_DIRECTORY LIBRARY_OUTPUT_DIRECTORY)
 	endforeach()
 endforeach()
 
+# Enable Unicode on Windows builds
 if (WIN32)
+	foreach(target sparklec sparklec-install)
+		target_sources(
+			${target}
+			PRIVATE
+			src/wio.c
+		)
+		
+		target_compile_definitions(
+			${target}
+			PRIVATE
+			UNICODE _UNICODE
+		)
+		
+		target_link_options(
+			${target}
+			BEFORE
+			PRIVATE
+			-municode
+		)
+	endforeach()
+	
 	target_sources(
-		sparklec
+		sparklec-install
 		PRIVATE
-		src/wio.c
-	)
-	
-	target_compile_definitions(
-		sparklec
-		PRIVATE
-		UNICODE _UNICODE
-	)
-	
-	target_link_options(
-		sparklec
-		BEFORE
-		PRIVATE
-		-municode
+		src/wregistry.c
 	)
 endif()
 
@@ -612,7 +647,7 @@ if (SPARKLEC_ENABLE_LTO)
 	check_ipo_supported(RESULT SPARKLEC_HAS_LTO LANGUAGES C)
 	
 	if (SPARKLEC_HAS_LTO)
-		foreach(target sparklec bearssl jansson libcurl tidy-share)
+		foreach(target sparklec sparklec-install bearssl jansson libcurl tidy-share)
 			set_target_properties(
 				${target}
 				PROPERTIES
@@ -638,7 +673,12 @@ target_link_libraries(
 	tidy-share
 )
 
-foreach(target sparklec bearssl jansson libcurl tidy-share)
+target_link_libraries(
+	sparklec-install
+	bearssl
+)
+
+foreach(target sparklec sparklec-install bearssl jansson libcurl tidy-share)
 	install(
 		TARGETS ${target}
 		RUNTIME DESTINATION bin

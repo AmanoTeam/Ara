@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 
 #include <curl/curl.h>
 #include <jansson.h>
@@ -17,6 +18,9 @@
 #include "query.h"
 #include "symbols.h"
 #include "curl.h"
+#include "curl_cleanup.h"
+#include "query_cleanup.h"
+#include "buffer_cleanup.h"
 #include "estrategia.h"
 #include "estrategia_concursos.h"
 
@@ -62,7 +66,7 @@ static int estrategia_concursos_get_exclusives(
 	
 	CURL* curl_easy = get_global_curl_easy();
 	
-	CURLU* cu __attribute__((__cleanup__(curlupp_free))) = curl_url();
+	CURLU* cu __curl_url_cleanup__ = curl_url();
 	
 	if (cu == NULL) {
 		return UERR_CURLU_FAILURE;
@@ -83,11 +87,11 @@ static int estrategia_concursos_get_exclusives(
 		char page_number[intlen(index) + 1];
 		snprintf(page_number, sizeof(page_number), "%zu", index);
 		
-		struct Query query __attribute__((__cleanup__(query_free))) = {0};
+		struct Query query __query_free__ = {0};
 		
 		add_parameter(&query, "page", page_number);
 		
-		char* query_fields __attribute__((__cleanup__(charpp_free))) = NULL;
+		char* query_fields __free__ = NULL;
 		const int code = query_stringify(query, &query_fields);
 		
 		if (code != UERR_SUCCESS) {
@@ -98,7 +102,7 @@ static int estrategia_concursos_get_exclusives(
 			return UERR_CURLU_FAILURE;
 		}
 		
-		char* url __attribute__((__cleanup__(curlcharpp_free))) = NULL;
+		char* url __curl_free__ = NULL;
 		
 		if (curl_url_get(cu, CURLUPART_URL, &url, 0) != CURLUE_OK) {
 			return UERR_CURLU_FAILURE;
@@ -106,7 +110,7 @@ static int estrategia_concursos_get_exclusives(
 		
 		curl_easy_setopt(curl_easy, CURLOPT_URL, url);
 		
-		struct String string __attribute__((__cleanup__(string_free))) = {0};
+		buffer_t string __buffer_free__ = {0};
 		
 		curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 		
@@ -335,13 +339,13 @@ int estrategia_concursos_get_resources(
 	strcat(authorization, SPACE);
 	strcat(authorization, credentials->access_token);
 	
-	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	buffer_t string __buffer_free__ = {0};
 	
 	const char* const headers[][2] = {
 		{HTTP_HEADER_AUTHORIZATION, authorization}
 	};
 	
-	struct curl_slist* list __attribute__((__cleanup__(curl_slistp_free_all))) = NULL;
+	struct curl_slist* list __curl_slist_free_all__ = NULL;
 	
 	for (size_t index = 0; index < sizeof(headers) / sizeof(*headers); index++) {
 		const char* const* const header = headers[index];
@@ -354,7 +358,7 @@ int estrategia_concursos_get_resources(
 		strcat(item, HTTP_HEADER_SEPARATOR);
 		strcat(item, value);
 		
-		struct curl_slist* tmp = curl_slist_append(list, item);
+		struct curl_slist* const tmp = curl_slist_append(list, item);
 		
 		if (tmp == NULL) {
 			return UERR_CURL_FAILURE;
@@ -564,7 +568,7 @@ int estrategia_concursos_get_modules(
 		{HTTP_HEADER_AUTHORIZATION, authorization}
 	};
 	
-	struct curl_slist* list __attribute__((__cleanup__(curl_slistp_free_all))) = NULL;
+	struct curl_slist* list __curl_slist_free_all__ = NULL;
 	
 	for (size_t index = 0; index < sizeof(headers) / sizeof(*headers); index++) {
 		const char* const* const header = headers[index];
@@ -577,7 +581,7 @@ int estrategia_concursos_get_modules(
 		strcat(item, HTTP_HEADER_SEPARATOR);
 		strcat(item, value);
 		
-		struct curl_slist* tmp = curl_slist_append(list, item);
+		struct curl_slist* const tmp = curl_slist_append(list, item);
 		
 		if (tmp == NULL) {
 			return UERR_CURL_FAILURE;
@@ -586,7 +590,7 @@ int estrategia_concursos_get_modules(
 		list = tmp;
 	}
 	
-	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	buffer_t string __buffer_free__ = {0};
 	
 	char url[strlen(ESTRATEGIA_CONCURSOS_COURSE_ENDPOINT) + strlen(SLASH) + strlen(resource->id) + 1];
 	strcpy(url, ESTRATEGIA_CONCURSOS_COURSE_ENDPOINT);
@@ -735,7 +739,7 @@ int estrategia_concursos_get_module(
 		{HTTP_HEADER_AUTHORIZATION, authorization}
 	};
 	
-	struct curl_slist* list __attribute__((__cleanup__(curl_slistp_free_all))) = NULL;
+	struct curl_slist* list __curl_slist_free_all__ = NULL;
 	
 	for (size_t index = 0; index < sizeof(headers) / sizeof(*headers); index++) {
 		const char* const* const header = headers[index];
@@ -748,7 +752,7 @@ int estrategia_concursos_get_module(
 		strcat(item, HTTP_HEADER_SEPARATOR);
 		strcat(item, value);
 		
-		struct curl_slist* tmp = curl_slist_append(list, item);
+		struct curl_slist* const tmp = curl_slist_append(list, item);
 		
 		if (tmp == NULL) {
 			return UERR_CURL_FAILURE;
@@ -757,7 +761,7 @@ int estrategia_concursos_get_module(
 		list = tmp;
 	}
 	
-	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	buffer_t string __buffer_free__ = {0};
 	
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);

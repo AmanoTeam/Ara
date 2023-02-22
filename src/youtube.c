@@ -13,6 +13,9 @@
 #include "types.h"
 #include "youtube.h"
 #include "curl.h"
+#include "curl_cleanup.h"
+#include "query_cleanup.h"
+#include "buffer_cleanup.h"
 #include "cleanup.h"
 
 static const char YOUTUBE_PLAYER_ENDPOINT[] = "https://www.youtube.com/youtubei/v1/player";
@@ -44,7 +47,7 @@ int youtube_parse(
 	
 	CURL* const curl_easy = get_global_curl_easy();
 	
-	CURLU* cu __attribute__((__cleanup__(curlupp_free))) = curl_url();
+	CURLU* cu __curl_url_cleanup__ = curl_url();
 	
 	if (cu == NULL) {
 		return UERR_CURLU_FAILURE;
@@ -54,7 +57,7 @@ int youtube_parse(
 		return UERR_CURLU_FAILURE;
 	}
 	
-	char* path __attribute__((__cleanup__(curlcharpp_free))) = NULL;
+	char* path __curl_free__ = NULL;
 	
 	if (curl_url_get(cu, CURLUPART_PATH, &path, 0) != CURLUE_OK) {
 		return UERR_CURLU_FAILURE;
@@ -65,7 +68,7 @@ int youtube_parse(
 	char video_id[strlen(start) + 1];
 	strcpy(video_id, start);
 	
-	struct curl_slist* list __attribute__((__cleanup__(curl_slistp_free_all))) = NULL;
+	struct curl_slist* list __curl_slist_free_all__ = NULL;
 	
 	for (size_t index = 0; index < sizeof(YOUTUBE_PLAYER_HEADERS) / sizeof(*YOUTUBE_PLAYER_HEADERS); index++) {
 		const char* const* const header = YOUTUBE_PLAYER_HEADERS[index];
@@ -78,7 +81,7 @@ int youtube_parse(
 		strcat(item, HTTP_HEADER_SEPARATOR);
 		strcat(item, value);
 		
-		struct curl_slist* tmp = curl_slist_append(list, item);
+		struct curl_slist* const tmp = curl_slist_append(list, item);
 		
 		if (tmp == NULL) {
 			return UERR_CURL_FAILURE;
@@ -87,19 +90,19 @@ int youtube_parse(
 		list = tmp;
 	}
 	
-	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	buffer_t string __buffer_free__ = {0};
 	
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 	curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, list);
 	
-	struct Query uquery __attribute__((__cleanup__(query_free))) = {0};
+	struct Query query __query_free__ = {0};
 	
-	add_parameter(&uquery, "token", YOUTUBE_PLAYER_KEY);
-	add_parameter(&uquery, "prettyPrint", "false");
+	add_parameter(&query, "token", YOUTUBE_PLAYER_KEY);
+	add_parameter(&query, "prettyPrint", "false");
 	
-	char* query __attribute__((__cleanup__(charpp_free))) = NULL;
-	const int code = query_stringify(uquery, &query);
+	char* get_fields __free__ = NULL;
+	const int code = query_stringify(query, &get_fields);
 	
 	if (code != UERR_SUCCESS) {
 		return code;
@@ -109,11 +112,11 @@ int youtube_parse(
 		return UERR_CURLU_FAILURE;
 	}
 	
-	if (curl_url_set(cu, CURLUPART_QUERY, query, 0) != CURLUE_OK) {
+	if (curl_url_set(cu, CURLUPART_QUERY, get_fields, 0) != CURLUE_OK) {
 		return UERR_CURLU_FAILURE;
 	}
 	
-	char* uri __attribute__((__cleanup__(curlcharpp_free))) = NULL;
+	char* uri __curl_free__ = NULL;
 	
 	if (curl_url_get(cu, CURLUPART_URL, &uri, 0) != CURLUE_OK) {
 		return UERR_CURLU_FAILURE;
@@ -147,7 +150,7 @@ int youtube_parse(
 	
 	json_object_set_new(subtree, "videoId", json_string(video_id));
 	
-	char* post_fields __attribute__((__cleanup__(charpp_free))) = json_dumps(subtree, JSON_COMPACT);
+	char* post_fields __free__ = json_dumps(subtree, JSON_COMPACT);
 	
 	if (post_fields == NULL) {
 		return UERR_MEMORY_ALLOCATE_FAILURE;

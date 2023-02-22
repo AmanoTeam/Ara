@@ -4,9 +4,10 @@
 
 #ifdef _WIN32
 	#include <stdio.h>
-	#include <fcntl.h>
-	#include <io.h>
-	#include <locale.h>
+	#ifdef _UNICODE
+		#include <fcntl.h>
+		#include <io.h>
+	#endif
 #else
 	#include <sys/resource.h>
 #endif
@@ -24,8 +25,11 @@
 #include "stringu.h"
 #include "symbols.h"
 #include "curl.h"
+#include "curl_cleanup.h"
 #include "hotmart.h"
 #include "fstream.h"
+#include "buffer.h"
+#include "buffer_cleanup.h"
 #include "providers.h"
 #include "input.h"
 #include "sparklec.h"
@@ -109,7 +113,7 @@ static int m3u8_download(const char* const url, const char* const output) {
 	CURLM* const curl_multi = get_global_curl_multi();
 	CURL* const curl_easy = get_global_curl_easy();
 	
-	struct String string __attribute__((__cleanup__(string_free))) = {0};
+	buffer_t string __buffer_free__ = {0};
 	
 	curl_easy_setopt(curl_easy, CURLOPT_URL, url);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
@@ -137,7 +141,7 @@ static int m3u8_download(const char* const url, const char* const output) {
 	strcat(playlist_filename, DOT);
 	strcat(playlist_filename, M3U8_FILE_EXTENSION);
 	
-	CURLU* cu __attribute__((__cleanup__(curlupp_free))) = curl_url();
+	CURLU* cu __curl_url_cleanup__ = curl_url();
 	curl_url_set(cu, CURLUPART_URL, url, 0);
 	
 	for (size_t index = 0; index < tags.offset; index++) {
@@ -149,7 +153,7 @@ static int m3u8_download(const char* const url, const char* const output) {
 			curl_url_set(cu, CURLUPART_URL, url, 0);
 			curl_url_set(cu, CURLUPART_URL, attribute->value, 0);
 			
-			char* key_url __attribute__((__cleanup__(curlcharpp_free))) = NULL;
+			char* key_url __curl_free__ = NULL;
 			curl_url_get(cu, CURLUPART_URL, &key_url, 0);
 			
 			char* filename = malloc(strlen(output) + strlen(DOT) + strlen(KEY_FILE_EXTENSION) + 1);
@@ -197,7 +201,7 @@ static int m3u8_download(const char* const url, const char* const output) {
 			curl_url_set(cu, CURLUPART_URL, url, 0);
 			curl_url_set(cu, CURLUPART_URL, tag->uri, 0);
 			
-			char* segment_url __attribute__((__cleanup__(curlcharpp_free))) = NULL;
+			char* segment_url __curl_free__ = NULL;
 			curl_url_get(cu, CURLUPART_URL, &segment_url, 0);
 			
 			handle = curl_easy_new();
@@ -252,7 +256,7 @@ static int m3u8_download(const char* const url, const char* const output) {
 			curl_url_set(cu, CURLUPART_URL, url, 0);
 			curl_url_set(cu, CURLUPART_URL, tag->uri, 0);
 			
-			char* segment_url __attribute__((__cleanup__(curlcharpp_free))) = NULL;
+			char* segment_url __curl_free__ = NULL;
 			curl_url_get(cu, CURLUPART_URL, &segment_url, 0);
 			
 			char value[intlen(segment_number) + 1];
@@ -383,8 +387,6 @@ int main(void) {
 			_setmode(_fileno(stdout), _O_WTEXT);
 			_setmode(_fileno(stderr), _O_WTEXT);
 			_setmode(_fileno(stdin), _O_WTEXT);
-			
-			setlocale(LC_ALL, ".UTF8");
 		#endif
 	#else
 		struct rlimit rlim = {0};
@@ -1439,8 +1441,8 @@ int main(void) {
 						case 0: {
 							fprintf(stderr, "- O arquivo '%s' não existe, baixando-o\r\n", media_filename);
 							
-							char* audio_path __attribute__((__cleanup__(charpp_free))) = NULL;
-							char* video_path __attribute__((__cleanup__(charpp_free))) = NULL;
+							char* audio_path __free__ = NULL;
+							char* video_path __free__ = NULL;
 							
 							if (media->audio.url != NULL) {
 								audio_path = malloc(strlen(temporary_directory) + strlen(PATH_SEPARATOR) + strlen(media->audio.short_filename) + 1);

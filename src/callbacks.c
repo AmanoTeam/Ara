@@ -5,6 +5,7 @@
 #include "callbacks.h"
 #include "types.h"
 #include "fstream.h"
+#include "buffer.h"
 
 #if defined(_WIN32) && defined(_UNICODE)
 	#include "wio.h"
@@ -12,7 +13,7 @@
 
 size_t curl_write_string_cb(char* ptr, size_t size, size_t nmemb, void* userdata) {
 	
-	struct String* string = (struct String*) userdata;
+	buffer_t* string = (buffer_t*) userdata;
 	
 	const size_t chunk_size = size * nmemb;
 	const size_t slength = string->slength + chunk_size;

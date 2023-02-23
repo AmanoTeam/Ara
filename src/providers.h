@@ -54,7 +54,7 @@ static const struct Provider PROVIDERS[] = {
 #ifndef SPARKLEC_DISABLE_ESTRATEGIA_CONCURSOS
 	{
 		.label = "Estratégia Concursos",
-		.url = "https://www.estrategiaconcursos.com.br",
+		.url = "https://estrategiaconcursos.com.br",
 		.methods = {
 			.authorize = &estrategia_concursos_authorize,
 			.get_resources = &estrategia_concursos_get_resources,

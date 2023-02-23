@@ -284,8 +284,6 @@ int main(void) {
 			return EXIT_FAILURE;
 		}
 		
-		printf("Modificando o valor da chave de registro %%PATH%%\r\n");
-		
 		char new_path[(current_path == NULL ? 0 : strlen(current_path) + strlen(SEMICOLON)) + strlen(executable_directory) + 1];
 		*new_path = '\0';
 		
@@ -297,6 +295,8 @@ int main(void) {
 		strcat(new_path, executable_directory);
 		
 		free(current_path);
+		
+		printf("+ Modificando o valor da chave de registro %%PATH%% para '%s'\r\n", new_path);
 		
 		if (wregistry_put(HKEY_CURRENT_USER, "Environment", "Path", new_path) == -1) {
 			const struct SystemError error = get_system_error();

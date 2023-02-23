@@ -17,10 +17,6 @@
 	#include "estrategia_vestibulares.h"
 #endif
 
-#ifndef SPARKLEC_DISABLE_CYBERCLASS
-	#include "cyberclass.h"
-#endif
-
 #ifndef SPARKLEC_DISABLE_IAEXPERT
 	#include "iaexpert.h"
 #endif
@@ -85,19 +81,6 @@ static const struct Provider PROVIDERS[] = {
 			.get_page = &estrategia_vestibulares_get_page
 		},
 		.directory = "Estratégia"
-	},
-#endif
-#ifndef SPARKLEC_DISABLE_CYBERCLASS
-	{
-		.label = "CyberClass",
-		.url = "https://www.cyberclass.com.br",
-		.methods = {
-			.authorize = &cyberclass_authorize,
-			.get_resources = &cyberclass_get_resources,
-			.get_modules = &cyberclass_get_modules,
-			.get_module = &cyberclass_get_module,
-			.get_page = &cyberclass_get_page
-		}
 	},
 #endif
 #ifndef SPARKLEC_DISABLE_IAEXPERT

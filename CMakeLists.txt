@@ -18,7 +18,6 @@ if (NOT SPARKLEC_DISABLE_ESTRATEGIA)
 	option(SPARKLEC_DISABLE_ESTRATEGIA_VESTIBULARES "Disable support for Estratégia Vestibulares" OFF)
 endif()
 
-option(SPARKLEC_DISABLE_CYBERCLASS "Disable support for CyberClass" OFF)
 option(SPARKLEC_DISABLE_IAEXPERT "Disable support for IA Expert Academy" OFF)
 option(SPARKLEC_DISABLE_QCONCURSOS "Disable support for QConcursos" OFF)
 option(SPARKLEC_DISABLE_CERTIFICATE_VALIDATION "Disable SSL certificate validation in libcurl" OFF)
@@ -502,20 +501,6 @@ else()
 		sparklec
 		PRIVATE
 		SPARKLEC_DISABLE_ESTRATEGIA
-	)
-endif()
-
-if (SPARKLEC_DISABLE_CYBERCLASS)
-	target_compile_definitions(
-		sparklec
-		PRIVATE
-		SPARKLEC_DISABLE_CYBERCLASS
-	)
-else()
-	target_sources(
-		sparklec
-		PRIVATE
-		src/cyberclass.c
 	)
 endif()
 

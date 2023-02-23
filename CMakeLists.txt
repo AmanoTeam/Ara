@@ -16,6 +16,7 @@ option(SPARKLEC_DISABLE_ESTRATEGIA "Disable support for Estratégia websites" OF
 if (NOT SPARKLEC_DISABLE_ESTRATEGIA)
 	option(SPARKLEC_DISABLE_ESTRATEGIA_CONCURSOS "Disable support for Estratégia Concursos" OFF)
 	option(SPARKLEC_DISABLE_ESTRATEGIA_VESTIBULARES "Disable support for Estratégia Vestibulares" OFF)
+	option(SPARKLEC_DISABLE_ESTRATEGIA_MILITARES "Disable support for Estratégia Militares" OFF)
 endif()
 
 option(SPARKLEC_DISABLE_IAEXPERT "Disable support for IA Expert Academy" OFF)
@@ -493,6 +494,20 @@ if (NOT SPARKLEC_DISABLE_ESTRATEGIA)
 			sparklec
 			PRIVATE
 			src/estrategia_vestibulares.c
+		)
+	endif()
+	
+	if (SPARKLEC_DISABLE_ESTRATEGIA_MILITARES)
+		target_compile_definitions(
+			sparklec
+			PRIVATE
+			SPARKLEC_DISABLE_ESTRATEGIA_MILITARES
+		)
+	else()
+		target_sources(
+			sparklec
+			PRIVATE
+			src/estrategia_militares.c
 		)
 	endif()
 else()

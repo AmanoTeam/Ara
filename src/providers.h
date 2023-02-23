@@ -7,6 +7,7 @@
 #ifdef SPARKLEC_DISABLE_ESTRATEGIA
 	#define SPARKLEC_DISABLE_ESTRATEGIA_CONCURSOS
 	#define SPARKLEC_DISABLE_ESTRATEGIA_VESTIBULARES
+	#define SPARKLEC_DISABLE_ESTRATEGIA_MILITARES
 #endif
 
 #ifndef SPARKLEC_DISABLE_ESTRATEGIA_CONCURSOS
@@ -15,6 +16,10 @@
 
 #ifndef SPARKLEC_DISABLE_ESTRATEGIA_VESTIBULARES
 	#include "estrategia_vestibulares.h"
+#endif
+
+#ifndef SPARKLEC_DISABLE_ESTRATEGIA_MILITARES
+	#include "estrategia_militares.h"
 #endif
 
 #ifndef SPARKLEC_DISABLE_IAEXPERT
@@ -75,6 +80,20 @@ static const struct Provider PROVIDERS[] = {
 			.get_modules = &estrategia_vestibulares_get_modules,
 			.get_module = &estrategia_vestibulares_get_module,
 			.get_page = &estrategia_vestibulares_get_page
+		},
+		.directory = "Estratégia"
+	},
+#endif
+#ifndef SPARKLEC_DISABLE_ESTRATEGIA_MILITARES
+	{
+		.label = "Estratégia Militares",
+		.url = "https://militares.estrategia.com",
+		.methods = {
+			.authorize = &estrategia_militares_authorize,
+			.get_resources = &estrategia_militares_get_resources,
+			.get_modules = &estrategia_militares_get_modules,
+			.get_module = &estrategia_militares_get_module,
+			.get_page = &estrategia_militares_get_page
 		},
 		.directory = "Estratégia"
 	},

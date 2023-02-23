@@ -19,7 +19,6 @@ if (NOT SPARKLEC_DISABLE_ESTRATEGIA)
 endif()
 
 option(SPARKLEC_DISABLE_IAEXPERT "Disable support for IA Expert Academy" OFF)
-option(SPARKLEC_DISABLE_QCONCURSOS "Disable support for QConcursos" OFF)
 option(SPARKLEC_DISABLE_CERTIFICATE_VALIDATION "Disable SSL certificate validation in libcurl" OFF)
 
 set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
@@ -515,20 +514,6 @@ else()
 		sparklec
 		PRIVATE
 		src/iaexpert.c
-	)
-endif()
-
-if (SPARKLEC_DISABLE_QCONCURSOS)
-	target_compile_definitions(
-		sparklec
-		PRIVATE
-		SPARKLEC_DISABLE_QCONCURSOS
-	)
-else()
-	target_sources(
-		sparklec
-		PRIVATE
-		src/qconcursos.c
 	)
 endif()
 

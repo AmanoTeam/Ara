@@ -225,6 +225,7 @@ CURLcode curl_easy_perform_retry(CURL* const curl) {
 				
 				break;
 			}
+			case CURLE_SEND_ERROR:
 			case CURLE_OPERATION_TIMEDOUT:
 				break;
 			default:

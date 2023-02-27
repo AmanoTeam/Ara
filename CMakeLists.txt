@@ -422,6 +422,7 @@ add_executable(
 	src/os.c
 	src/vimeo.c
 	src/youtube.c
+	src/panda.c
 	src/fstream.c
 	src/credentials.c
 	src/input.c

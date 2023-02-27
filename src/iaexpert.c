@@ -39,8 +39,6 @@ static const char IAEXPERT_COURSES_ENDPOINT[] =
 	IAEXPERT_HOMEPAGE_ENDPOINT
 	"/cursos-online-assinatura/";
 
-static const char VIMEO_URL_PATTERN[] = "https://player.vimeo.com/video";
-
 static const tidy_attr_t* attribute_find(
 	const tidy_node_t* const root,
 	const char* const tag,
@@ -1193,7 +1191,7 @@ int iaexpert_get_page(
 		
 		struct Media media = {0};
 		
-		if (memcmp(url, VIMEO_URL_PATTERN, strlen(VIMEO_URL_PATTERN)) == 0) {
+		if (vimeo_matches(url)) {
 			const int code = vimeo_parse(url, resource, page, &media, page->url);
 			
 			if (!(code == UERR_SUCCESS || code == UERR_NO_STREAMS_AVAILABLE)) {

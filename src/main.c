@@ -170,6 +170,7 @@ static int m3u8_download(const char* const url, const char* const output) {
 				return UERR_FAILURE;
 			}
 			
+			curl_easy_setopt(handle, CURLOPT_REFERER, url);
 			curl_easy_setopt(handle, CURLOPT_URL, key_url);
 			
 			struct FStream* stream = fstream_open(filename, FSTREAM_WRITE);
@@ -278,6 +279,7 @@ static int m3u8_download(const char* const url, const char* const output) {
 				return UERR_FAILURE;
 			}
 			
+			curl_easy_setopt(handle, CURLOPT_REFERER, url);
 			curl_easy_setopt(handle, CURLOPT_URL, segment_url);
 			
 			struct FStream* stream = fstream_open(filename, FSTREAM_WRITE);

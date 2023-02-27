@@ -17,7 +17,16 @@
 #include "curl.h"
 #include "curl_cleanup.h"
 
+static const char VIMEO_URL_PATTERN[] = "https://player.vimeo.com/video";
+
 static const char JSON_TREE_PATTERN[] = "window.playerConfig = ";
+
+int vimeo_matches(const char* const url) {
+	
+	const int matches = memcmp(url, VIMEO_URL_PATTERN, strlen(VIMEO_URL_PATTERN)) == 0;
+	return matches;
+	
+}
 
 int vimeo_parse(
 	const char* const url,

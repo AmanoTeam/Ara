@@ -20,6 +20,7 @@
 #include "vimeo.h"
 #include "youtube.h"
 #include "curl.h"
+#include "panda.h"
 #include "curl_cleanup.h"
 #include "query_cleanup.h"
 #include "buffer.h"
@@ -70,9 +71,6 @@ static const char HOTMART_TOKEN_CHECK_ENDPOINT[] =
 static const char HOTMART_PROFILE_ENDPOINT[] = 
 	HOTMART_API_VLC_PREFIX
 	"/userprofile/rest/v1/user";
-
-static const char VIMEO_URL_PATTERN[] = "https://player.vimeo.com/video";
-static const char YOUTUBE_URL_PATTERN[] = "https://www.youtube.com/embed";
 
 int hotmart_authorize(
 	const char* const username,
@@ -1220,7 +1218,7 @@ int hotmart_get_page(
 			
 			struct Media media = {0};
 			
-			if (memcmp(url, VIMEO_URL_PATTERN, strlen(VIMEO_URL_PATTERN)) == 0) {
+			if (vimeo_matches(url)) {
 				char referer[strlen(resource->url) + strlen(SLASH) + strlen(HOTMART_EMBED_PAGE_PREFIX) + strlen(page->id) + 1];
 				strcpy(referer, resource->url);
 				strcat(referer, SLASH);
@@ -1232,8 +1230,14 @@ int hotmart_get_page(
 				if (!(code == UERR_SUCCESS || code == UERR_NO_STREAMS_AVAILABLE)) {
 					return code;
 				}
-			} else if (memcmp(url, YOUTUBE_URL_PATTERN, strlen(YOUTUBE_URL_PATTERN)) == 0) {
+			} else if (youtube_matches(url)) {
 				const int code = youtube_parse(url, resource, page, &media, NULL);
+				
+				if (!(code == UERR_SUCCESS || code == UERR_NO_STREAMS_AVAILABLE)) {
+					return code;
+				}
+			} else if (panda_matches(url)) {
+				const int code = panda_parse(url, resource, page, &media, NULL);
 				
 				if (!(code == UERR_SUCCESS || code == UERR_NO_STREAMS_AVAILABLE)) {
 					return code;

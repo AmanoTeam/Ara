@@ -1,4 +1,6 @@
-#include "hotmart.h"
+#include "resources.h"
+
+int vimeo_matches(const char* const url);
 
 int vimeo_parse(
 	const char* const url,

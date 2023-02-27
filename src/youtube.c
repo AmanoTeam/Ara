@@ -18,6 +18,8 @@
 #include "buffer_cleanup.h"
 #include "cleanup.h"
 
+static const char YOUTUBE_URL_PATTERN[] = "https://www.youtube.com/embed";
+
 static const char YOUTUBE_PLAYER_ENDPOINT[] = "https://www.youtube.com/youtubei/v1/player";
 static const char YOUTUBE_PLAYER_KEY[] = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
 
@@ -32,6 +34,13 @@ static const char* const YOUTUBE_PLAYER_HEADERS[][2] = {
 	{"Content-Type", "application/json"},
 	{"User-Agent", YOUTUBE_CLIENT_USER_AGENT}
 };
+
+int youtube_matches(const char* const url) {
+	
+	const int matches = memcmp(url, YOUTUBE_URL_PATTERN, strlen(YOUTUBE_URL_PATTERN)) == 0;
+	return matches;
+	
+}
 
 int youtube_parse(
 	const char* const url,

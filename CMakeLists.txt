@@ -76,10 +76,10 @@ if (APPLE)
 endif()
 
 include_directories(
-	src
-	submodules/bearssl/src
-	submodules/bearssl/inc
-	${CMAKE_CURRENT_BINARY_DIR}/submodules/jansson/include
+	"${CMAKE_SOURCE_DIR}/src"
+	"${CMAKE_SOURCE_DIR}/submodules/bearssl/src"
+	"${CMAKE_SOURCE_DIR}/submodules/bearssl/inc"
+	"${CMAKE_CURRENT_BINARY_DIR}/submodules/jansson/include"
 )
 
 add_library(
@@ -394,6 +394,256 @@ set_target_properties(
 	IMPORTED_LOCATION $<TARGET_FILE:bearssl>
 )
 
+set(FFMPEG_SOURCE_DIRECTORY "${CMAKE_SOURCE_DIR}/submodules/ffmpeg")
+set(FFMPEG_BUILD_DIRECTORY "${CMAKE_BINARY_DIR}/ffmpeg-build")
+set(FFMPEG_INSTALL_PREFIX "${FFMPEG_BUILD_DIRECTORY}/binaries")
+
+set(
+	FFMPEG_CONFIGURE_FLAGS
+	--disable-symver
+	--disable-asm
+	--disable-all
+	--enable-avcodec
+	--enable-avformat
+	--enable-avutil
+	--disable-zlib
+	--disable-network
+	--enable-small
+	--disable-lzma
+	--disable-pthreads
+	--disable-w32threads
+	--disable-sdl2
+	--disable-alsa
+	--disable-bzlib
+	--disable-iconv
+	--disable-xlib
+	--disable-libxcb
+	--disable-doc
+	--disable-static
+	--enable-shared
+	--disable-debug
+	--enable-ffmpeg
+	--enable-protocol=file,crypto
+	--enable-decoder=aac,h264
+	--enable-muxer=aac,h264,matroska,mp4,webm
+	--enable-demuxer=aac,h264,hls,mp4
+	--disable-vulkan
+	--disable-neon
+	--disable-schannel
+	--prefix="${FFMPEG_INSTALL_PREFIX}"
+	--enable-pic
+	--disable-appkit
+	--disable-coreimage
+	--disable-securetransport
+	--disable-avfoundation
+	--enable-version3
+)
+
+if (SPARKLEC_ENABLE_LTO)
+	list(APPEND FFMPEG_CONFIGURE_FLAGS "--enable-lto")
+endif()
+
+if (CMAKE_CROSSCOMPILING)
+	string(TOLOWER "${CMAKE_SYSTEM_NAME}" system_name)
+	
+	if ("${system_name}" STREQUAL "windows")
+		set(system_name "mingw32")
+	elseif ("${system_name}" STREQUAL "android")
+		list(APPEND FFMPEG_CONFIGURE_FLAGS "--as=${CMAKE_C_COMPILER}")
+		list(APPEND FFMPEG_CONFIGURE_FLAGS "--nm=${ANDROID_TOOLCHAIN_ROOT}/bin/llvm-nm")
+		list(APPEND FFMPEG_CONFIGURE_FLAGS "--strip=${ANDROID_TOOLCHAIN_ROOT}/bin/llvm-strip")
+	elseif ("${system_name}" STREQUAL "darwin")
+		list(APPEND FFMPEG_CONFIGURE_FLAGS "--cc=${CMAKE_C_COMPILER}")
+		list(APPEND FFMPEG_CONFIGURE_FLAGS "--extra-cflags=-mmacosx-version-min=11.3")
+	endif()
+	
+	list(APPEND FFMPEG_CONFIGURE_FLAGS "--cross-prefix=${TOOLCHAIN_PREFIX}-")
+	list(APPEND FFMPEG_CONFIGURE_FLAGS "--target-os=${system_name}")
+	list(APPEND FFMPEG_CONFIGURE_FLAGS "--arch=${CMAKE_SYSTEM_PROCESSOR}")
+else()
+	list(APPEND FFMPEG_CONFIGURE_FLAGS "--cc=${CMAKE_C_COMPILER}")
+	list(APPEND FFMPEG_CONFIGURE_FLAGS "--ld=${CMAKE_C_COMPILER}")
+endif()
+
+set(FFMPEG_INCLUDE_DIRS "${FFMPEG_INSTALL_PREFIX}/include")
+
+if (NOT EXISTS "${FFMPEG_BUILD_DIRECTORY}")
+	file(MAKE_DIRECTORY "${FFMPEG_BUILD_DIRECTORY}")
+endif()
+
+if (NOT EXISTS "${FFMPEG_BUILD_DIRECTORY}/Makefile")
+	message("-- Configuring FFmpeg")
+	
+	execute_process(
+		COMMAND bash
+		"${FFMPEG_SOURCE_DIRECTORY}/configure"
+		${FFMPEG_CONFIGURE_FLAGS}
+		WORKING_DIRECTORY "${FFMPEG_BUILD_DIRECTORY}"
+		COMMAND_ERROR_IS_FATAL ANY
+	)
+endif()
+
+if (NOT EXISTS "${FFMPEG_INSTALL_PREFIX}")
+	add_custom_command(
+		OUTPUT "${FFMPEG_INSTALL_PREFIX}"
+		COMMAND make
+		COMMAND make install
+		WORKING_DIRECTORY "${FFMPEG_BUILD_DIRECTORY}"
+		COMMENT "-- Building FFmpeg"
+	)
+endif()
+
+add_custom_target(ffmpeg ALL DEPENDS "${FFMPEG_INSTALL_PREFIX}")
+
+# Extract libavformat version
+file(READ "${FFMPEG_SOURCE_DIRECTORY}/libavformat/version_major.h" FILE_CONTENTS)
+string(REGEX MATCH "#define LIBAVFORMAT_VERSION_MAJOR *([0-9]+)" _ ${FILE_CONTENTS})
+
+set(LIBAVFORMAT_VERSION_MAJOR "${CMAKE_MATCH_1}")
+
+file(READ "${FFMPEG_SOURCE_DIRECTORY}/libavformat/version.h" FILE_CONTENTS)
+
+string(REGEX MATCH "#define LIBAVFORMAT_VERSION_MINOR *([0-9]+)" _ ${FILE_CONTENTS})
+set(LIBAVFORMAT_VERSION_MINOR "${CMAKE_MATCH_1}")
+
+string(REGEX MATCH "#define LIBAVFORMAT_VERSION_MICRO *([0-9]+)" _ ${FILE_CONTENTS})
+set(LIBAVFORMAT_VERSION_MICRO "${CMAKE_MATCH_1}")
+
+# Extract libavcodec version
+file(READ "${FFMPEG_SOURCE_DIRECTORY}/libavcodec/version_major.h" FILE_CONTENTS)
+string(REGEX MATCH "#define LIBAVCODEC_VERSION_MAJOR *([0-9]+)" _ ${FILE_CONTENTS})
+
+set(LIBAVCODEC_VERSION_MAJOR "${CMAKE_MATCH_1}")
+
+file(READ "${FFMPEG_SOURCE_DIRECTORY}/libavcodec/version.h" FILE_CONTENTS)
+
+string(REGEX MATCH "#define LIBAVCODEC_VERSION_MINOR *([0-9]+)" _ ${FILE_CONTENTS})
+set(LIBAVCODEC_VERSION_MINOR "${CMAKE_MATCH_1}")
+
+string(REGEX MATCH "#define LIBAVCODEC_VERSION_MICRO *([0-9]+)" _ ${FILE_CONTENTS})
+set(LIBAVCODEC_VERSION_MICRO "${CMAKE_MATCH_1}")
+
+# Extract libavutil version
+file(READ "${FFMPEG_SOURCE_DIRECTORY}/libavutil/version.h" FILE_CONTENTS)
+
+string(REGEX MATCH "#define LIBAVUTIL_VERSION_MAJOR *([0-9]+)" _ ${FILE_CONTENTS})
+set(LIBAVUTIL_VERSION_MAJOR "${CMAKE_MATCH_1}")
+
+string(REGEX MATCH "#define LIBAVUTIL_VERSION_MINOR *([0-9]+)" _ ${FILE_CONTENTS})
+set(LIBAVUTIL_VERSION_MINOR "${CMAKE_MATCH_1}")
+
+string(REGEX MATCH "#define LIBAVUTIL_VERSION_MICRO *([0-9]+)" _ ${FILE_CONTENTS})
+set(LIBAVUTIL_VERSION_MICRO "${CMAKE_MATCH_1}")
+
+if (UNIX)
+	set(LIBAVFORMAT_SOVERSION "${LIBAVFORMAT_VERSION_MAJOR}.${LIBAVFORMAT_VERSION_MINOR}.${LIBAVFORMAT_VERSION_MICRO}")
+	set(LIBAVCODEC_SOVERSION "${LIBAVCODEC_VERSION_MAJOR}.${LIBAVCODEC_VERSION_MINOR}.${LIBAVCODEC_VERSION_MICRO}")
+	set(LIBAVUTIL_SOVERSION "${LIBAVUTIL_VERSION_MAJOR}.${LIBAVUTIL_VERSION_MINOR}.${LIBAVUTIL_VERSION_MICRO}")
+	
+	set(SOVERSION_SEPARATOR ".")
+	
+	if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Android")
+		set(AVFORMAT_LIBRARY_NAME "${CMAKE_SHARED_LIBRARY_PREFIX}avformat${CMAKE_SHARED_LIBRARY_SUFFIX}")
+		set(AVCODEC_LIBRARY_NAME "${CMAKE_SHARED_LIBRARY_PREFIX}avcodec${CMAKE_SHARED_LIBRARY_SUFFIX}")
+		set(AVUTIL_LIBRARY_NAME "${CMAKE_SHARED_LIBRARY_PREFIX}avutil${CMAKE_SHARED_LIBRARY_SUFFIX}")
+	elseif ("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
+		set(AVFORMAT_LIBRARY_NAME "${CMAKE_SHARED_LIBRARY_PREFIX}avformat${SOVERSION_SEPARATOR}${LIBAVFORMAT_SOVERSION}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+		set(AVCODEC_LIBRARY_NAME "${CMAKE_SHARED_LIBRARY_PREFIX}avcodec${SOVERSION_SEPARATOR}${LIBAVCODEC_SOVERSION}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+		set(AVUTIL_LIBRARY_NAME "${CMAKE_SHARED_LIBRARY_PREFIX}avutil${SOVERSION_SEPARATOR}${LIBAVUTIL_SOVERSION}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+	else()
+		set(AVFORMAT_LIBRARY_NAME "${CMAKE_SHARED_LIBRARY_PREFIX}avformat${CMAKE_SHARED_LIBRARY_SUFFIX}${SOVERSION_SEPARATOR}${LIBAVFORMAT_SOVERSION}")
+		set(AVCODEC_LIBRARY_NAME "${CMAKE_SHARED_LIBRARY_PREFIX}avcodec${CMAKE_SHARED_LIBRARY_SUFFIX}${SOVERSION_SEPARATOR}${LIBAVCODEC_SOVERSION}")
+		set(AVUTIL_LIBRARY_NAME "${CMAKE_SHARED_LIBRARY_PREFIX}avutil${CMAKE_SHARED_LIBRARY_SUFFIX}${SOVERSION_SEPARATOR}${LIBAVUTIL_SOVERSION}")
+	endif()
+elseif (WIN32)
+	set(LIBAVFORMAT_SOVERSION "${LIBAVFORMAT_VERSION_MAJOR}")
+	set(LIBAVCODEC_SOVERSION "${LIBAVCODEC_VERSION_MAJOR}")
+	set(LIBAVUTIL_SOVERSION "${LIBAVUTIL_VERSION_MAJOR}")
+	
+	set(SOVERSION_SEPARATOR "-")
+	
+	set(AVFORMAT_LIBRARY_NAME "avformat${SOVERSION_SEPARATOR}${LIBAVFORMAT_SOVERSION}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+	set(AVCODEC_LIBRARY_NAME "avcodec${SOVERSION_SEPARATOR}${LIBAVCODEC_SOVERSION}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+	set(AVUTIL_LIBRARY_NAME "avutil${SOVERSION_SEPARATOR}${LIBAVUTIL_SOVERSION}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+endif()
+
+if (UNIX)
+	set(SHARED_LIBRARY_DIRECTORY "lib")
+elseif(WIN32)
+	set(SHARED_LIBRARY_DIRECTORY "bin")
+endif()
+
+set(
+	libraries
+	"${FFMPEG_INSTALL_PREFIX}/${SHARED_LIBRARY_DIRECTORY}/${AVFORMAT_LIBRARY_NAME}"
+	"${FFMPEG_INSTALL_PREFIX}/${SHARED_LIBRARY_DIRECTORY}/${AVCODEC_LIBRARY_NAME}"
+	"${FFMPEG_INSTALL_PREFIX}/${SHARED_LIBRARY_DIRECTORY}/${AVUTIL_LIBRARY_NAME}"
+)
+
+set(FFMPEG_LIBRARIES)
+
+foreach(source ${libraries})
+	get_filename_component(dirname "${source}" DIRECTORY)
+	get_filename_component(basename "${source}" NAME)
+	
+	string(FIND "${basename}" "${SOVERSION_SEPARATOR}" position)
+	string(SUBSTRING "${basename}" 0 "${position}" destination)
+	
+	set(target "${destination}")
+	set(target_name "${destination}")
+	
+	if (${target} STREQUAL "libavformat" OR ${target} STREQUAL "avformat")
+		set(major_version "${LIBAVFORMAT_VERSION_MAJOR}")
+	elseif (${target} STREQUAL "libavcodec" OR ${target} STREQUAL "avcodec")
+		set(major_version "${LIBAVCODEC_VERSION_MAJOR}")
+	elseif (${target} STREQUAL "libavutil" OR ${target} STREQUAL "avutil")
+		set(major_version "${LIBAVUTIL_VERSION_MAJOR}")
+	endif()
+	
+	if (UNIX)
+		if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Android")
+			string(APPEND destination "${CMAKE_SHARED_LIBRARY_SUFFIX}")
+		elseif ("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
+			string(APPEND destination "${SOVERSION_SEPARATOR}${major_version}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+		else()
+			string(APPEND destination "${CMAKE_SHARED_LIBRARY_SUFFIX}${SOVERSION_SEPARATOR}${major_version}")
+		endif()
+	elseif (WIN32)
+		string(APPEND destination "${SOVERSION_SEPARATOR}${major_version}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+	endif()
+	
+	string(PREPEND destination "${CMAKE_BINARY_DIR}/")
+	
+	if (NOT EXISTS "${destination}")
+		add_custom_command(
+			TARGET ffmpeg POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy "${source}" "${destination}"
+			WORKING_DIRECTORY "${FFMPEG_BUILD_DIRECTORY}"
+			COMMENT "-- Copying shared library from '${source}' to '${destination}'"
+		)
+	endif()
+	
+	if (WIN32)
+		string(PREPEND target "${CMAKE_SHARED_LIBRARY_PREFIX}")
+	endif()
+	
+	add_library("${target}" SHARED IMPORTED)
+	
+	set_target_properties(
+		"${target}"
+		PROPERTIES IMPORTED_LOCATION "${destination}"
+	)
+	
+	if (WIN32)
+		set_target_properties(
+			"${target}"
+			PROPERTIES IMPORTED_IMPLIB "${dirname}/${target_name}.lib"
+		)
+	endif()
+	
+	list(APPEND FFMPEG_LIBRARIES "${destination}")
+endforeach()
+
 # Disable SO versioning for all third-party packages
 foreach(target jansson libcurl tidy-share)
 	set_target_properties(
@@ -428,6 +678,7 @@ add_executable(
 	src/input.c
 	src/terminal.c
 	src/cir.c
+	src/ffmpeg.c
 )
 
 add_executable(
@@ -439,6 +690,12 @@ add_executable(
 	src/errors.c
 	src/fstream.c
 	src/cleanup.c
+)
+
+target_include_directories(
+	sparklec
+	PRIVATE
+	"${FFMPEG_INCLUDE_DIRS}"
 )
 
 if (SPARKLEC_DISABLE_CERTIFICATE_VALIDATION) 
@@ -648,7 +905,14 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 		sparklec
 		BEFORE
 		PRIVATE
-		-Wl,-rpath-link,.
+		-Wl,-rpath-link,. -L.
+	)
+elseif (WIN32)
+	target_link_options(
+		sparklec
+		BEFORE
+		PRIVATE
+		-L.
 	)
 endif()
 
@@ -657,6 +921,9 @@ target_link_libraries(
 	jansson
 	libcurl
 	tidy-share
+	libavformat
+	libavcodec
+	libavutil
 )
 
 target_link_libraries(
@@ -676,4 +943,10 @@ install(
 	FILES "${CMAKE_SOURCE_DIR}/submodules/cabundle/pem/cert.pem"
 	DESTINATION etc/tls
 	RENAME cert.pem
+)
+
+install(
+	FILES ${FFMPEG_LIBRARIES}
+	PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+	DESTINATION "${SHARED_LIBRARY_DIRECTORY}"
 )

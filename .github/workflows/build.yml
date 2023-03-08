@@ -15,10 +15,14 @@ jobs:
     - uses: actions/checkout@main
       with:
         submodules: true
+    - name: Enable Debian unstable repository
+      run: |
+        sudo bash -c "echo 'deb https://deb.debian.org/debian/ unstable main contrib' >> '/etc/apt/sources.list'"
+        sudo apt -o Acquire::AllowInsecureRepositories=true update
+        sudo apt -o Dpkg::Options::="--force-overwrite" --assume-yes --allow-unauthenticated install libc6
     - name: Setup Linux cross compiler
       run: |
-        sudo apt update
-        sudo apt install --assume-yes \
+        sudo apt install --assume-yes --allow-unauthenticated \
             gcc-arm-linux-gnueabi \
             gcc-arm-linux-gnueabihf \
             gcc-aarch64-linux-gnu \
@@ -51,6 +55,7 @@ jobs:
       run: |
         echo 'ANDROID_HOME=${{ steps.setup-ndk.outputs.ndk-path }}' >> "${GITHUB_ENV}"
         sudo sed -i '/CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG/d' /usr/local/share/cmake-*/Modules/Platform/Android.cmake
+        echo '${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin' >> "${GITHUB_PATH}"
     - name: Setup Windows cross compiler
       run: |
         declare -r LLVM_MINGW_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/mstorsjo/llvm-mingw/releases/latest')")"
@@ -61,6 +66,7 @@ jobs:
         tar --directory="$(dirname "${LLVM_MINGW_TARBALL}")" --extract --file="${LLVM_MINGW_TARBALL}"
         
         echo "LLVM_MINGW_HOME=$(dirname "${LLVM_MINGW_TARBALL}")/$(basename "${LLVM_MINGW_URL}" '.tar.xz')" >> "${GITHUB_ENV}"
+        echo "$(dirname "${LLVM_MINGW_TARBALL}")/$(basename "${LLVM_MINGW_URL}" '.tar.xz')/bin" >> "${GITHUB_PATH}"
     - name: Setup MacOS X cross compiler
       run: |
         git clone --depth='1' 'https://github.com/tpoechtrager/osxcross.git'
@@ -69,10 +75,12 @@ jobs:
         
         cd './osxcross'
         
-        CMAKE_BUILD_PARALLEL_LEVEL='30' SDK_VERSION='11.3' OSX_VERSION_MIN='10.6' ./build.sh <<< ''
+        CMAKE_BUILD_PARALLEL_LEVEL='100' SDK_VERSION='11.3' OSX_VERSION_MIN='10.7' ./build.sh <<< ''
         
         echo "OSXCROSS_HOME=$(realpath './target')" >> "${GITHUB_ENV}"
         echo "$(realpath './target/bin')" >> "${GITHUB_PATH}"
+        
+        echo 'MACOSX_DEPLOYMENT_TARGET=11.3' >> "${GITHUB_ENV}"
     - name: Setup NetBSD cross compiler
       run: | 
         declare -r NETBSD_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/NetBSD-Cross/releases/latest')")"
@@ -83,6 +91,7 @@ jobs:
         tar --directory="$(dirname "${NETBSD_CROSS_TARBALL}")" --extract --file="${NETBSD_CROSS_TARBALL}"
         
         echo 'NETBSD_TOOLCHAIN=/tmp/unknown-unknown-netbsd' >> "${GITHUB_ENV}"
+        echo '/tmp/unknown-unknown-netbsd/bin' >> "${GITHUB_PATH}"
     - name: Setup FreeBSD cross compiler
       run: |
         declare -r FREEBSD_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl  --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/FreeBSD-Cross/releases/latest')")"
@@ -93,6 +102,7 @@ jobs:
         tar --directory="$(dirname "${FREEBSD_CROSS_TARBALL}")" --extract --file="${FREEBSD_CROSS_TARBALL}"
         
         echo 'FREEBSD_TOOLCHAIN=/tmp/unknown-unknown-freebsd' >> "${GITHUB_ENV}"
+        echo '/tmp/unknown-unknown-freebsd/bin' >> "${GITHUB_PATH}"
     - name: Setup DragonFly cross compiler
       run: |
         declare -r DRAGONFLY_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/DragonFlyBSD-Cross/releases/latest')")"
@@ -103,6 +113,7 @@ jobs:
         tar --directory="$(dirname "${DRAGONFLY_CROSS_TARBALL}")" --extract --file="${DRAGONFLY_CROSS_TARBALL}"
         
         echo 'DRAGONFLY_TOOLCHAIN=/tmp/unknown-unknown-dragonfly' >> "${GITHUB_ENV}"
+        echo '/tmp/unknown-unknown-dragonfly/bin' >> "${GITHUB_PATH}"
     - name: Setup Haiku cross compiler
       run: |
         declare -r HAIKU_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Haiku-Cross/releases/latest')")"
@@ -113,20 +124,17 @@ jobs:
         tar --directory="$(dirname "${HAIKU_CROSS_TARBALL}")" --extract --file="${HAIKU_CROSS_TARBALL}"
         
         echo 'HAIKU_TOOLCHAIN=/tmp/unknown-unknown-haiku' >> "${GITHUB_ENV}"
-    - name: Setup Theos (Apple iOS/tvOS cross compiler)
-      run: |
-        bash -c "$(curl --retry 10 --retry-delay 3 --silent --location --url 'https://raw.githubusercontent.com/theos/theos/master/bin/install-theos' --output '-')" <<< 'n'
-        echo "THEOS_HOME=${HOME}/theos" >> "${GITHUB_ENV}"
+        echo '/tmp/unknown-unknown-haiku/bin' >> "${GITHUB_PATH}"
     - name: Build with CMake
       run: |
         declare -r MACHINE_HOST="$(gcc -dumpmachine)"
         
         declare -r targets=(
+            "${MACHINE_HOST}"
             arm-linux-gnueabi
             arm-linux-gnueabihf
             armv7-w64-mingw32
             armv7a-linux-androideabi
-            armv7-appleios-darwin
             powerpc-linux-gnu
             i686-linux-android
             i686-linux-gnu
@@ -155,8 +163,6 @@ jobs:
             aarch64-w64-mingw32
             aarch64-apple-darwin
             aarch64-unknown-freebsd
-            aarch64-appletv-darwin
-            aarch64-appleios-darwin
             powerpc64-linux-gnu
             powerpc64le-linux-gnu
             s390x-linux-gnu
@@ -166,7 +172,6 @@ jobs:
             mipsisa64r6-linux-gnuabi64
             mips64-linux-gnuabi64
             mips64el-linux-gnuabi64
-            "${MACHINE_HOST}"
         )
         
         declare -r OUTPUT_DIRECTORY="$(realpath './output')"
@@ -176,19 +181,22 @@ jobs:
         
         for target in "${targets[@]}"; do
             echo "Building for ${target}"
-            
+
+            declare SPARKLEC_ENABLE_LTO=ON
+
+            if [[ "${target}" == *-apple-darwin ]]; then
+                SPARKLEC_ENABLE_LTO=OFF
+            fi
+
             if [ "${target}" == "${MACHINE_HOST}" ]; then
                 cmake -Wno-dev \
-                    -DSPARKLEC_DISABLE_CYBERCLASS=ON \
-                    -DSPARKLEC_DISABLE_QCONCURSOS=ON \
-                    -DSPARKLEC_ENABLE_LTO=ON \
+                    -DCMAKE_C_COMPILER='/usr/bin/clang' \
+                    -DSPARKLEC_ENABLE_LTO="${SPARKLEC_ENABLE_LTO}" \
                     -DCMAKE_INSTALL_PREFIX="${target}" \
                     -DCMAKE_BUILD_TYPE=MinSizeRel ../ 1>/dev/null
             else
                 cmake -Wno-dev \
-                    -DSPARKLEC_DISABLE_CYBERCLASS=ON \
-                    -DSPARKLEC_DISABLE_QCONCURSOS=ON \
-                    -DSPARKLEC_ENABLE_LTO=ON \
+                    -DSPARKLEC_ENABLE_LTO="${SPARKLEC_ENABLE_LTO}" \
                     -DCMAKE_TOOLCHAIN_FILE="./.github/workflows/cmake_toolchains/${target}.cmake" \
                     -DCMAKE_INSTALL_PREFIX="${target}" \
                     -DCMAKE_BUILD_TYPE=MinSizeRel ../ 1>/dev/null

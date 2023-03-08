@@ -13,3 +13,6 @@
 [submodule "submodules/cabundle"]
 	path = submodules/cabundle
 	url = https://github.com/AmanoTeam/CABundle
+[submodule "submodules/ffmpeg"]
+	path = submodules/ffmpeg
+	url = https://github.com/FFmpeg/FFmpeg

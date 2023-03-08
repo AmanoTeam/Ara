@@ -1,4 +1,6 @@
 set(CMAKE_SYSTEM_NAME Linux)
+set(CMAKE_SYSTEM_PROCESSOR powerpc)
+
 set(TOOLCHAIN_PREFIX powerpc-linux-gnu)
 
 set(CMAKE_C_COMPILER ${TOOLCHAIN_PREFIX}-gcc)

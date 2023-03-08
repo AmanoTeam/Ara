@@ -4,6 +4,7 @@
 
 #ifdef _WIN32
 	#include <stdio.h>
+	
 	#ifdef _UNICODE
 		#include <fcntl.h>
 		#include <io.h>
@@ -14,6 +15,7 @@
 
 #include <curl/curl.h>
 #include <jansson.h>
+#include <libavformat/avformat.h>
 
 #include "cleanup.h"
 #include "errors.h"
@@ -35,6 +37,7 @@
 #include "sparklec.h"
 #include "cir.h"
 #include "terminal.h"
+#include "ffmpeg.h"
 
 #if defined(_WIN32) && defined(_UNICODE)
 	#include "wio.h"
@@ -345,14 +348,10 @@ static int m3u8_download(const char* const url, const char* const output) {
 	
 	printf("+ Concatenando seguimentos de mídia baixados para um único arquivo em '%s'\r\n", output);
 	
-	const char* const command = "ffmpeg -nostdin -nostats -loglevel error -allowed_extensions ALL -i \"%s\" -c copy \"%s\"";
+	const char* const input[] = {playlist_filename, NULL};
 	
-	const int size = snprintf(NULL, 0, command, playlist_filename, output);
-	char shell_command[size + 1];
-	snprintf(shell_command, sizeof(shell_command), command, playlist_filename, output);
-	
-	const int exit_code = execute_shell_command(shell_command);
-	
+	const int code = ffmpeg_copy_streams(input, output);
+	/*
 	for (size_t index = 0; index < dl_total; index++) {
 		struct Download* const download = &dl_queue[index];
 		
@@ -361,9 +360,9 @@ static int m3u8_download(const char* const url, const char* const output) {
 	}
 	
 	remove_file(playlist_filename);
-	
-	if (exit_code != 0) {
-		fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar processar a mídia!\r\n");
+	*/
+	if (code != 0) {
+		fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar concatenar os seguimentos de mídia de '%s' para um único arquivo em '%s': %s\r\n", playlist_filename, output, av_err2str(code));
 		return UERR_FAILURE;
 	}
 	
@@ -1593,21 +1592,21 @@ int main(void) {
 								strcat(temporary_file, DOT);
 								strcat(temporary_file, file_extension);
 								
-								const char* const command = "ffmpeg -nostdin -nostats -loglevel error -i \"%s\" -i \"%s\" -c copy -movflags +faststart -map_metadata -1 -map 0:v:0 -map 1:a:0 \"%s\"";
+								printf("+ Copiando canais de vídeo e áudio para uma única mídia em '%s'\r\n", temporary_file);
 								
-								const int size = snprintf(NULL, 0, command, video_path, audio_path, temporary_file);
-								char shell_command[size + 1];
-								snprintf(shell_command, sizeof(shell_command), command, video_path, audio_path, temporary_file);
+								const char* const inputs[] = {
+									video_path,
+									audio_path,
+									NULL
+								};
 								
-								printf("+ Copiando canais de áudio e vídeo para uma única mídia em '%s'\r\n", temporary_file);
-								
-								const int exit_code = execute_shell_command(shell_command);
+								const int code = ffmpeg_copy_streams(inputs, temporary_file);
 								
 								remove_file(audio_path);
 								remove_file(video_path);
 								
-								if (exit_code != 0) {
-									fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar processar a mídia!\r\n");
+								if (code != 0) {
+									fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar copiar os canais de vídeo e áudio para uma única mídia em '%s': %s\r\n", temporary_file, av_err2str(code));
 									return EXIT_FAILURE;
 								}
 								

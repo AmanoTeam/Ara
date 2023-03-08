@@ -1,4 +1,6 @@
 set(CMAKE_SYSTEM_NAME Linux)
+set(CMAKE_SYSTEM_PROCESSOR mipsisa32r6)
+
 set(TOOLCHAIN_PREFIX mipsisa32r6-linux-gnu)
 
 set(CMAKE_C_COMPILER ${TOOLCHAIN_PREFIX}-gcc)

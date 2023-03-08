@@ -1,4 +1,6 @@
 set(CMAKE_SYSTEM_NAME Linux)
+set(CMAKE_SYSTEM_PROCESSOR hppa)
+
 set(TOOLCHAIN_PREFIX hppa-linux-gnu)
 
 set(CMAKE_C_COMPILER ${TOOLCHAIN_PREFIX}-gcc)

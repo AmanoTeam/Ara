@@ -1,4 +1,6 @@
 set(CMAKE_SYSTEM_NAME Linux)
+set(CMAKE_SYSTEM_PROCESSOR armhf)
+
 set(TOOLCHAIN_PREFIX arm-linux-gnueabihf)
 
 set(CMAKE_C_COMPILER ${TOOLCHAIN_PREFIX}-gcc)

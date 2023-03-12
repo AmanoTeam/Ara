@@ -72,7 +72,17 @@ int youtube_parse(
 		return UERR_CURLU_FAILURE;
 	}
 	
-	const char* const start = basename(path);
+	const char* start = path;
+	
+	while (1) {
+		const char* slash_at = strchr(start, *SLASH);
+		
+		if (slash_at == NULL) {
+			break;
+		}
+		
+		start = slash_at + 1;
+	}
 	
 	char video_id[strlen(start) + 1];
 	strcpy(video_id, start);

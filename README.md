@@ -8,8 +8,6 @@ O programa está disponível para Android, Windows, Linux, MacOS, Haiku e sistem
 
 Note que embora versões para MacOS, Haiku e BSD estejam disponíveis, as mesmas não são testadas com frequência. Caso encontre (ou não) problemas ao executar o SparkleC nessas plataformas, [reporte-nos](https://github.com/Kartatz/SparkleC/issues).
 
-A ferramenta depende do [ffmpeg](https://ffmpeg.org/download.html) para decodificar e desencriptar arquivos de vídeo baixados. Ele não funcionará sem ela, portanto instale-o em sua máquina antes de tudo.
-
 ## Instalando no Windows
 
 Note que o programa precisa de uma versão igual ou superior ao Windows 7 para funcionar adequadamente.

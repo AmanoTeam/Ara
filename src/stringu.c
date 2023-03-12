@@ -86,6 +86,37 @@ char* normalize_filename(char* filename) {
 		}
 	}
 	
+	char* start = filename;
+	char* end = strchr(filename, '\0');
+	
+	char* position = end;
+	
+	position--;
+	
+	while (position != start) {
+		if (*position != *DOT) {
+			break;
+		}
+		
+		*position = '\0';
+		position--;
+	}
+	
+	position = start;
+	
+	while (position != end) {
+		if (*position != *DOT) {
+			break;
+		}
+		
+		*position = '\0';
+		position++;
+	}
+	
+	if (position != start) {
+		memmove(start, position, strlen(position) + 1);
+	}
+	
 	return filename;
 	
 }

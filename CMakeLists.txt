@@ -981,7 +981,7 @@ if (APPLE)
 		add_custom_command(
 			TARGET sparklec POST_BUILD
 			COMMAND "${CMAKE_INSTALL_NAME_TOOL}" -change "${old_rpath}" "${new_rpath}" "${executable}"
-			COMMENT "-- Changing hardcodec rpath of '${executable}' from '${old_rpath}' to '${new_rpath}'"
+			COMMENT "-- Changing hardcoded rpath of '${executable}' from '${old_rpath}' to '${new_rpath}'"
 		)
 	endforeach()
 	
@@ -1030,7 +1030,7 @@ if (APPLE)
 			add_custom_command(
 				TARGET ffmpeg POST_BUILD
 				COMMAND "${CMAKE_INSTALL_NAME_TOOL}" -change "${old_rpath}" "${new_rpath}" "${library}"
-				COMMENT "-- Changing hardcodec rpath of '${library}' from '${old_rpath}' to '${new_rpath}'"
+				COMMENT "-- Changing hardcoded rpath of '${library}' from '${old_rpath}' to '${new_rpath}'"
 			)
 		endforeach()
 	endforeach()

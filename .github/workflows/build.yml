@@ -75,6 +75,7 @@ jobs:
         
         cd './osxcross'
         
+        sudo bash './tools/get_dependencies.sh'
         CMAKE_BUILD_PARALLEL_LEVEL='100' SDK_VERSION='11.3' OSX_VERSION_MIN='10.6' ./build.sh <<< ''
         
         echo "OSXCROSS_HOME=$(realpath './target')" >> "${GITHUB_ENV}"
@@ -180,21 +181,15 @@ jobs:
         for target in "${targets[@]}"; do
             echo "Building for ${target}"
 
-            declare SPARKLEC_ENABLE_LTO=ON
-
-            if [[ "${target}" == *-apple-darwin ]]; then
-                SPARKLEC_ENABLE_LTO=OFF
-            fi
-
             if [ "${target}" == "${MACHINE_HOST}" ]; then
                 cmake -Wno-dev \
+                    -DSPARKLEC_ENABLE_LTO=ON \
                     -DCMAKE_C_COMPILER='/usr/bin/clang' \
-                    -DSPARKLEC_ENABLE_LTO="${SPARKLEC_ENABLE_LTO}" \
                     -DCMAKE_INSTALL_PREFIX="${target}" \
                     -DCMAKE_BUILD_TYPE=MinSizeRel ../ 1>/dev/null
             else
                 cmake -Wno-dev \
-                    -DSPARKLEC_ENABLE_LTO="${SPARKLEC_ENABLE_LTO}" \
+                    -DSPARKLEC_ENABLE_LTO=ON \
                     -DCMAKE_TOOLCHAIN_FILE="./.github/workflows/cmake_toolchains/${target}.cmake" \
                     -DCMAKE_INSTALL_PREFIX="${target}" \
                     -DCMAKE_BUILD_TYPE=MinSizeRel ../ 1>/dev/null

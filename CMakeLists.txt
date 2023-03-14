@@ -436,6 +436,8 @@ set(
 	--disable-coreimage
 	--disable-securetransport
 	--disable-avfoundation
+	--disable-audiotoolbox
+	--disable-videotoolbox
 	--enable-version3
 )
 
@@ -454,7 +456,6 @@ if (CMAKE_CROSSCOMPILING)
 		list(APPEND FFMPEG_CONFIGURE_FLAGS "--strip=${ANDROID_TOOLCHAIN_ROOT}/bin/llvm-strip")
 	elseif ("${system_name}" STREQUAL "darwin")
 		list(APPEND FFMPEG_CONFIGURE_FLAGS "--cc=${CMAKE_C_COMPILER}")
-		list(APPEND FFMPEG_CONFIGURE_FLAGS "--extra-cflags=-mmacosx-version-min=11.3")
 	endif()
 	
 	list(APPEND FFMPEG_CONFIGURE_FLAGS "--cross-prefix=${TOOLCHAIN_PREFIX}-")
@@ -811,7 +812,7 @@ foreach(target sparklec sparklec-install)
 			set_target_properties(
 				${target}
 				PROPERTIES
-				${property} "@loader_path/../lib:@loader_path"
+				${property} "@loader_path/../lib"
 			)
 		endforeach()
 	elseif (UNIX)
@@ -950,3 +951,87 @@ install(
 	PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
 	DESTINATION "${SHARED_LIBRARY_DIRECTORY}"
 )
+
+if (APPLE)
+	set(
+		names
+		"../../libjansson.dylib"
+		"../../../libcurl.dylib"
+		"../../libtidy.dylib"
+	)
+	
+	set(index 0)
+	
+	foreach(library ${libraries})
+		get_filename_component(dirname "${library}" DIRECTORY)
+		list(GET FFMPEG_LIBRARIES "${index}" library)
+		get_filename_component(basename "${library}" NAME)
+		
+		list(APPEND names "${dirname}/${basename}")
+		
+		MATH(EXPR index "${index}+1")
+	endforeach()
+	
+	set(executable $<TARGET_FILE:sparklec>)
+	
+	foreach(old_rpath ${names})
+		get_filename_component(basename "${old_rpath}" NAME)
+		set(new_rpath "@loader_path/../lib/${basename}")
+		
+		add_custom_command(
+			TARGET sparklec POST_BUILD
+			COMMAND "${CMAKE_INSTALL_NAME_TOOL}" -change "${old_rpath}" "${new_rpath}" "${executable}"
+			COMMENT "-- Changing hardcodec rpath of '${executable}' from '${old_rpath}' to '${new_rpath}'"
+		)
+	endforeach()
+	
+	foreach(library ${FFMPEG_LIBRARIES})
+		set(names)
+		set(index -1)
+		
+		get_filename_component(basename "${library}" NAME)
+		
+		if (basename MATCHES "libavformat${SOVERSION_SEPARATOR}${LIBAVFORMAT_VERSION_MAJOR}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+			foreach(library ${libraries})
+				MATH(EXPR index "${index}+1")
+				
+				get_filename_component(dirname "${library}" DIRECTORY)
+				list(GET FFMPEG_LIBRARIES "${index}" library)
+				get_filename_component(basename "${library}" NAME)
+				
+				if (NOT (basename STREQUAL "libavcodec${SOVERSION_SEPARATOR}${LIBAVCODEC_VERSION_MAJOR}${CMAKE_SHARED_LIBRARY_SUFFIX}" OR basename STREQUAL "libavutil${SOVERSION_SEPARATOR}${LIBAVUTIL_VERSION_MAJOR}${CMAKE_SHARED_LIBRARY_SUFFIX}"))
+					continue()
+				endif()
+				
+				list(APPEND names "${dirname}/${basename}")
+			endforeach()
+		elseif (basename MATCHES "libavcodec${SOVERSION_SEPARATOR}${LIBAVCODEC_VERSION_MAJOR}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+			foreach(library ${libraries})
+				MATH(EXPR index "${index}+1")
+				
+				get_filename_component(dirname "${library}" DIRECTORY)
+				list(GET FFMPEG_LIBRARIES ${index} library)
+				get_filename_component(basename "${library}" NAME)
+				
+				if (NOT basename STREQUAL "libavutil${SOVERSION_SEPARATOR}${LIBAVUTIL_VERSION_MAJOR}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+					continue()
+				endif()
+				
+				list(APPEND names "${dirname}/${basename}")
+			endforeach()
+		else()
+			continue()
+		endif()
+		
+		foreach(old_rpath ${names})
+			get_filename_component(basename "${old_rpath}" NAME)
+			set(new_rpath "@loader_path/../lib/${basename}")
+			
+			add_custom_command(
+				TARGET ffmpeg POST_BUILD
+				COMMAND "${CMAKE_INSTALL_NAME_TOOL}" -change "${old_rpath}" "${new_rpath}" "${library}"
+				COMMENT "-- Changing hardcodec rpath of '${library}' from '${old_rpath}' to '${new_rpath}'"
+			)
+		endforeach()
+	endforeach()
+endif()

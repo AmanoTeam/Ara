@@ -75,12 +75,10 @@ jobs:
         
         cd './osxcross'
         
-        CMAKE_BUILD_PARALLEL_LEVEL='100' SDK_VERSION='11.3' OSX_VERSION_MIN='10.7' ./build.sh <<< ''
+        CMAKE_BUILD_PARALLEL_LEVEL='100' SDK_VERSION='11.3' OSX_VERSION_MIN='10.6' ./build.sh <<< ''
         
         echo "OSXCROSS_HOME=$(realpath './target')" >> "${GITHUB_ENV}"
         echo "$(realpath './target/bin')" >> "${GITHUB_PATH}"
-        
-        echo 'MACOSX_DEPLOYMENT_TARGET=11.3' >> "${GITHUB_ENV}"
     - name: Setup NetBSD cross compiler
       run: | 
         declare -r NETBSD_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/NetBSD-Cross/releases/latest')")"

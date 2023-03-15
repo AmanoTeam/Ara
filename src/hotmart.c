@@ -847,18 +847,6 @@ int hotmart_get_page(
 				}
 			}
 			
-			char* const file_extension = get_file_extension(media_name);
-			
-			if (file_extension != NULL) {
-				for (size_t index = 0; index < strlen(file_extension); index++) {
-					char* ch = &file_extension[index];
-					
-					if (isupper(*ch)) {
-						*ch = (char) tolower(*ch);
-					}
-				}
-			}
-			
 			if (strcmp(media_type, "VIDEO") == 0) {
 				curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, NULL);
 				curl_easy_setopt(curl_easy, CURLOPT_URL, url);
@@ -926,13 +914,15 @@ int hotmart_get_page(
 					return UERR_CURLU_FAILURE;
 				}
 				
+				remove_file_extension((char*) media_name);
+				
 				struct Media media = {
 					.type = MEDIA_M3U8,
 					.audio = {0},
 					.video = {
 						.id = malloc(strlen(media_code) + 1),
-						.filename = malloc(strlen(media_name) + (file_extension == NULL ? strlen(DOT) + strlen(MP4_FILE_EXTENSION) : 0) + 1),
-						.short_filename = malloc(strlen(media_code) + strlen(DOT) + (file_extension == NULL ? strlen(MP4_FILE_EXTENSION) : strlen(file_extension)) + 1),
+						.filename = malloc(strlen(media_name) + strlen(DOT) + strlen(TS_FILE_EXTENSION) + 1),
+						.short_filename = malloc(strlen(media_code) + strlen(DOT) + strlen(TS_FILE_EXTENSION) + 1),
 						.url = malloc(strlen(stream_url) + 1)
 					}
 				};
@@ -943,23 +933,21 @@ int hotmart_get_page(
 				
 				strcpy(media.video.id, media_code);
 				strcpy(media.video.url, stream_url);
-				strcpy(media.video.filename, media_name);
-				strcpy(media.video.short_filename, media_code);
 				
-				if (file_extension == NULL) {
-					strcat(media.video.filename, DOT);
-					strcat(media.video.filename, MP4_FILE_EXTENSION);
-					strcat(media.video.short_filename, DOT);
-					strcat(media.video.short_filename, MP4_FILE_EXTENSION);
-				} else {
-					strcat(media.video.short_filename, DOT);
-					strcat(media.video.short_filename, file_extension);
-				}
+				strcpy(media.video.filename, media_name);
+				strcat(media.video.filename, DOT);
+				strcat(media.video.filename, TS_FILE_EXTENSION);
+				
+				strcpy(media.video.short_filename, media_code);
+				strcat(media.video.short_filename, DOT);
+				strcat(media.video.short_filename, TS_FILE_EXTENSION);
 				
 				normalize_filename(media.video.filename);
 				
 				page->medias.items[page->medias.offset++] = media;
 			} else {
+				char* const file_extension = get_file_extension(media_name);
+				
 				struct Media media = {
 					.type = MEDIA_SINGLE,
 					.audio = {

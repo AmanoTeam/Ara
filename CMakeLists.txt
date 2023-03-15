@@ -425,8 +425,8 @@ set(
 	--enable-ffmpeg
 	--enable-protocol=file,crypto
 	--enable-decoder=aac,h264
-	--enable-muxer=aac,h264,matroska,mp4,webm
-	--enable-demuxer=aac,h264,hls,mp4
+	--enable-muxer=h264,mpegts
+	--enable-demuxer=aac,h264,hls
 	--disable-vulkan
 	--disable-neon
 	--disable-schannel

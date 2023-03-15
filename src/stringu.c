@@ -69,7 +69,34 @@ char* get_file_extension(const char* const filename) {
 		return NULL;
 	}
 	
+	for (size_t index = 0; index < strlen(start); index++) {
+		const char ch = start[index];
+		
+		if (!isalnum(ch)) {
+			return NULL;
+		}
+	}
+	
 	return start;
+	
+}
+
+char* remove_file_extension(char* const filename) {
+	/*
+	Removes extension of the filename.
+	*/
+	
+	while (1) {
+		char* const file_extension = get_file_extension(filename);
+		
+		if (file_extension == NULL) {
+			break;
+		}
+		
+		*(file_extension - 1) = '\0';
+	}
+	
+	return filename;
 	
 }
 

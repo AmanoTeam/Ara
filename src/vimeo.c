@@ -445,8 +445,8 @@ int vimeo_parse(
 		normalize_filename(media->audio.filename);
 		
 		media->video.id = malloc(strlen(sid) + 1);
-		media->video.filename = malloc(strlen(title) + strlen(DOT) + strlen(MP4_FILE_EXTENSION) + 1);
-		media->video.short_filename = malloc(strlen(sid) + strlen(DOT) + strlen(MP4_FILE_EXTENSION) + 1);
+		media->video.filename = malloc(strlen(title) + strlen(DOT) + strlen(TS_FILE_EXTENSION) + 1);
+		media->video.short_filename = malloc(strlen(sid) + strlen(DOT) + strlen(TS_FILE_EXTENSION) + 1);
 		
 		if (media->video.id == NULL || media->video.filename == NULL || media->video.short_filename == NULL) {
 			return UERR_MEMORY_ALLOCATE_FAILURE;
@@ -456,11 +456,11 @@ int vimeo_parse(
 		
 		strcpy(media->video.filename, title);
 		strcat(media->video.filename, DOT);
-		strcat(media->video.filename, MP4_FILE_EXTENSION);
+		strcat(media->video.filename, TS_FILE_EXTENSION);
 		
 		strcpy(media->video.short_filename, sid);
 		strcat(media->video.short_filename, DOT);
-		strcat(media->video.short_filename, MP4_FILE_EXTENSION);
+		strcat(media->video.short_filename, TS_FILE_EXTENSION);
 		
 		normalize_filename(media->video.filename);
 		

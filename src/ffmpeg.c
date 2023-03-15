@@ -44,8 +44,6 @@ static void output_context_cleanup(AVFormatContext** output_format_context) {
 
 int ffmpeg_copy_streams(const char* const* const sources, const char* const destination) {
 	
-	av_log_set_level(AV_LOG_QUIET);
-	
 	int code = 0;
 	
 	AVDictionary* options = NULL;

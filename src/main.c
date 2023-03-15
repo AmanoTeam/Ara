@@ -402,6 +402,8 @@ int main(void) {
 		return EXIT_FAILURE;
 	}
 	
+	av_log_set_level(AV_LOG_ERROR);
+	
 	printf("+ Selecione o seu provedor de serviços:\r\n\r\n");
 	
 	for (size_t index = 0; index < PROVIDERS_NUM; index++) {

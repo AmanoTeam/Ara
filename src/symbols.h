@@ -62,12 +62,15 @@ static const char HTML_HEADER_END[] =
 	#define SHARED_LIBRARY_EXTENSION ".dll"
 	#define EXECUTABLE_EXTENSION ".exe"
 	#define SHARED_LIBRARY_DIRECTORY "bin"
+	#define SOVERSION_SEPARATOR "-"
 #elif defined(__APPLE__)
 	#define SHARED_LIBRARY_EXTENSION ".dylib"
 	#define EXECUTABLE_EXTENSION ""
 	#define SHARED_LIBRARY_DIRECTORY "lib"
+	#define SOVERSION_SEPARATOR "."
 #else
 	#define SHARED_LIBRARY_EXTENSION ".so"
 	#define EXECUTABLE_EXTENSION ""
 	#define SHARED_LIBRARY_DIRECTORY "lib"
+	#define SOVERSION_SEPARATOR "."
 #endif

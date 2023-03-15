@@ -693,12 +693,6 @@ add_executable(
 	src/cleanup.c
 )
 
-target_include_directories(
-	sparklec
-	PRIVATE
-	"${FFMPEG_INCLUDE_DIRS}"
-)
-
 if (SPARKLEC_DISABLE_CERTIFICATE_VALIDATION) 
 	target_compile_definitions(
 		sparklec
@@ -824,6 +818,12 @@ foreach(target sparklec sparklec-install)
 			)
 		endforeach()
 	endif()
+	
+	target_include_directories(
+		${target}
+		PRIVATE
+		"${FFMPEG_INCLUDE_DIRS}"
+	)
 endforeach()
 
 if (APPLE)

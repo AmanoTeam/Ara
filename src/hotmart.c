@@ -385,7 +385,8 @@ int hotmart_get_resources(
 			return UERR_JSON_NON_MATCHING_TYPE;
 		}
 		
-		const char* const name = json_string_value(obj);
+		char* const name = (char*) json_string_value(obj);
+		strip(name);
 		
 		struct Resource resource = {
 			.id = malloc(strlen(id) + 1),
@@ -529,7 +530,8 @@ int hotmart_get_modules(
 			return UERR_JSON_NON_MATCHING_TYPE;
 		}
 		
-		const char* const name = json_string_value(obj);
+		char* const name = (char*) json_string_value(obj);
+		strip(name);
 		
 		obj = json_object_get(item, "locked");
 		
@@ -611,7 +613,8 @@ int hotmart_get_modules(
 				return UERR_JSON_NON_MATCHING_TYPE;
 			}
 			
-			const char* const name = json_string_value(obj);
+			char* const name = (char*) json_string_value(obj);
+			strip(name);
 			
 			obj = json_object_get(page_item, "locked");
 			
@@ -783,7 +786,7 @@ int hotmart_get_page(
 				return UERR_JSON_NON_MATCHING_TYPE;
 			}
 			
-			const char* const media_name = json_string_value(obj);
+			char* const media_name = (char*) json_string_value(obj);
 			
 			obj = json_object_get(item, "mediaCode");
 			
@@ -914,7 +917,7 @@ int hotmart_get_page(
 					return UERR_CURLU_FAILURE;
 				}
 				
-				remove_file_extension((char*) media_name);
+				remove_file_extension(media_name);
 				
 				struct Media media = {
 					.type = MEDIA_M3U8,

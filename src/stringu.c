@@ -114,7 +114,7 @@ char* normalize_filename(char* filename) {
 	}
 	
 	char* start = filename;
-	char* end = strchr(filename, '\0');
+	char* end = strchr(start, '\0');
 	
 	char* position = end;
 	
@@ -145,6 +145,46 @@ char* normalize_filename(char* filename) {
 	}
 	
 	return filename;
+	
+}
+
+char* strip(char* const s) {
+	/*
+	Strips leading and trailing whitespaces from string.
+	*/
+	
+	char* start = s;
+	char* end = strchr(start, '\0');
+	
+	char* position = end;
+	
+	position--;
+	
+	while (position != start) {
+		if (!iscntrl(*position)) {
+			break;
+		}
+		
+		*position = '\0';
+		position--;
+	}
+	
+	position = start;
+	
+	while (position != end) {
+		if (!iscntrl(*position)) {
+			break;
+		}
+		
+		*position = '\0';
+		position++;
+	}
+	
+	if (position != start) {
+		memmove(start, position, strlen(position) + 1);
+	}
+	
+	return s;
 	
 }
 

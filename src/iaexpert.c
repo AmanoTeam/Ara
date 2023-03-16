@@ -109,7 +109,8 @@ static int tidy_extract_resources(
 				tidy_buffer_init(&buffer);
 				tidy_node_get_text(document, children, &buffer);
 				
-				const char* const resource_name = (char*) buffer.bp;
+				char* const resource_name = (char*) buffer.bp;
+				strip(resource_name);
 				
 				const tidy_node_t* next = root;
 				
@@ -309,13 +310,8 @@ static int tidy_extract_modules(
 					tidy_buffer_init(&buffer);
 					tidy_node_get_text(document, children, &buffer);
 					
-					const char* const module_name = (char*) buffer.bp;
-					
-					char* const ptr = strchr(module_name, '\n');
-					
-					if (ptr != NULL) {
-						*ptr = '\0';
-					}
+					char* const module_name = (char*) buffer.bp;
+					strip(module_name);
 					
 					const int value = hashs(module_name);
 					
@@ -379,13 +375,8 @@ static int tidy_extract_modules(
 					tidy_buffer_init(&buffer);
 					tidy_node_get_text(document, tidy_get_child(next), &buffer);
 					
-					const char* const topic_name = (char*) buffer.bp;
-					
-					char* const ptr = strchr(topic_name, '\n');
-					
-					if (ptr != NULL) {
-						*ptr = '\0';
-					}
+					char* const topic_name = (char*) buffer.bp;
+					strip(topic_name);
 					
 					const int value = hashs(topic_url);
 					

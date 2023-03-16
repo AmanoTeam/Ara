@@ -263,7 +263,8 @@ static int estrategia_concursos_get_exclusives(
 				return UERR_JSON_NON_MATCHING_TYPE;
 			}
 			
-			const char* const name = json_string_value(obj);
+			char* const name = (char*) json_string_value(obj);
+			strip(name);
 			
 			struct Resource resource = {
 				.id = malloc(strlen(sid) + 1),
@@ -426,7 +427,8 @@ int estrategia_concursos_get_resources(
 			return UERR_JSON_NON_MATCHING_TYPE;
 		}
 		
-		const char* const qualification = json_string_value(obj);
+		char* const qualification = (char*) json_string_value(obj);
+		strip(qualification);
 		
 		const int value = hashs(qualification);
 		
@@ -487,7 +489,8 @@ int estrategia_concursos_get_resources(
 				return UERR_JSON_NON_MATCHING_TYPE;
 			}
 			
-			const char* const name = json_string_value(obj);
+			char* const name = (char*) json_string_value(obj);
+			strip(name);
 			
 			struct Resource resource = {
 				.id = malloc(strlen(sid) + 1),
@@ -674,7 +677,8 @@ int estrategia_concursos_get_modules(
 			return UERR_JSON_NON_MATCHING_TYPE;
 		}
 			
-		const char* const name = json_string_value(obj);
+		char* const name = (char*) json_string_value(obj);
+		strip(name);
 		
 		obj = json_object_get(item, "is_disponivel");
 		
@@ -912,7 +916,8 @@ int estrategia_concursos_get_module(
 			return UERR_JSON_NON_MATCHING_TYPE;
 		}
 		
-		const char* const name = json_string_value(obj);
+		char* const name = (char*) json_string_value(obj);
+		strip(name);
 		
 		struct Page page = {
 			.id = malloc(strlen(sid) + 1),

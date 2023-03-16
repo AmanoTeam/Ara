@@ -10,5 +10,6 @@ int isnumeric(const char* const s);
 char* get_parent_directory(const char* const source, char* const destination, const size_t depth);
 int hashs(const char* const s);
 char* remove_file_extension(char* const filename);
+char* strip(char* const s);
 
 #pragma once

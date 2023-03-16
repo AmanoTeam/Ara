@@ -368,7 +368,8 @@ int estrategia_get_resources(
 			return UERR_JSON_NON_MATCHING_TYPE;
 		}
 		
-		const char* const name = json_string_value(obj);
+		char* const name = (char*) json_string_value(obj);
+		strip(name);
 		
 		const int value = hashs(id);
 		
@@ -520,7 +521,8 @@ int estrategia_get_modules(
 			return UERR_JSON_NON_MATCHING_TYPE;
 		}
 		
-		const char* const name = json_string_value(obj);
+		char* const name = (char*) json_string_value(obj);
+		strip(name);
 		
 		const int value = hashs(name);
 		

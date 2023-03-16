@@ -39,6 +39,10 @@ static const char IAEXPERT_COURSES_ENDPOINT[] =
 	IAEXPERT_HOMEPAGE_ENDPOINT
 	"/cursos-online-assinatura/";
 
+static const char IAEXPERT_LOGIN_HOMEPAGE[] = 
+	IAEXPERT_HOMEPAGE_ENDPOINT
+	"/login";
+
 static const tidy_attr_t* attribute_find(
 	const tidy_node_t* const root,
 	const char* const tag,
@@ -851,6 +855,26 @@ int iaexpert_get_resources(
 	
 	CURL* curl_easy = get_global_curl_easy();
 	
+	curl_easy_setopt(curl_easy, CURLOPT_COOKIEFILE, credentials->cookie_jar);
+	curl_easy_setopt(curl_easy, CURLOPT_URL, IAEXPERT_PROFILE_ENDPOINT);
+	curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 1L);
+	curl_easy_setopt(curl_easy, CURLOPT_MAXREDIRS, 3L);
+	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_discard_body_cb);
+	
+	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
+		return UERR_CURL_FAILURE;
+	}
+	
+	curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 0L);
+	curl_easy_setopt(curl_easy, CURLOPT_MAXREDIRS, -1);
+	
+	char* effective_url __curl_free__ = NULL;
+	curl_easy_getinfo(curl_easy, CURLINFO_EFFECTIVE_URL, &effective_url);
+	
+	if (effective_url != NULL && memcmp(effective_url, IAEXPERT_LOGIN_HOMEPAGE, strlen(IAEXPERT_LOGIN_HOMEPAGE)) == 0) {
+		return UERR_PROVIDER_SESSION_EXPIRED;
+	}
+	
 	buffer_t string __buffer_free__ = {0};
 	
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
@@ -962,7 +986,7 @@ int iaexpert_get_resources(
 		}
 	}
 	
-	curl_easy_setopt(curl_easy, CURLOPT_COOKIELIST, NULL);
+	curl_easy_setopt(curl_easy, CURLOPT_COOKIEFILE, NULL);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, NULL);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, NULL);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, NULL);

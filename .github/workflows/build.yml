@@ -163,9 +163,13 @@ jobs:
             aarch64-unknown-freebsd
             powerpc64-linux-gnu
             powerpc64le-linux-gnu
+            powerpc-unknown-freebsd
+            powerpc64-unknown-freebsd
             s390x-linux-gnu
             riscv64-linux-gnu
+            riscv64-unknown-freebsd
             sparc64-linux-gnu
+            sparc64-unknown-freebsd
             mipsisa64r6el-linux-gnuabi64
             mipsisa64r6-linux-gnuabi64
             mips64-linux-gnuabi64

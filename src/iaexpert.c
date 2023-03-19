@@ -450,7 +450,7 @@ static int tidy_extract_modules(
 				}
 			}
 			
-			if (is_pagination) {
+			if (is_pagination && lesson_id != NULL) {
 				CURL* curl_easy = get_global_curl_easy();
 				
 				const tidy_node_t* const root = tidy_get_root(document);

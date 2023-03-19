@@ -161,7 +161,7 @@ char* strip(char* const s) {
 	position--;
 	
 	while (position != start) {
-		if (!iscntrl(*position)) {
+		if (!(iscntrl(*position) || isspace(*position))) {
 			break;
 		}
 		
@@ -172,7 +172,7 @@ char* strip(char* const s) {
 	position = start;
 	
 	while (position != end) {
-		if (!iscntrl(*position)) {
+		if (!(iscntrl(*position) || isspace(*position))) {
 			break;
 		}
 		

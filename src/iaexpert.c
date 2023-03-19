@@ -851,8 +851,6 @@ int iaexpert_get_resources(
 	struct Resources* const resources
 ) {
 	
-	(void) credentials;
-	
 	CURL* curl_easy = get_global_curl_easy();
 	
 	curl_easy_setopt(curl_easy, CURLOPT_COOKIEFILE, credentials->cookie_jar);
@@ -868,7 +866,7 @@ int iaexpert_get_resources(
 	curl_easy_setopt(curl_easy, CURLOPT_FOLLOWLOCATION, 0L);
 	curl_easy_setopt(curl_easy, CURLOPT_MAXREDIRS, -1);
 	
-	char* effective_url __curl_free__ = NULL;
+	char* effective_url = NULL;
 	curl_easy_getinfo(curl_easy, CURLINFO_EFFECTIVE_URL, &effective_url);
 	
 	if (effective_url != NULL && memcmp(effective_url, IAEXPERT_LOGIN_HOMEPAGE, strlen(IAEXPERT_LOGIN_HOMEPAGE)) == 0) {

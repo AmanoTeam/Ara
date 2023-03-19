@@ -240,6 +240,8 @@ CURLcode curl_easy_perform_retry(CURL* const curl) {
 		
 		retry_after += retry_after;
 		
+		fprintf(stderr, "- Ocorreu uma falha inesperada durante a comunicação com o servidor HTTP: %s\r\n- (%zu/%zu) Uma nova tentativa de conexão ocorrerá dentro de %zu segundos\n", get_global_curl_error(), retries, HTTP_MAX_RETRIES, retry_after);
+		
 		#ifdef _WIN32
 			Sleep((DWORD) (retry_after * 1000));
 		#else

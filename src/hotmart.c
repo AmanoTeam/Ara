@@ -1057,6 +1057,10 @@ int hotmart_get_page(
 				return UERR_CURL_FAILURE;
 			}
 			
+			if (strcmp(string.s, "{}") == 0) {
+				continue;
+			}
+			
 			json_auto_t* subtree = json_loads(string.s, 0, NULL);
 			
 			buffer_free(&string);

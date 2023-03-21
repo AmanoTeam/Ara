@@ -134,19 +134,24 @@ jobs:
             armv7-w64-mingw32
             armv7a-linux-androideabi
             powerpc-linux-gnu
+            powerpc-unknown-netbsd
             i686-linux-android
             i686-linux-gnu
             i686-w64-mingw32
             i386-unknown-netbsdelf
             i386-unknown-freebsd
             sh4-linux-gnu
+            shle-unknown-netbsdelf
             m68k-linux-gnu
             hppa-linux-gnu
+            hppa-unknown-netbsd
             alpha-linux-gnu
+            alpha-unknown-netbsd
             mipsisa32r6el-linux-gnu
             mipsisa32r6-linux-gnu
             mipsel-linux-gnu
             mips-linux-gnu
+            mips-unknown-netbsd
             x86_64-apple-darwin
             x86_64h-apple-darwin
             x86_64-linux-android
@@ -170,6 +175,8 @@ jobs:
             riscv64-unknown-freebsd
             sparc64-linux-gnu
             sparc64-unknown-freebsd
+            sparc64-unknown-netbsd
+            sparc-unknown-netbsdelf
             mipsisa64r6el-linux-gnuabi64
             mipsisa64r6-linux-gnuabi64
             mips64-linux-gnuabi64

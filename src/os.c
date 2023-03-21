@@ -5,79 +5,11 @@
 	#include <windows.h>
 #else
 	#include <unistd.h>
-	
-	#if defined(__AppleiOS__) || defined(__AppleTV__)
-		#include <spawn.h>
-	#endif
-	
-	#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__AppleiOS__) || defined(__AppleTV__)
-		#include <sys/wait.h>
-	#endif
 #endif
 
 #include "symbols.h"
 #include "os.h"
 #include "filesystem.h"
-
-int execute_shell_command(const char* const command) {
-	/*
-	Executes a shell command.
-	
-	Returns the exit code for the command, which is (0) on success.
-	*/
-	
-	#if defined(_WIN32) && defined(_UNICODE)
-		const int wcommands = MultiByteToWideChar(CP_UTF8, 0, command, -1, NULL, 0);
-		
-		if (wcommands == 0) {
-			return -1;
-		}
-		
-		wchar_t wcommand[wcommands];
-		
-		if (MultiByteToWideChar(CP_UTF8, 0, command, -1, wcommand, wcommands) == 0) {
-			return -1;
-		}
-		
-		const int code = _wsystem(wcommand);
-	#else
-		#if defined(__AppleiOS__) || defined(__AppleTV__)
-			char* const argv[] = {
-				"sh",
-				"-c",
-				(char* const) command,
-				NULL
-			};
-			
-			pid_t pid = 0;
-			
-			if (posix_spawnp(&pid, "/bin/sh", 0, NULL, argv, NULL) != 0) {
-				return -1;
-			}
-			
-			int code = 0;
-			
-			do {
-				const int status = waitpid(pid, &code, WUNTRACED | WCONTINUED);
-				
-				if (status == -1) {
-					return -1;
-				}
-			} while (!WIFEXITED(code) && !WIFSIGNALED(code));
-		#else
-			const int code = system(command);
-		#endif
-	#endif
-	
-	#ifndef _WIN32
-		const int exit_code = WIFSIGNALED(code) ? 128 + WTERMSIG(code) : WEXITSTATUS(code);
-	#else
-		const int exit_code = code;
-	#endif
-	
-	return exit_code;
-	
-}
 
 int is_administrator(void) {
 	/*

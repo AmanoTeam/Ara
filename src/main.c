@@ -351,7 +351,7 @@ static int m3u8_download(const char* const url, const char* const output) {
 	const char* const input[] = {playlist_filename, NULL};
 	
 	const int code = ffmpeg_copy_streams(input, output);
-	/*
+	
 	for (size_t index = 0; index < dl_total; index++) {
 		struct Download* const download = &dl_queue[index];
 		
@@ -360,7 +360,7 @@ static int m3u8_download(const char* const url, const char* const output) {
 	}
 	
 	remove_file(playlist_filename);
-	*/
+	
 	if (code != 0) {
 		fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar concatenar os seguimentos de mídia de '%s' para um único arquivo em '%s': %s\r\n", playlist_filename, output, av_err2str(code));
 		return UERR_FAILURE;
@@ -576,12 +576,11 @@ int main(void) {
 			}
 			
 			subobj = json_object_get(item, "cookie_jar");
-			/*
+			
 			if (subobj == NULL || (!json_is_null(subobj) && !json_is_string(subobj))) {
 				fprintf(stderr, "- O arquivo de configurações localizado em '%s' possui um formato inválido!\r\n", accounts_file);
 				return EXIT_FAILURE;
 			}
-			*/
 			
 			const char* const cookie_jar = json_is_null(subobj) ? NULL : json_string_value(subobj);
 			

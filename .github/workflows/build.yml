@@ -123,20 +123,35 @@ jobs:
         
         echo 'HAIKU_TOOLCHAIN=/tmp/unknown-unknown-haiku' >> "${GITHUB_ENV}"
         echo '/tmp/unknown-unknown-haiku/bin' >> "${GITHUB_PATH}"
+    - name: Setup OBGGCC cross compiler
+      run: |
+        declare -r OBGGCC_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/obggcc/releases/latest')")"
+        declare -r OBGGCC_CROSS_TARBALL='/tmp/linux-cross.tar.xz'
+        declare -r OBGGCC_CROSS_URL="https://github.com/AmanoTeam/obggcc/releases/download/${OBGGCC_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
+        
+        curl --retry 10 --retry-delay 3 --silent --location --url "${OBGGCC_CROSS_URL}" --output "${OBGGCC_CROSS_TARBALL}"
+        tar --directory="$(dirname "${OBGGCC_CROSS_TARBALL}")" --extract --file="${OBGGCC_CROSS_TARBALL}"
+        
+        echo 'OBGGCC_TOOLCHAIN=/tmp/unknown-unknown-linux' >> "${GITHUB_ENV}"
+        echo '/tmp/unknown-unknown-linux/bin' >> "${GITHUB_PATH}"
     - name: Build with CMake
       run: |
         declare -r MACHINE_HOST="$(gcc -dumpmachine)"
         
         declare -r targets=(
+        	x86_64-unknown-linux-gnu
             "${MACHINE_HOST}"
             arm-linux-gnueabi
+            arm-unknown-linux-gnueabi
             arm-linux-gnueabihf
+            arm-unknown-linux-gnueabihf
             armv7-w64-mingw32
             armv7a-linux-androideabi
             powerpc-linux-gnu
             powerpc-unknown-netbsd
             i686-linux-android
             i686-linux-gnu
+            i486-unknown-linux-gnu
             i686-w64-mingw32
             i386-unknown-netbsdelf
             i386-unknown-freebsd
@@ -161,6 +176,7 @@ jobs:
             x86_64-unknown-dragonfly
             x86_64-unknown-haiku
             x86_64-linux-gnux32
+            x86_64-unknown-linux-gnu
             aarch64-linux-android
             aarch64-linux-gnu
             aarch64-w64-mingw32

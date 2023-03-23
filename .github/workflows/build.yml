@@ -139,7 +139,6 @@ jobs:
         declare -r MACHINE_HOST="$(gcc -dumpmachine)"
         
         declare -r targets=(
-        	x86_64-unknown-linux-gnu
             "${MACHINE_HOST}"
             arm-linux-gnueabi
             arm-unknown-linux-gnueabi

@@ -1,32 +1,67 @@
+#ifndef _WIN32
+	#define _GNU_SOURCE
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 
 #ifdef _WIN32
 	#include <windows.h>
 	#include <fileapi.h>
+	#include <shlwapi.h>
 #else
 	#include <unistd.h>
 	#include <sys/stat.h>
 	#include <errno.h>
 	#include <limits.h>
+	#include <dirent.h>
+#endif
+
+#if !defined(_WIN32) && !defined(__FreeBSD__) && !defined(__NetBSD__) && !defined(__DragonFly__) && !defined(__APPLE__) && !defined(__Haiku__)
+	#include <sys/syscall.h>
 	
-	#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
-		#include <sys/sysctl.h>
-	#elif defined(__APPLE__)
-		#include <sys/param.h>
-		#include <copyfile.h>
-		#include <mach-o/dyld.h>
-	#elif defined(__Haiku__)
-		#include <FindDirectory.h>
+	struct linux_dirent {
+		unsigned long d_ino;
+		off_t d_off;
+		unsigned short d_reclen;
+		char d_name[];
+	};
+	
+	#if defined(__aarch64__) || (defined(__riscv) && __LP64__)
+		#define SYS_getdents SYS_getdents64
 	#endif
+#endif
+
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+	#include <sys/sysctl.h>
+#endif
+
+#if defined(__APPLE__)
+	#include <sys/param.h>
+	#include <copyfile.h>
+	#include <mach-o/dyld.h>
+	
+	int getdirentries64(int fd, char *buf, int nbytes, long *basep) __asm("___getdirentries64");
+#endif
+
+#if defined(__Haiku__)
+	#include <FindDirectory.h>
+	
+	int _kern_open_dir(int fd, const char *path);
+	ssize_t _kern_read_dir(int fd, struct dirent *buffer, size_t bufferSize, size_t maxCount);
+#endif
+
+#if !defined(__Haiku__)
+	#include <fcntl.h>
 #endif
 
 #include "fstream.h"
 #include "symbols.h"
 #include "filesystem.h"
+#include "walkdir.h"
 
 #ifdef _WIN32
-	static int is_absolute(const char* const path) {
+	int is_absolute(const char* const path) {
 		/*
 		Checks whether a given path is absolute.
 		
@@ -133,16 +168,21 @@ int remove_file(const char* const filename) {
 	
 	#ifdef _WIN32
 		#ifdef _UNICODE
+			const int is_abs = is_absolute(filename);
+			
 			const int wfilenames = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
 			
 			if (wfilenames == 0) {
 				return -1;
 			}
 			
-			wchar_t wfilename[wcslen(WIN10LP_PREFIX) + wfilenames];
-			wcscpy(wfilename, WIN10LP_PREFIX);
+			wchar_t wfilename[(is_abs ? wcslen(WIN10LP_PREFIX) : 0) + wfilenames];
 			
-			if (MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfilename + wcslen(WIN10LP_PREFIX), wfilenames) == 0) {
+			if (is_abs) {
+				wcscpy(wfilename, WIN10LP_PREFIX);
+			}
+			
+			if (MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfilename + (is_abs ? wcslen(WIN10LP_PREFIX) : 0), wfilenames) == 0) {
 				return -1;
 			}
 			
@@ -190,6 +230,113 @@ int remove_file(const char* const filename) {
 	
 }
 
+static int remove_empty_directory(const char* const directory) {
+	/*
+	Deletes an existing empty directory.
+	
+	Returns (0) on success, (-1) on error.
+	*/
+	
+	#ifdef _WIN32
+		#ifdef _UNICODE
+			const int is_abs = is_absolute(directory);
+			
+			const int wdirectorys = MultiByteToWideChar(CP_UTF8, 0, directory, -1, NULL, 0);
+			
+			if (wdirectorys == 0) {
+				return -1;
+			}
+			
+			wchar_t wdirectory[(is_abs ? wcslen(WIN10LP_PREFIX) : 0) + wdirectorys];
+			
+			if (is_abs) {
+				wcscpy(wdirectory, WIN10LP_PREFIX);
+			}
+			
+			if (MultiByteToWideChar(CP_UTF8, 0, directory, -1, wdirectory + (is_abs ? wcslen(WIN10LP_PREFIX) : 0), wdirectorys) == 0) {
+				return -1;
+			}
+			
+			const BOOL status = RemoveDirectoryW(wdirectory);
+		#else
+			const BOOL status = RemoveDirectoryA(directory);
+		#endif
+		
+		if (status == 0) {
+			return -1;
+		}
+	#else
+		if (rmdir(directory) == -1) {
+			return -1;
+		}
+	#endif
+	
+	return 0;
+	
+}
+
+int remove_recursive(const char* const directory, int remove_itself) {
+	/*
+	Recursively removes a directory from disk.
+	
+	Returns (0) on success, (-1) on error.
+	*/
+	
+	struct WalkDir walkdir = {0};
+	
+	if (walkdir_init(&walkdir, directory) == -1) {
+		return -1;
+	}
+	
+	while (1) {
+		const struct WalkDirItem* const item = walkdir_next(&walkdir);
+		
+		if (item == NULL) {
+			break;
+		}
+		
+		if (strcmp(item->name, ".") == 0 || strcmp(item->name, "..") == 0) {
+			continue;
+		}
+		
+		char path[strlen(directory) + strlen(PATH_SEPARATOR) + strlen(item->name) + 1];
+		strcpy(path, directory);
+		strcat(path, PATH_SEPARATOR);
+		strcat(path, item->name);
+		
+		switch (item->type) {
+			case WALKDIR_ITEM_DIRECTORY: {
+				if (remove_recursive(path, 1) == -1) {
+					walkdir_free(&walkdir);
+					return -1;
+				}
+				
+				break;
+			}
+			case WALKDIR_ITEM_FILE:
+			case WALKDIR_ITEM_UNKNOWN: {
+				if (remove_file(path) == -1) {
+					walkdir_free(&walkdir);
+					return -1;
+				}
+				
+				break;
+			}
+		}
+	}
+	
+	walkdir_free(&walkdir);
+	
+	if (remove_itself) {
+		if (remove_empty_directory(directory) == -1) {
+			return -1;
+		}
+	}
+	
+	return 0;
+	
+}
+
 int directory_exists(const char* const directory) {
 	/*
 	Checks if directory exists.
@@ -199,16 +346,21 @@ int directory_exists(const char* const directory) {
 	
 	#ifdef _WIN32
 		#ifdef _UNICODE
+			const int is_abs = is_absolute(directory);
+			
 			const int wdirectorys = MultiByteToWideChar(CP_UTF8, 0, directory, -1, NULL, 0);
 			
 			if (wdirectorys == 0) {
 				return -1;
 			}
 			
-			wchar_t wdirectory[wcslen(WIN10LP_PREFIX) + wdirectorys];
-			wcscpy(wdirectory, WIN10LP_PREFIX);
+			wchar_t wdirectory[(is_abs ? wcslen(WIN10LP_PREFIX) : 0) + wdirectorys];
 			
-			if (MultiByteToWideChar(CP_UTF8, 0, directory, -1, wdirectory + wcslen(WIN10LP_PREFIX), wdirectorys) == 0) {
+			if (is_abs) {
+				wcscpy(wdirectory, WIN10LP_PREFIX);
+			}
+			
+			if (MultiByteToWideChar(CP_UTF8, 0, directory, -1, wdirectory + (is_abs ? wcslen(WIN10LP_PREFIX) : 0), wdirectorys) == 0) {
 				return -1;
 			}
 			
@@ -225,7 +377,7 @@ int directory_exists(const char* const directory) {
 			return -1;
 		}
 		
-		return (value & FILE_ATTRIBUTE_DIRECTORY) > 0;
+		return (value & FILE_ATTRIBUTE_DIRECTORY) != 0;
 	#else
 		struct stat st = {0};
 		
@@ -242,6 +394,132 @@ int directory_exists(const char* const directory) {
 	
 }
 
+int directory_empty(const char* const directory) {
+	/*
+	Determines whether a specified path is an empty directory.
+	
+	Returns (1) if directory is empty, (0) if it does not, (-1) on error.
+	*/
+	
+	#ifdef _WIN32
+		#ifdef _UNICODE
+			const int is_abs = is_absolute(directory);
+			
+			const int wdirectorys = MultiByteToWideChar(CP_UTF8, 0, directory, -1, NULL, 0);
+			
+			if (wdirectorys == 0) {
+				return -1;
+			}
+			
+			wchar_t wdirectory[(is_abs ? wcslen(WIN10LP_PREFIX) : 0) + wdirectorys];
+			
+			if (is_abs) {
+				wcscpy(wdirectory, WIN10LP_PREFIX);
+			}
+			
+			if (MultiByteToWideChar(CP_UTF8, 0, directory, -1, wdirectory + (is_abs ? wcslen(WIN10LP_PREFIX) : 0), wdirectorys) == 0) {
+				return -1;
+			}
+			
+			const DWORD value = GetFileAttributesW(wdirectory);
+		#else
+			const DWORD value = GetFileAttributesA(directory);
+		#endif
+		
+		if (value == INVALID_FILE_ATTRIBUTES) {
+			return -1;
+		}
+		
+		if ((value & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+			return -1;
+		}
+		
+		#ifdef _UNICODE
+			const BOOL status = PathIsDirectoryEmptyW(wdirectory);
+		#else
+			const BOOL status = PathIsDirectoryEmptyA(directory);
+		#endif
+		
+		return (int) status;
+	#else
+		#ifdef __Haiku__
+			const int fd = _kern_open_dir(-1, directory);
+		#else
+			const int fd = open(directory, O_RDONLY | O_DIRECTORY);
+		#endif
+		
+		if (fd == -1) {
+			return -1;
+		}
+		
+		#if defined(__APPLE__) || defined(__Haiku__)
+			struct dirent buffer[3] = {'\0'};
+		#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+			struct dirent buffer[2] = {'\0'};
+		#else
+			struct linux_dirent buffer[2] = {'\0'};
+		#endif
+		
+		while (1) {
+			#if defined(__APPLE__)
+				long base = 0;
+				const int size = getdirentries64(fd, (char*) buffer, sizeof(buffer), &base);
+			#elif defined(__Haiku__)
+				const ssize_t size = _kern_read_dir(fd, buffer, sizeof(buffer), sizeof(buffer) / sizeof(*buffer));
+			#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+				const ssize_t size = getdents(fd, (char*) buffer, sizeof(buffer));
+			#else
+				const long size = syscall(SYS_getdents, fd, buffer, sizeof(buffer));
+			#endif
+			
+			if (size == 0) {
+				close(fd);
+				break;
+			}
+			
+			#ifdef __Haiku__
+				if (size < 0) {
+					return -1;
+				}
+			#else
+				if (size == -1) {
+					close(fd);
+					
+					if (errno == EINVAL) {
+						return 0;
+					}
+					
+					return -1;
+				}
+			#endif
+			
+			for (long index = 0; index < size;) {
+				#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__APPLE__)
+					struct dirent* item = (struct dirent*) (((char*) buffer) + index);
+				#elif defined(__Haiku__)
+					struct dirent* item = (struct dirent*) (buffer + index);
+				#else
+					struct linux_dirent* item = (struct linux_dirent*) (buffer + index);
+				#endif
+				
+				if (!(strcmp(item->d_name, ".") == 0 || strcmp(item->d_name, "..") == 0)) {
+					close(fd);
+					return 0;
+				}
+				
+				#ifdef __DragonFly__
+					index += _DIRENT_DIRSIZ(item);
+				#else
+					index += item->d_reclen;
+				#endif
+			}
+		}
+		
+		return 1;
+	#endif
+	
+}
+
 int file_exists(const char* const filename) {
 	/*
 	Checks if file exists and is a regular file or symlink.
@@ -251,16 +529,21 @@ int file_exists(const char* const filename) {
 	
 	#ifdef _WIN32
 		#ifdef _UNICODE
+			const int is_abs = is_absolute(filename);
+			
 			const int wfilenames = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
 			
 			if (wfilenames == 0) {
 				return -1;
 			}
 			
-			wchar_t wfilename[wcslen(WIN10LP_PREFIX) + wfilenames];
-			wcscpy(wfilename, WIN10LP_PREFIX);
+			wchar_t wfilename[(is_abs ? wcslen(WIN10LP_PREFIX) : 0) + wfilenames];
 			
-			if (MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfilename + wcslen(WIN10LP_PREFIX), wfilenames) == 0) {
+			if (is_abs) {
+				wcscpy(wfilename, WIN10LP_PREFIX);
+			}
+			
+			if (MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfilename + (is_abs ? wcslen(WIN10LP_PREFIX) : 0), wfilenames) == 0) {
 				return -1;
 			}
 			
@@ -305,16 +588,21 @@ static int raw_create_dir(const char* const directory) {
 	
 	#ifdef _WIN32
 		#ifdef _UNICODE
+			const int is_abs = is_absolute(directory);
+			
 			const int wdirectorys = MultiByteToWideChar(CP_UTF8, 0, directory, -1, NULL, 0);
 			
 			if (wdirectorys == 0) {
 				return -1;
 			}
 			
-			wchar_t wdirectory[wcslen(WIN10LP_PREFIX) + wdirectorys];
-			wcscpy(wdirectory, WIN10LP_PREFIX);
+			wchar_t wdirectory[(is_abs ? wcslen(WIN10LP_PREFIX) : 0) + wdirectorys];
 			
-			if (MultiByteToWideChar(CP_UTF8, 0, directory, -1, wdirectory + wcslen(WIN10LP_PREFIX), wdirectorys) == 0) {
+			if (is_abs) {
+				wcscpy(wdirectory, WIN10LP_PREFIX);
+			}
+			
+			if (MultiByteToWideChar(CP_UTF8, 0, directory, -1, wdirectory + (is_abs ? wcslen(WIN10LP_PREFIX) : 0), wdirectorys) == 0) {
 				return -1;
 			}
 			
@@ -411,18 +699,25 @@ int copy_file(const char* const source, const char* const destination) {
 	
 	#if defined(_WIN32)
 		#ifdef _UNICODE
-			int wsources = MultiByteToWideChar(CP_UTF8, 0, source, -1, NULL, 0);
+			int is_abs = is_absolute(source);
+			
+			const int wsources = MultiByteToWideChar(CP_UTF8, 0, source, -1, NULL, 0);
 			
 			if (wsources == 0) {
 				return -1;
 			}
 			
-			wchar_t wsource[wcslen(WIN10LP_PREFIX) + wsources];
-			wcscpy(wsource, WIN10LP_PREFIX);
+			wchar_t wsource[(is_abs ? wcslen(WIN10LP_PREFIX) : 0) + wsources];
 			
-			if (MultiByteToWideChar(CP_UTF8, 0, source, -1, wsource + wcslen(WIN10LP_PREFIX), wsources) == 0) {
+			if (is_abs) {
+				wcscpy(wsource, WIN10LP_PREFIX);
+			}
+			
+			if (MultiByteToWideChar(CP_UTF8, 0, source, -1, wsource + (is_abs ? wcslen(WIN10LP_PREFIX) : 0), wsources) == 0) {
 				return -1;
 			}
+			
+			is_abs = is_absolute(destination);
 			
 			const int wdestinations = MultiByteToWideChar(CP_UTF8, 0, destination, -1, NULL, 0);
 			
@@ -430,10 +725,13 @@ int copy_file(const char* const source, const char* const destination) {
 				return -1;
 			}
 			
-			wchar_t wdestination[wcslen(WIN10LP_PREFIX) + wdestinations];
-			wcscpy(wdestination, WIN10LP_PREFIX);
+			wchar_t wdestination[(is_abs ? wcslen(WIN10LP_PREFIX) : 0) + wdestinations];
 			
-			if (MultiByteToWideChar(CP_UTF8, 0, destination, -1, wdestination + wcslen(WIN10LP_PREFIX), wdestinations) == 0) {
+			if (is_abs) {
+				wcscpy(wdestination, WIN10LP_PREFIX);
+			}
+			
+			if (MultiByteToWideChar(CP_UTF8, 0, destination, -1, wdestination + (is_abs ? wcslen(WIN10LP_PREFIX) : 0), wdestinations) == 0) {
 				return -1;
 			}
 			
@@ -513,18 +811,25 @@ int move_file(const char* const source, const char* const destination) {
 	
 	#ifdef _WIN32
 		#ifdef _UNICODE
+			int is_abs = is_absolute(source);
+			
 			const int wsources = MultiByteToWideChar(CP_UTF8, 0, source, -1, NULL, 0);
 			
 			if (wsources == 0) {
 				return -1;
 			}
 			
-			wchar_t wsource[wcslen(WIN10LP_PREFIX) + wsources];
-			wcscpy(wsource, WIN10LP_PREFIX);
+			wchar_t wsource[(is_abs ? wcslen(WIN10LP_PREFIX) : 0) + wsources];
 			
-			if (MultiByteToWideChar(CP_UTF8, 0, source, -1, wsource + wcslen(WIN10LP_PREFIX), wsources) == 0) {
+			if (is_abs) {
+				wcscpy(wsource, WIN10LP_PREFIX);
+			}
+			
+			if (MultiByteToWideChar(CP_UTF8, 0, source, -1, wsource + (is_abs ? wcslen(WIN10LP_PREFIX) : 0), wsources) == 0) {
 				return -1;
 			}
+			
+			is_abs = is_absolute(destination);
 			
 			const int wdestinations = MultiByteToWideChar(CP_UTF8, 0, destination, -1, NULL, 0);
 			
@@ -532,10 +837,13 @@ int move_file(const char* const source, const char* const destination) {
 				return -1;
 			}
 			
-			wchar_t wdestination[wcslen(WIN10LP_PREFIX) + wdestinations];
-			wcscpy(wdestination, WIN10LP_PREFIX);
+			wchar_t wdestination[(is_abs ? wcslen(WIN10LP_PREFIX) : 0) + wdestinations];
 			
-			if (MultiByteToWideChar(CP_UTF8, 0, destination, -1, wdestination + wcslen(WIN10LP_PREFIX), wdestinations) == 0) {
+			if (is_abs) {
+				wcscpy(wdestination, WIN10LP_PREFIX);
+			}
+			
+			if (MultiByteToWideChar(CP_UTF8, 0, destination, -1, wdestination + (is_abs ? wcslen(WIN10LP_PREFIX) : 0), wdestinations) == 0) {
 				return -1;
 			}
 			
@@ -663,16 +971,21 @@ long long get_file_size(const char* const filename) {
 		WIN32_FIND_DATA data = {0};
 		
 		#ifdef _UNICODE
+			const int is_abs = is_absolute(filename);
+			
 			const int wfilenames = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
 			
 			if (wfilenames == 0) {
 				return -1;
 			}
 			
-			wchar_t wfilename[wcslen(WIN10LP_PREFIX) + wfilenames];
-			wcscpy(wfilename, WIN10LP_PREFIX);
+			wchar_t wfilename[(is_abs ? wcslen(WIN10LP_PREFIX) : 0) + wfilenames];
 			
-			if (MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfilename + wcslen(WIN10LP_PREFIX), wfilenames) == 0) {
+			if (is_abs) {
+				wcscpy(wfilename, WIN10LP_PREFIX);
+			}
+			
+			if (MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfilename + (is_abs ? wcslen(WIN10LP_PREFIX) : 0), wfilenames) == 0) {
 				return -1;
 			}
 			

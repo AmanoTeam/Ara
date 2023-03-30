@@ -687,6 +687,7 @@ add_executable(
 	src/terminal.c
 	src/cir.c
 	src/ffmpeg.c
+	src/walkdir.c
 )
 
 add_executable(
@@ -698,6 +699,7 @@ add_executable(
 	src/errors.c
 	src/fstream.c
 	src/cleanup.c
+	src/walkdir.c
 )
 
 if (SPARKLEC_DISABLE_CERTIFICATE_VALIDATION) 
@@ -881,6 +883,11 @@ if (WIN32)
 			BEFORE
 			PRIVATE
 			-municode
+		)
+		
+		target_link_libraries(
+			${target}
+			shlwapi
 		)
 	endforeach()
 	

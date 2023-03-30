@@ -484,6 +484,30 @@ int main(void) {
 			
 			break;
 		}
+		case 1: {
+			switch (directory_empty(temporary_directory)) {
+				case 0: {
+					fprintf(stderr, "- Resquícios de arquivos temporários foram encontrados em '%s', deletando-os\r\n", temporary_directory);
+					
+					if (remove_directory_contents(temporary_directory) == -1) {
+						const struct SystemError error = get_system_error();
+						
+						fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar remover os resquícios de arquivos temporários em '%s': %s\r\n", temporary_directory, error.message);
+						return EXIT_FAILURE;
+					}
+					
+					break;
+				}
+				case -1: {
+					const struct SystemError error = get_system_error();
+					
+					fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar obter informações sobre o diretório em '%s': %s\r\n", temporary_directory, error.message);
+					return EXIT_FAILURE;
+				}
+			}
+			
+			break;
+		}
 		case -1: {
 			const struct SystemError error = get_system_error();
 			

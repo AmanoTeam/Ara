@@ -30,7 +30,7 @@ struct WalkDir {
 #else
 	DIR* dir;
 #endif
-#ifdef __Haiku__
+#ifdef HAIKU
 	const char* directory;
 #endif
 };

@@ -397,10 +397,12 @@ int main(void) {
 		setrlimit(RLIMIT_NOFILE, &rlim);
 	#endif
 	
-	if (is_administrator()) {
-		fprintf(stderr, "- Você não precisa e nem deve executar este programa com privilégios elevados!\r\n");
-		return EXIT_FAILURE;
-	}
+	#ifndef HAIKU
+		if (is_administrator()) {
+			fprintf(stderr, "- Você não precisa e nem deve executar este programa com privilégios elevados!\r\n");
+			return EXIT_FAILURE;
+		}
+	#endif
 	
 	av_log_set_level(AV_LOG_ERROR);
 	

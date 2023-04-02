@@ -1,4 +1,7 @@
-int is_administrator(void);
+#ifndef HAIKU
+	int is_administrator(void);
+#endif
+
 char* get_configuration_directory(void);
 char* get_temporary_directory(void);
 char* get_home_directory(void);

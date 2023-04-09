@@ -81,9 +81,9 @@ jobs:
         echo "$(realpath './target/bin')" >> "${GITHUB_PATH}"
     - name: Setup NetBSD cross compiler
       run: | 
-        declare -r NETBSD_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/NetBSD-Cross/releases/latest')")"
+        declare -r NETBSD_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/n3tbsdcr0ss/releases/latest')")"
         declare -r NETBSD_CROSS_TARBALL='/tmp/netbsd-cross.tar.xz'
-        declare -r NETBSD_CROSS_URL="https://github.com/AmanoTeam/NetBSD-Cross/releases/download/${NETBSD_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
+        declare -r NETBSD_CROSS_URL="https://github.com/AmanoTeam/n3tbsdcr0ss/releases/download/${NETBSD_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
         
         curl --retry 10 --retry-delay 3 --silent --location --url "${NETBSD_CROSS_URL}" --output "${NETBSD_CROSS_TARBALL}"
         tar --directory="$(dirname "${NETBSD_CROSS_TARBALL}")" --extract --file="${NETBSD_CROSS_TARBALL}"
@@ -92,9 +92,9 @@ jobs:
         echo '/tmp/unknown-unknown-netbsd/bin' >> "${GITHUB_PATH}"
     - name: Setup FreeBSD cross compiler
       run: |
-        declare -r FREEBSD_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl  --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/FreeBSD-Cross/releases/latest')")"
+        declare -r FREEBSD_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl  --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/fr33bsdcr0ss/releases/latest')")"
         declare -r FREEBSD_CROSS_TARBALL='/tmp/freebsd-cross.tar.xz'
-        declare -r FREEBSD_CROSS_URL="https://github.com/AmanoTeam/FreeBSD-Cross/releases/download/${FREEBSD_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
+        declare -r FREEBSD_CROSS_URL="https://github.com/AmanoTeam/fr33bsdcr0ss/releases/download/${FREEBSD_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
         
         curl --silent --retry 10 --retry-delay 3 --location --url "${FREEBSD_CROSS_URL}" --output "${FREEBSD_CROSS_TARBALL}"
         tar --directory="$(dirname "${FREEBSD_CROSS_TARBALL}")" --extract --file="${FREEBSD_CROSS_TARBALL}"
@@ -103,9 +103,9 @@ jobs:
         echo '/tmp/unknown-unknown-freebsd/bin' >> "${GITHUB_PATH}"
     - name: Setup DragonFly cross compiler
       run: |
-        declare -r DRAGONFLY_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/DragonFlyBSD-Cross/releases/latest')")"
+        declare -r DRAGONFLY_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/dr4g0nflybsdcr0ss/releases/latest')")"
         declare -r DRAGONFLY_CROSS_TARBALL='/tmp/freebsd-cross.tar.xz'
-        declare -r DRAGONFLY_CROSS_URL="https://github.com/AmanoTeam/DragonFlyBSD-Cross/releases/download/${DRAGONFLY_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
+        declare -r DRAGONFLY_CROSS_URL="https://github.com/AmanoTeam/dr4g0nflybsdcr0ss/releases/download/${DRAGONFLY_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
         
         curl --retry 10 --retry-delay 3 --silent --location --url "${DRAGONFLY_CROSS_URL}" --output "${DRAGONFLY_CROSS_TARBALL}"
         tar --directory="$(dirname "${DRAGONFLY_CROSS_TARBALL}")" --extract --file="${DRAGONFLY_CROSS_TARBALL}"
@@ -114,9 +114,9 @@ jobs:
         echo '/tmp/unknown-unknown-dragonfly/bin' >> "${GITHUB_PATH}"
     - name: Setup Haiku cross compiler
       run: |
-        declare -r HAIKU_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Haiku-Cross/releases/latest')")"
+        declare -r HAIKU_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/h4ikucr0ss/releases/latest')")"
         declare -r HAIKU_CROSS_TARBALL='/tmp/haiku-cross.tar.xz'
-        declare -r HAIKU_CROSS_URL="https://github.com/AmanoTeam/Haiku-Cross/releases/download/${HAIKU_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
+        declare -r HAIKU_CROSS_URL="https://github.com/AmanoTeam/h4ikucr0ss/releases/download/${HAIKU_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
         
         curl --retry 10 --retry-delay 3 --silent --location --url "${HAIKU_CROSS_URL}" --output "${HAIKU_CROSS_TARBALL}"
         tar --directory="$(dirname "${HAIKU_CROSS_TARBALL}")" --extract --file="${HAIKU_CROSS_TARBALL}"
@@ -134,6 +134,17 @@ jobs:
         
         echo 'OBGGCC_TOOLCHAIN=/tmp/unknown-unknown-linux' >> "${GITHUB_ENV}"
         echo '/tmp/unknown-unknown-linux/bin' >> "${GITHUB_PATH}"
+    - name: Setup OpenBSD cross compiler
+      run: |
+        declare -r OPENBSD_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/0p3nbsdcr0ss/releases/latest')")"
+        declare -r OPENBSD_CROSS_TARBALL='/tmp/openbsd-cross.tar.xz'
+        declare -r OPENBSD_CROSS_URL="https://github.com/AmanoTeam/0p3nbsdcr0ss/releases/download/${OPENBSD_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
+        
+        curl --retry 10 --retry-delay 3 --silent --location --url "${OPENBSD_CROSS_URL}" --output "${OPENBSD_CROSS_TARBALL}"
+        tar --directory="$(dirname "${OPENBSD_CROSS_TARBALL}")" --extract --file="${OPENBSD_CROSS_TARBALL}"
+        
+        echo 'OPENBSD_TOOLCHAIN=/tmp/unknown-unknown-openbsd' >> "${GITHUB_ENV}"
+        echo '/tmp/unknown-unknown-openbsd/bin' >> "${GITHUB_PATH}"
     - name: Build with CMake
       run: |
         declare -r MACHINE_HOST="$(gcc -dumpmachine)"
@@ -148,24 +159,32 @@ jobs:
             armv7a-linux-androideabi
             powerpc-linux-gnu
             powerpc-unknown-netbsd
+            powerpc-unknown-linux-gnu
             i686-linux-android
             i686-linux-gnu
             i486-unknown-linux-gnu
             i686-w64-mingw32
             i386-unknown-netbsdelf
             i386-unknown-freebsd
+            i386-unknown-openbsd
             sh4-linux-gnu
             shle-unknown-netbsdelf
             m68k-linux-gnu
             hppa-linux-gnu
             hppa-unknown-netbsd
+            hppa-unknown-linux-gnu
+            # hppa-unknown-openbsd
             alpha-linux-gnu
             alpha-unknown-netbsd
+            alpha-unknown-openbsd
+            alpha-unknown-linux-gnu
             mipsisa32r6el-linux-gnu
             mipsisa32r6-linux-gnu
             mipsel-linux-gnu
             mips-linux-gnu
             mips-unknown-netbsd
+            mipsel-unknown-linux-gnu
+            mips-unknown-linux-gnu
             x86_64-apple-darwin
             x86_64h-apple-darwin
             x86_64-linux-android
@@ -176,26 +195,34 @@ jobs:
             x86_64-unknown-haiku
             x86_64-linux-gnux32
             x86_64-unknown-linux-gnu
+            x86_64-unknown-openbsd
             aarch64-linux-android
             aarch64-linux-gnu
             aarch64-w64-mingw32
             aarch64-apple-darwin
             aarch64-unknown-freebsd
+            aarch64-unknown-linux-gnu
             powerpc64-linux-gnu
             powerpc64le-linux-gnu
             powerpc-unknown-freebsd
             powerpc64-unknown-freebsd
+            powerpc64le-unknown-linux-gnu
             s390x-linux-gnu
+            s390x-unknown-linux-gnu
+            s390-unknown-linux-gnu
             riscv64-linux-gnu
             riscv64-unknown-freebsd
             sparc64-linux-gnu
             sparc64-unknown-freebsd
             sparc64-unknown-netbsd
             sparc-unknown-netbsdelf
+            sparc-unknown-linux-gnu
             mipsisa64r6el-linux-gnuabi64
             mipsisa64r6-linux-gnuabi64
             mips64-linux-gnuabi64
             mips64el-linux-gnuabi64
+            mips64el-unknown-linux-gnuabi64
+            # vax-unknown-netbsdelf
         )
         
         declare -r OUTPUT_DIRECTORY="$(realpath './output')"

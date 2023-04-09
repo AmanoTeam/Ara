@@ -397,7 +397,7 @@ int main(void) {
 		setrlimit(RLIMIT_NOFILE, &rlim);
 	#endif
 	
-	#ifndef HAIKU
+	#ifndef __HAIKU__
 		if (is_administrator()) {
 			fprintf(stderr, "- Você não precisa e nem deve executar este programa com privilégios elevados!\r\n");
 			return EXIT_FAILURE;

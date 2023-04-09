@@ -17,7 +17,7 @@
 	#include <dirent.h>
 #endif
 
-#if !defined(_WIN32) && !defined(__FreeBSD__) && !defined(__NetBSD__) && !defined(__DragonFly__) && !defined(__APPLE__) && !defined(HAIKU) && !defined(__OpenBSD__)
+#if !defined(_WIN32) && !defined(__FreeBSD__) && !defined(__NetBSD__) && !defined(__DragonFly__) && !defined(__APPLE__) && !defined(__HAIKU__) && !defined(__OpenBSD__)
 	#include <sys/syscall.h>
 	
 	struct linux_dirent {
@@ -44,14 +44,14 @@
 	int getdirentries64(int fd, char *buf, int nbytes, long *basep) __asm("___getdirentries64");
 #endif
 
-#if defined(HAIKU)
+#if defined(__HAIKU__)
 	#include <FindDirectory.h>
 	
 	int _kern_open_dir(int fd, const char *path);
 	ssize_t _kern_read_dir(int fd, struct dirent *buffer, size_t bufferSize, size_t maxCount);
 #endif
 
-#if !defined(HAIKU)
+#if !defined(__HAIKU__)
 	#include <fcntl.h>
 #endif
 
@@ -442,7 +442,7 @@ int directory_empty(const char* const directory) {
 		
 		return (int) status;
 	#else
-		#ifdef HAIKU
+		#ifdef __HAIKU__
 			const int fd = _kern_open_dir(-1, directory);
 		#else
 			const int fd = open(directory, O_RDONLY | O_DIRECTORY);
@@ -452,7 +452,7 @@ int directory_empty(const char* const directory) {
 			return -1;
 		}
 		
-		#if defined(__APPLE__) || defined(HAIKU)
+		#if defined(__APPLE__) || defined(__HAIKU__)
 			struct dirent buffer[3] = {'\0'};
 		#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__OpenBSD__)
 			struct dirent buffer[2] = {'\0'};
@@ -464,7 +464,7 @@ int directory_empty(const char* const directory) {
 			#if defined(__APPLE__)
 				long base = 0;
 				const int size = getdirentries64(fd, (char*) buffer, sizeof(buffer), &base);
-			#elif defined(HAIKU)
+			#elif defined(__HAIKU__)
 				const ssize_t size = _kern_read_dir(fd, buffer, sizeof(buffer), sizeof(buffer) / sizeof(*buffer));
 			#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__OpenBSD__)
 				const ssize_t size = getdents(fd, (char*) buffer, sizeof(buffer));
@@ -477,7 +477,7 @@ int directory_empty(const char* const directory) {
 				break;
 			}
 			
-			#ifdef HAIKU
+			#ifdef __HAIKU__
 				if (size < 0) {
 					return -1;
 				}
@@ -496,7 +496,7 @@ int directory_empty(const char* const directory) {
 			for (long index = 0; index < size;) {
 				#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__APPLE__) || defined(__OpenBSD__)
 					struct dirent* item = (struct dirent*) (((char*) buffer) + index);
-				#elif defined(HAIKU)
+				#elif defined(__HAIKU__)
 					struct dirent* item = (struct dirent*) (buffer + index);
 				#else
 					struct linux_dirent* item = (struct linux_dirent*) (buffer + index);
@@ -620,7 +620,7 @@ static int raw_create_dir(const char* const directory) {
 		}
 	#else
 		if (mkdir(directory, 0777) == -1) {
-			#ifdef HAIKU
+			#ifdef __HAIKU__
 				if (errno == EEXIST || errno == EROFS) {
 					return 0;
 				}
@@ -1055,7 +1055,7 @@ char* get_app_filename(char* const filename) {
 		}
 		
 		strcpy(filename, resolved_path);
-	#elif defined(HAIKU)
+	#elif defined(__HAIKU__)
 		if (find_path(NULL, B_FIND_PATH_IMAGE_PATH, NULL, filename, PATH_MAX) != B_OK) {
 			return NULL;
 		}

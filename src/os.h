@@ -1,4 +1,4 @@
-#ifndef HAIKU
+#ifndef __HAIKU__
 	int is_administrator(void);
 #endif
 

@@ -11,7 +11,7 @@
 #include "os.h"
 #include "filesystem.h"
 
-#ifndef HAIKU
+#ifndef __HAIKU__
 	int is_administrator(void) {
 		/*
 		Returns whether the caller's process is a member of the Administrators local

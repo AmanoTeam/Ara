@@ -7,7 +7,7 @@
 	#include <dirent.h>
 #endif
 
-#ifdef HAIKU
+#ifdef __HAIKU__
 	#include <sys/stat.h>
 #endif
 
@@ -87,7 +87,7 @@ int walkdir_init(struct WalkDir* const walkdir, const char* const directory) {
 			return -1;
 		}
 		
-		#ifdef HAIKU
+		#ifdef __HAIKU__
 			walkdir->directory = directory;
 		#endif
 	#endif
@@ -141,7 +141,7 @@ const struct WalkDirItem* walkdir_next(struct WalkDir* const walkdir) {
 		
 		strcpy(walkdir->item.name, item->d_name);
 		
-		#ifdef HAIKU
+		#ifdef __HAIKU__
 			char path[strlen(walkdir->directory) + strlen(PATH_SEPARATOR) + strlen(item->d_name) + 1];
 			strcpy(path, walkdir->directory);
 			strcat(path, PATH_SEPARATOR);
@@ -154,7 +154,7 @@ const struct WalkDirItem* walkdir_next(struct WalkDir* const walkdir) {
 			}
 		#endif
 		
-		#ifdef HAIKU
+		#ifdef __HAIKU__
 			switch (st.st_mode & S_IFMT) {
 				case S_IFDIR:
 				case S_IFBLK:

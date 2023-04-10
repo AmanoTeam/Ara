@@ -494,12 +494,10 @@ int directory_empty(const char* const directory) {
 			#endif
 			
 			for (long index = 0; index < size;) {
-				#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__APPLE__) || defined(__OpenBSD__)
+				#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__APPLE__) || defined(__OpenBSD__) || defined(__HAIKU__)
 					struct dirent* item = (struct dirent*) (((char*) buffer) + index);
-				#elif defined(__HAIKU__)
-					struct dirent* item = (struct dirent*) (buffer + index);
 				#else
-					struct linux_dirent* item = (struct linux_dirent*) (buffer + index);
+					struct linux_dirent* item = (struct linux_dirent*) (((char*) buffer) + index);
 				#endif
 				
 				if (!(strcmp(item->d_name, ".") == 0 || strcmp(item->d_name, "..") == 0)) {

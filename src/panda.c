@@ -175,8 +175,8 @@ int panda_parse(
 	
 	media->type = MEDIA_M3U8;
 	media->video.id = malloc(strlen(id) + 1);
-	media->video.filename = malloc(strlen(id) + strlen(DOT) + strlen(MP4_FILE_EXTENSION) + 1);
-	media->video.short_filename = malloc(strlen(id) + strlen(DOT) + strlen(MP4_FILE_EXTENSION) + 1);
+	media->video.filename = malloc(strlen(id) + strlen(DOT) + strlen(TS_FILE_EXTENSION) + 1);
+	media->video.short_filename = malloc(strlen(id) + strlen(DOT) + strlen(TS_FILE_EXTENSION) + 1);
 	
 	if (media->video.id == NULL || media->video.filename == NULL || media->video.short_filename == NULL) {
 		return UERR_MEMORY_ALLOCATE_FAILURE;
@@ -186,7 +186,7 @@ int panda_parse(
 	
 	strcpy(media->video.filename, id);
 	strcat(media->video.filename, DOT);
-	strcat(media->video.filename, MP4_FILE_EXTENSION);
+	strcat(media->video.filename, TS_FILE_EXTENSION);
 	
 	strcpy(media->video.short_filename, media->video.filename);
 	

@@ -6,6 +6,7 @@
 	#define NAME_MAX (_MAX_FNAME - 1)
 #else
 	#include <limits.h>
+	#include <sys/types.h>
 #endif
 
 #include "stringu.h"

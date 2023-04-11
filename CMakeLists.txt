@@ -20,6 +20,8 @@ if (NOT SPARKLEC_DISABLE_ESTRATEGIA)
 endif()
 
 option(SPARKLEC_DISABLE_IAEXPERT "Disable support for IA Expert Academy" OFF)
+option(SPARKLEC_DISABLE_KIWIFY "Disable support for Kiwify" OFF)
+
 option(SPARKLEC_DISABLE_CERTIFICATE_VALIDATION "Disable SSL certificate validation in libcurl" OFF)
 
 set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
@@ -802,6 +804,20 @@ else()
 		sparklec
 		PRIVATE
 		src/iaexpert.c
+	)
+endif()
+
+if (SPARKLEC_DISABLE_KIWIFY)
+	target_compile_definitions(
+		sparklec
+		PRIVATE
+		SPARKLEC_DISABLE_KIWIFY
+	)
+else()
+	target_sources(
+		sparklec
+		PRIVATE
+		src/kiwify.c
 	)
 endif()
 

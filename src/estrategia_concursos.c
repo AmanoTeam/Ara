@@ -220,16 +220,6 @@ static int estrategia_concursos_get_exclusives(
 			resources->items = items;
 		}
 		
-		const json_t*  obj = json_object_get(tree, "data");
-		
-		if (obj == NULL) {
-			return UERR_JSON_MISSING_REQUIRED_KEY;
-		}
-		
-		if (!json_is_array(obj)) {
-			return UERR_JSON_NON_MATCHING_TYPE;
-		}
-		
 		size_t index = 0;
 		const json_t* item = NULL;
 		
@@ -280,7 +270,7 @@ static int estrategia_concursos_get_exclusives(
 				.url = malloc(strlen(ESTRATEGIA_CONCURSOS_COURSE_HOMEPAGE) + strlen(SLASH) + strlen(sid) + strlen(SLASH) + strlen(AULAS) + 1)
 			};
 			
-			if (resource.id == NULL || resource.name == NULL || resource.dirname == NULL || resource.short_dirname == NULL ||  resource.qualification.id == NULL || resource.qualification.name == NULL || resource.qualification.dirname == NULL || resource.qualification.short_dirname == NULL) {
+			if (resource.id == NULL || resource.name == NULL || resource.dirname == NULL || resource.short_dirname == NULL ||  resource.qualification.id == NULL || resource.qualification.name == NULL || resource.qualification.dirname == NULL || resource.qualification.short_dirname == NULL || resource.url == NULL) {
 				return UERR_MEMORY_ALLOCATE_FAILURE;
 			}
 			
@@ -309,7 +299,7 @@ static int estrategia_concursos_get_exclusives(
 			resources->items[resources->offset++] = resource;
 		}
 		
-		obj = json_object_get(meta, "to");
+		const json_t* const obj = json_object_get(meta, "to");
 		
 		if (obj == NULL) {
 			return UERR_JSON_MISSING_REQUIRED_KEY;

@@ -26,6 +26,10 @@
 	#include "iaexpert.h"
 #endif
 
+#ifndef SPARKLEC_DISABLE_KIWIFY
+	#include "kiwify.h"
+#endif
+
 struct ProviderMethods {
 	int (*authorize)(const char* const, const char* const, struct Credentials* const);
 	int (*get_resources)(const struct Credentials* const, struct Resources* const);
@@ -110,6 +114,20 @@ static const struct Provider PROVIDERS[] = {
 			.get_page = &iaexpert_get_page
 		},
 		.directory = "IA Expert Academy"
+	},
+#endif
+#ifndef SPARKLEC_DISABLE_KIWIFY
+	{
+		.label = "Kiwify",
+		.url = "https://kiwify.com.br",
+		.methods = {
+			.authorize = &kiwify_authorize,
+			.get_resources = &kiwify_get_resources,
+			.get_modules = &kiwify_get_modules,
+			.get_module = &kiwify_get_module,
+			.get_page = &kiwify_get_page
+		},
+		.directory = "Kiwify"
 	},
 #endif
 };

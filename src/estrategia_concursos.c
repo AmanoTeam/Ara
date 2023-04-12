@@ -657,6 +657,19 @@ int estrategia_concursos_get_modules(
 		char sid[intlen(id) + 1];
 		snprintf(sid, sizeof(sid), "%llu", id);
 		
+		obj = json_object_get(item, "nome");
+		
+		if (obj == NULL) {
+			return UERR_JSON_MISSING_REQUIRED_KEY;
+		}
+		
+		if (!json_is_string(obj)) {
+			return UERR_JSON_NON_MATCHING_TYPE;
+		}
+		
+		char* const title = (char*) json_string_value(obj);
+		strip(title);
+		
 		obj = json_object_get(item, "conteudo");
 		
 		if (obj == NULL) {
@@ -666,7 +679,7 @@ int estrategia_concursos_get_modules(
 		if (!json_is_string(obj)) {
 			return UERR_JSON_NON_MATCHING_TYPE;
 		}
-			
+		
 		char* const name = (char*) json_string_value(obj);
 		strip(name);
 		
@@ -684,8 +697,8 @@ int estrategia_concursos_get_modules(
 		
 		struct Module module = {
 			.id = malloc(strlen(sid) + 1),
-			.name = malloc(strlen(name) + 1),
-			.dirname = malloc(strlen(name) + 1),
+			.name = malloc(strlen(title) + strlen(SPACE) + strlen(HYPHEN) + strlen(SPACE) + strlen(name) + 1),
+			.dirname = malloc(strlen(title) + strlen(SPACE) + strlen(HYPHEN) + strlen(SPACE) + strlen(name) + 1),
 			.short_dirname = malloc(strlen(sid) + 1),
 			.is_locked = is_locked
 		};
@@ -695,9 +708,13 @@ int estrategia_concursos_get_modules(
 		}
 		
 		strcpy(module.id, sid);
-		strcpy(module.name, name);
+		strcpy(module.name, title);
+		strcat(module.name, SPACE);
+		strcat(module.name, HYPHEN);
+		strcat(module.name, SPACE);
+		strcat(module.name, name);
 		
-		strcpy(module.dirname, name);
+		strcpy(module.dirname, module.name);
 		normalize_directory(module.dirname);
 		
 		strcpy(module.short_dirname, sid);

@@ -45,7 +45,30 @@ jobs:
             gcc-hppa-linux-gnu \
             gcc-m68k-linux-gnu \
             gcc-sh4-linux-gnu \
-            gcc-x86-64-linux-gnux32
+            gcc-x86-64-linux-gnux32 \
+            g++-arm-linux-gnueabi \
+            g++-arm-linux-gnueabihf \
+            g++-aarch64-linux-gnu \
+            g++-i686-linux-gnu \
+            g++-powerpc-linux-gnu \
+            g++-powerpc64-linux-gnu \
+            g++-powerpc64le-linux-gnu \
+            g++-s390x-linux-gnu \
+            g++-mips-linux-gnu \
+            g++-mips64-linux-gnuabi64 \
+            g++-mips64el-linux-gnuabi64 \
+            g++-mipsel-linux-gnu \
+            g++-mipsisa32r6-linux-gnu \
+            g++-mipsisa32r6el-linux-gnu \
+            g++-mipsisa64r6-linux-gnuabi64 \
+            g++-mipsisa64r6el-linux-gnuabi64 \
+            g++-sparc64-linux-gnu \
+            g++-riscv64-linux-gnu \
+            g++-alpha-linux-gnu \
+            g++-hppa-linux-gnu \
+            g++-m68k-linux-gnu \
+            g++-sh4-linux-gnu \
+            g++-x86-64-linux-gnux32
     - name: Setup Android cross compiler
       uses: nttld/setup-ndk@main
       id: setup-ndk
@@ -145,6 +168,28 @@ jobs:
         
         echo 'OPENBSD_TOOLCHAIN=/tmp/unknown-unknown-openbsd' >> "${GITHUB_ENV}"
         echo '/tmp/unknown-unknown-openbsd/bin' >> "${GITHUB_PATH}"
+    - name: Setup Linux musl cross compiler
+      run: |
+        declare -r MUSL_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/muslcr00s/releases/latest')")"
+        declare -r MUSL_CROSS_TARBALL='/tmp/musl-cross.tar.xz'
+        declare -r MUSL_CROSS_URL="https://github.com/AmanoTeam/muslcr00s/releases/download/${MUSL_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
+        
+        curl --retry 10 --retry-delay 3 --silent --location --url "${MUSL_CROSS_URL}" --output "${MUSL_CROSS_TARBALL}"
+        tar --directory="$(dirname "${MUSL_CROSS_TARBALL}")" --extract --file="${MUSL_CROSS_TARBALL}"
+        
+        echo 'MUSL_TOOLCHAIN=/tmp/unknown-unknown-musl' >> "${GITHUB_ENV}"
+        echo '/tmp/unknown-unknown-musl/bin' >> "${GITHUB_PATH}"
+    - name: Setup Tizen cross compiler
+      run: |
+        declare -r TIZEN_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/t1z3ncr0ss/releases/latest')")"
+        declare -r TIZEN_CROSS_TARBALL='/tmp/tizen-cross.tar.xz'
+        declare -r TIZEN_CROSS_URL="https://github.com/AmanoTeam/t1z3ncr0ss/releases/download/${TIZEN_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
+        
+        curl --retry 10 --retry-delay 3 --silent --location --url "${TIZEN_CROSS_URL}" --output "${TIZEN_CROSS_TARBALL}"
+        tar --directory="$(dirname "${TIZEN_CROSS_TARBALL}")" --extract --file="${TIZEN_CROSS_TARBALL}"
+        
+        echo 'TIZEN_TOOLCHAIN=/tmp/unknown-unknown-tizen' >> "${GITHUB_ENV}"
+        echo '/tmp/unknown-unknown-tizen/bin' >> "${GITHUB_PATH}"
     - name: Build with CMake
       run: |
         declare -r MACHINE_HOST="$(gcc -dumpmachine)"
@@ -155,8 +200,14 @@ jobs:
             arm-unknown-linux-gnueabi
             arm-linux-gnueabihf
             arm-unknown-linux-gnueabihf
+            arm-unknown-linux-musleabihf
+            arm-tizenwd-linux-gnueabi
+            arm-tizenmd-linux-gnueabi
             armv7-w64-mingw32
             armv7a-linux-androideabi
+            armv7l-unknown-linux-musleabihf
+            arm-tizenihld-linux-gnueabi
+            arm-tizenihd-linux-gnueabi
             powerpc-linux-gnu
             powerpc-unknown-netbsd
             powerpc-unknown-linux-gnu
@@ -167,6 +218,9 @@ jobs:
             i386-unknown-netbsdelf
             i386-unknown-freebsd
             i386-unknown-openbsd
+            i386-unknown-linux-musl
+            i386-tizenwe-linux-gnueabi
+            i386-tizenme-linux-gnueabi
             sh4-linux-gnu
             shle-unknown-netbsdelf
             m68k-linux-gnu
@@ -196,22 +250,28 @@ jobs:
             x86_64-linux-gnux32
             x86_64-unknown-linux-gnu
             x86_64-unknown-openbsd
+            x86_64-unknown-linux-musl
             aarch64-linux-android
             aarch64-linux-gnu
             aarch64-w64-mingw32
             aarch64-apple-darwin
             aarch64-unknown-freebsd
             aarch64-unknown-linux-gnu
+            aarch64-unknown-linux-musl
+            aarch64-tizenihd-linux-gnueabi
             powerpc64-linux-gnu
             powerpc64le-linux-gnu
             powerpc-unknown-freebsd
             powerpc64-unknown-freebsd
             powerpc64le-unknown-linux-gnu
+            powerpc64le-unknown-linux-musl
             s390x-linux-gnu
             s390x-unknown-linux-gnu
             s390-unknown-linux-gnu
+            s390x-unknown-linux-musl
             riscv64-linux-gnu
             riscv64-unknown-freebsd
+            riscv64-unknown-linux-musl
             sparc64-linux-gnu
             sparc64-unknown-freebsd
             sparc64-unknown-netbsd

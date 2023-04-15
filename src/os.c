@@ -106,7 +106,7 @@ char* get_configuration_directory(void) {
 			const char* const config_directory = ".config";
 			const char* const home_directory = getenv("HOME");
 			
-			char* configuration_directory = malloc(strlen(home_directory) + strlen(PATH_SEPARATOR) + strlen(config_directory) + 1);
+			char* configuration_directory = (char*) malloc(strlen(home_directory) + strlen(PATH_SEPARATOR) + strlen(config_directory) + 1);
 			
 			if (configuration_directory == NULL) {
 				return NULL;
@@ -122,14 +122,14 @@ char* get_configuration_directory(void) {
 	
 	// Strip trailing path separator
 	if (strlen(directory) > 1) {
-		char* ptr = strchr(directory, '\0') - 1;
+		char* ptr = (char*) strchr(directory, '\0') - 1;
 		
 		if (*ptr == *PATH_SEPARATOR) {
 			*ptr = '\0';
 		}
 	}
 	
-	char* configuration_directory = malloc(strlen(directory) + 1);
+	char* configuration_directory = (char*) malloc(strlen(directory) + 1);
 	
 	if (configuration_directory == NULL) {
 		return NULL;
@@ -221,7 +221,7 @@ char* get_temporary_directory(void) {
 				continue;
 			}
 			
-			char* temporary_directory = malloc(strlen(value) + 1);
+			char* temporary_directory = (char*) malloc(strlen(value) + 1);
 			
 			if (temporary_directory == NULL) {
 				return NULL;
@@ -234,7 +234,7 @@ char* get_temporary_directory(void) {
 		
 		const char* const tmp = "/tmp";
 		
-		char* temporary_directory = malloc(strlen(tmp) + 1);
+		char* temporary_directory = (char*) malloc(strlen(tmp) + 1);
 		
 		if (temporary_directory == NULL) {
 			return NULL;
@@ -304,7 +304,7 @@ char* get_home_directory(void) {
 		return NULL;
 	}
 	
-	char* const home = malloc(strlen(directory) + 1);
+	char* const home = (char*) malloc(strlen(directory) + 1);
 	
 	if (home == NULL) {
 		return NULL;
@@ -371,7 +371,7 @@ char* find_exe(const char* const name) {
 		
 		switch (file_exists(filename)) {
 			case 1: {
-				char* const executable = malloc(strlen(filename) + 1);
+				char* const executable = (char*) malloc(strlen(filename) + 1);
 				
 				if (executable == NULL) {
 					return NULL;

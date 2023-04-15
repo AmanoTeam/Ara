@@ -16,7 +16,7 @@ static const char INVALID_FILENAME_CHARS[] = {
 	'\'', '%', '"', ' ', '/', '\\', ':', '*', '?', '\"', '<', '>', '|', '^', '\x00'
 };
 
-char* basename(const char* const path) {
+char* extract_filename(const char* const path) {
 	/*
 	Returns the final component of a path.
 	*/
@@ -42,7 +42,7 @@ char* get_file_extension(const char* const filename) {
 	Returns the extension of a filename.
 	*/
 	
-	const char* const last_part = basename(filename);
+	char* const last_part = extract_filename(filename);
 	
 	char* start = strstr(last_part, DOT);
 	

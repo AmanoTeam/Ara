@@ -102,7 +102,7 @@ struct FStream* fstream_open(const char* const filename, const enum FStreamMode 
 		}
 	#endif
 	
-	struct FStream* const stream = malloc(sizeof(struct FStream));
+	struct FStream* const stream = (struct FStream*) malloc(sizeof(struct FStream));
 	
 	if (stream == NULL) {
 		return NULL;

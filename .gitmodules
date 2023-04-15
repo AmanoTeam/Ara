@@ -16,3 +16,12 @@
 [submodule "submodules/ffmpeg"]
 	path = submodules/ffmpeg
 	url = https://github.com/FFmpeg/FFmpeg
+[submodule "submodules/zlib"]
+	path = submodules/zlib
+	url = https://github.com/madler/zlib
+[submodule "submodules/turbojpeg"]
+	path = submodules/turbojpeg
+	url = https://github.com/libjpeg-turbo/libjpeg-turbo
+[submodule "submodules/qpdf"]
+	path = submodules/qpdf
+	url = https://github.com/qpdf/qpdf

@@ -40,7 +40,15 @@ struct SystemError {
 	char message[256];
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct SystemError get_system_error(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 const char* strurr(const int code);
 

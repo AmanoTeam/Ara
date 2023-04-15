@@ -26,10 +26,18 @@ enum FStreamSeek {
 	FSTREAM_SEEK_END
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct FStream* fstream_open(const char* const filename, const enum FStreamMode mode);
 ssize_t fstream_read(struct FStream* const stream, char* const buffer, const size_t size);
 int fstream_write(struct FStream* const stream, const char* const buffer, const size_t size);
 int fstream_seek(struct FStream* const stream, const long int offset, const enum FStreamSeek method);
 int fstream_close(struct FStream* const stream);
+
+#ifdef __cplusplus
+}
+#endif
 
 #pragma once

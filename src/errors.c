@@ -38,7 +38,8 @@ const char* strurr(const int code) {
 
 struct SystemError get_system_error(void) {
 	
-	struct SystemError error = {0};
+	struct SystemError error;
+	memset(&error, 0, sizeof(error));
 	
 	#ifdef _WIN32
 		const DWORD code = GetLastError();

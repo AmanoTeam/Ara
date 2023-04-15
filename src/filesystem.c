@@ -1,4 +1,4 @@
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(_GNU_SOURCE)
 	#define _GNU_SOURCE
 #endif
 
@@ -143,7 +143,7 @@ char* get_current_directory(void) {
 			return NULL;
 		}
 		
-		char* pwd = malloc(strlen(cpwd) + 1);
+		char* pwd = (char*) malloc(strlen(cpwd) + 1);
 		
 		if (pwd == NULL) {
 			return NULL;
@@ -282,7 +282,8 @@ int remove_recursive(const char* const directory, int remove_itself) {
 	Returns (0) on success, (-1) on error.
 	*/
 	
-	struct WalkDir walkdir = {0};
+	struct WalkDir walkdir;
+	memset(&walkdir, 0, sizeof(walkdir));
 	
 	if (walkdir_init(&walkdir, directory) == -1) {
 		return -1;
@@ -379,7 +380,8 @@ int directory_exists(const char* const directory) {
 		
 		return (value & FILE_ATTRIBUTE_DIRECTORY) != 0;
 	#else
-		struct stat st = {0};
+		struct stat st;
+		memset(&st, 0, sizeof(st));
 		
 		if (stat(directory, &st) == -1) {
 			if (errno == ENOENT) {
@@ -453,12 +455,14 @@ int directory_empty(const char* const directory) {
 		}
 		
 		#if defined(__APPLE__) || defined(__HAIKU__)
-			struct dirent buffer[3] = {'\0'};
+			struct dirent buffer[3];
 		#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__OpenBSD__)
-			struct dirent buffer[2] = {'\0'};
+			struct dirent buffer[2];
 		#else
-			struct linux_dirent buffer[2] = {'\0'};
+			struct linux_dirent buffer[2];
 		#endif
+		
+		memset(&buffer, 0, sizeof(buffer));
 		
 		while (1) {
 			#if defined(__APPLE__)
@@ -560,7 +564,8 @@ int file_exists(const char* const filename) {
 		
 		return (value & FILE_ATTRIBUTE_DIRECTORY) == 0;
 	#else
-		struct stat st = {0};
+		struct stat st;
+		memset(&st, 0, sizeof(st));
 		
 		if (stat(filename, &st) == -1) {
 			if (errno == ENOENT) {
@@ -1109,7 +1114,8 @@ long long get_file_size(const char* const filename) {
 		
 		return (data.nFileSizeHigh * MAXDWORD) + data.nFileSizeLow;
 	#else
-		struct stat st = {0};
+		struct stat st;
+		memset(&st, 0, sizeof(st));
 		
 		if (stat(filename, &st) == -1) {
 			return -1;

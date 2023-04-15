@@ -5,7 +5,7 @@ project(
 	VERSION 0.5
 	DESCRIPTION "Tiny CLI tool to download courses from Hotmart"
 	HOMEPAGE_URL "https://github.com/Kartatz/SparkleC"
-	LANGUAGES C
+	LANGUAGES C CXX
 )
 
 option(SPARKLEC_ENABLE_LTO "Turn on compiler Link Time Optimizations" OFF)
@@ -23,6 +23,9 @@ option(SPARKLEC_DISABLE_IAEXPERT "Disable support for IA Expert Academy" OFF)
 option(SPARKLEC_DISABLE_KIWIFY "Disable support for Kiwify" OFF)
 
 option(SPARKLEC_DISABLE_CERTIFICATE_VALIDATION "Disable SSL certificate validation in libcurl" OFF)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
 
@@ -58,6 +61,19 @@ set(JANSSON_BUILD_SHARED_LIBS ON CACHE BOOL "")
 set(SYMVER_WORKS OFF CACHE BOOL "")
 set(VSCRIPT_WORKS OFF CACHE BOOL "")
 
+# qpdf
+set(USE_IMPLICIT_CRYPTO OFF)
+set(ALLOW_CRYPTO_NATIVE ON)
+set(REQUIRE_CRYPTO_NATIVE ON)
+set(USE_INSECURE_RANDOM ON)
+set(SKIP_OS_SECURE_RANDOM ON)
+
+# turbojpeg
+set(HAVE_VERSION_SCRIPT OFF CACHE BOOL "")
+set(WITH_JPEG8 ON CACHE BOOL "")
+set(WITH_SIMD OFF CACHE BOOL "")
+set(ENABLE_STATIC OFF CACHE BOOL "")
+
 if (NOT APPLE)
 	if (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
 		add_link_options(-s)
@@ -71,6 +87,30 @@ endif()
 file(READ "${CMAKE_SOURCE_DIR}/submodules/tidy/include/tidyplatform.h" FILE_CONTENTS)
 string(REPLACE "TIDY_THREAD_LOCAL __thread" "TIDY_THREAD_LOCAL" FILE_CONTENTS "${FILE_CONTENTS}")
 file(WRITE "${CMAKE_SOURCE_DIR}/submodules/tidy/include/tidyplatform.h" "${FILE_CONTENTS}")
+
+file(READ "${CMAKE_SOURCE_DIR}/submodules/turbojpeg/CMakeLists.txt" FILE_CONTENTS)
+string(REPLACE "NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR" "0" FILE_CONTENTS "${FILE_CONTENTS}")
+string(REPLACE "CMAKE_INSTALL_DOCDIR" "CMAKE_CURRENT_BINARY_DIR" FILE_CONTENTS "${FILE_CONTENTS}")
+file(WRITE "${CMAKE_SOURCE_DIR}/submodules/turbojpeg/CMakeLists.txt" "${FILE_CONTENTS}")
+
+file(READ "${CMAKE_SOURCE_DIR}/submodules/turbojpeg/sharedlib/CMakeLists.txt" FILE_CONTENTS)
+string(REPLACE "add_executable(example ../example.c)\ntarget_link_libraries(example jpeg)" "" FILE_CONTENTS "${FILE_CONTENTS}")
+string(REPLACE "elseif(MINGW)" "elseif(0)" FILE_CONTENTS "${FILE_CONTENTS}")
+file(WRITE "${CMAKE_SOURCE_DIR}/submodules/turbojpeg/sharedlib/CMakeLists.txt" "${FILE_CONTENTS}")
+
+file(READ "${CMAKE_SOURCE_DIR}/submodules/zlib/CMakeLists.txt" FILE_CONTENTS)
+string(REPLACE "(UNIX)" "(1)" FILE_CONTENTS "${FILE_CONTENTS}")
+string(REPLACE "(NOT APPLE)" "(0)" FILE_CONTENTS "${FILE_CONTENTS}")
+file(WRITE "${CMAKE_SOURCE_DIR}/submodules/zlib/CMakeLists.txt" "${FILE_CONTENTS}")
+
+file(READ "${CMAKE_SOURCE_DIR}/submodules/qpdf/libqpdf/CMakeLists.txt" FILE_CONTENTS)
+string(REPLACE "  if(WIN32)" "  if(0)" FILE_CONTENTS "${FILE_CONTENTS}")
+file(WRITE "${CMAKE_SOURCE_DIR}/submodules/qpdf/libqpdf/CMakeLists.txt" "${FILE_CONTENTS}")
+
+file(READ "${CMAKE_SOURCE_DIR}/submodules/qpdf/libqpdf/QUtil.cc" FILE_CONTENTS)
+string(REPLACE "HAVE_FSEEKO" "0" FILE_CONTENTS "${FILE_CONTENTS}")
+string(REPLACE "HAVE_FSEEKO64" "0" FILE_CONTENTS "${FILE_CONTENTS}")
+file(WRITE "${CMAKE_SOURCE_DIR}/submodules/qpdf/libqpdf/QUtil.cc" "${FILE_CONTENTS}")
 
 # Workaround for build issues of Tidy on MacOS
 if (APPLE)
@@ -383,12 +423,48 @@ add_library(
 	submodules/bearssl/src/x509/x509_minimal_full.c
 )
 
-set(BEARSSL_INCLUDE_DIRS submodules/bearssl/inc)
+set(BEARSSL_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/submodules/bearssl/inc")
 set(BEARSSL_LIBRARY $<TARGET_FILE:bearssl>)
+
+set(LIBJPEG_H_PATH "${CMAKE_CURRENT_SOURCE_DIR}/submodules/turbojpeg")
+set(LIBJPEG_LIB_PATH "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}jpeg${CMAKE_SHARED_LIBRARY_SUFFIX}")
+
+set(ZLIB_H_PATH "${CMAKE_CURRENT_SOURCE_DIR}/submodules/zlib")
+set(ZLIB_LIB_PATH "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}z${CMAKE_SHARED_LIBRARY_SUFFIX}")
+
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY)
 
 add_subdirectory(submodules/curl EXCLUDE_FROM_ALL)
 add_subdirectory(submodules/jansson EXCLUDE_FROM_ALL)
 add_subdirectory(submodules/tidy EXCLUDE_FROM_ALL)
+add_subdirectory(submodules/qpdf EXCLUDE_FROM_ALL)
+add_subdirectory(submodules/zlib EXCLUDE_FROM_ALL)
+add_subdirectory(submodules/turbojpeg EXCLUDE_FROM_ALL)
+
+target_include_directories(
+	libqpdf
+	PRIVATE
+	"${CMAKE_CURRENT_BINARY_DIR}/submodules/turbojpeg"
+	"${CMAKE_CURRENT_BINARY_DIR}/submodules/zlib"
+)
+
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+
+foreach(target zlib jpeg)
+	add_custom_command(
+		OUTPUT ${target}
+		COMMAND ${CMAKE_COMMAND} --build ./ --target ${target}
+	)
+	
+	add_custom_target(
+		"ensure_${target}" ALL DEPENDS "${target}"
+	)
+	
+	add_dependencies(
+		libqpdf
+		"ensure_${target}"
+	)
+endforeach()
 
 set_target_properties(
 	libcurl
@@ -666,7 +742,7 @@ foreach(source ${libraries})
 endforeach()
 
 # Disable SO versioning for all third-party packages
-foreach(target jansson libcurl tidy-share)
+foreach(target jansson libcurl tidy-share zlib jpeg libqpdf)
 	set_target_properties(
 		${target}
 		PROPERTIES
@@ -701,6 +777,18 @@ add_executable(
 	src/cir.c
 	src/ffmpeg.c
 	src/walkdir.c
+)
+
+add_executable(
+	sparklec-pdfremove
+	src/pdf.cpp
+	src/walkdir.c
+	src/fstream.c
+	src/input.c
+	src/stringu.c
+	src/filesystem.c
+	src/os.c
+	src/errors.c
 )
 
 add_executable(
@@ -821,7 +909,7 @@ else()
 	)
 endif()
 
-foreach(target sparklec sparklec-install)
+foreach(target sparklec sparklec-install sparklec-pdfremove)
 	target_compile_options(
 		${target}
 		PRIVATE
@@ -862,26 +950,28 @@ foreach(target sparklec sparklec-install)
 	)
 endforeach()
 
-if (APPLE)
-	foreach(property BUILD_RPATH INSTALL_RPATH)
-		set_target_properties(
-			libcurl
-			PROPERTIES
-			${property} "@loader_path"
-		)
-	endforeach()
-elseif (UNIX)
-	foreach(property BUILD_RPATH INSTALL_RPATH)
-		set_target_properties(
-			libcurl
-			PROPERTIES
-			${property} "$ORIGIN"
-		)
-	endforeach()
-endif()
+foreach(target libcurl libqpdf)
+	if (APPLE)
+		foreach(property BUILD_RPATH INSTALL_RPATH)
+			set_target_properties(
+				${target}
+				PROPERTIES
+				${property} "@loader_path"
+			)
+		endforeach()
+	elseif (UNIX)
+		foreach(property BUILD_RPATH INSTALL_RPATH)
+			set_target_properties(
+				${target}
+				PROPERTIES
+				${property} "$ORIGIN"
+			)
+		endforeach()
+	endif()
+endforeach()
 
 foreach(property RUNTIME_OUTPUT_DIRECTORY LIBRARY_OUTPUT_DIRECTORY)
-	foreach(target jansson libcurl tidy-share)
+	foreach(target jansson libcurl tidy-share zlib jpeg libqpdf)
 		set_target_properties(
 			${target}
 			PROPERTIES
@@ -892,7 +982,7 @@ endforeach()
 
 # Enable Unicode on Windows builds
 if (WIN32)
-	foreach(target sparklec sparklec-install)
+	foreach(target sparklec sparklec-install sparklec-pdfremove)
 		target_sources(
 			${target}
 			PRIVATE
@@ -932,7 +1022,7 @@ if (SPARKLEC_ENABLE_LTO)
 	check_ipo_supported(RESULT SPARKLEC_HAS_LTO LANGUAGES C)
 	
 	if (SPARKLEC_HAS_LTO)
-		foreach(target sparklec sparklec-install bearssl jansson libcurl tidy-share)
+		foreach(target sparklec sparklec-install bearssl jansson libcurl tidy-share zlib jpeg libqpdf)
 			set_target_properties(
 				${target}
 				PROPERTIES
@@ -973,7 +1063,21 @@ target_link_libraries(
 	bearssl
 )
 
-foreach(target sparklec sparklec-install bearssl jansson libcurl tidy-share)
+target_link_libraries(
+	sparklec-pdfremove
+	libqpdf
+)
+
+foreach(target sparklec-pdfremove libqpdf)
+	target_link_options(
+		${target}
+		BEFORE
+		PRIVATE
+		-static-libstdc++ -static-libgcc
+	)
+endforeach()
+
+foreach(target sparklec sparklec-install sparklec-pdfremove bearssl jansson libcurl tidy-share zlib jpeg libqpdf)
 	install(
 		TARGETS ${target}
 		RUNTIME DESTINATION bin

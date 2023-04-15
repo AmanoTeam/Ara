@@ -462,7 +462,7 @@ int main(void) {
 	if (directory == NULL) {
 		const struct SystemError error = get_system_error();
 		
-		fprintf(stderr, "- Não foi possível obter um diretório temporário válido: %s\r\n", error.message);
+		fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar obter o diretório temporário: %s\r\n", error.message);
 		return EXIT_FAILURE;
 	}
 	

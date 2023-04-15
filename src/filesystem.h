@@ -1,3 +1,7 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 char* get_current_directory(void);
 char* get_app_filename(char* const filename);
 int remove_file(const char* const filename);
@@ -12,6 +16,10 @@ int directory_empty(const char* const directory);
 
 #ifdef _WIN32
 	int is_absolute(const char* const path);
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #define remove_directory(directory) remove_recursive(directory, 1)

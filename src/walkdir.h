@@ -35,8 +35,16 @@ struct WalkDir {
 #endif
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int walkdir_init(struct WalkDir* const walkdir, const char* const directory);
 const struct WalkDirItem* walkdir_next(struct WalkDir* const walkdir);
 void walkdir_free(struct WalkDir* const walkdir);
+
+#ifdef __cplusplus
+}
+#endif
 
 #pragma once

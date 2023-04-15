@@ -267,7 +267,7 @@ int main(void) {
 		}
 		
 		#ifndef _WIN32
-			const char* const name = basename(destination_file);
+			const char* const name = extract_filename(destination_file);
 			
 			if (strcmp(name, "sparklec") == 0) {
 				printf("+ Aplicando permissões de executável para o arquivo em '%s'\r\n", destination_file);
@@ -335,7 +335,7 @@ int main(void) {
 			return EXIT_FAILURE;
 		}
 		
-		const char* const name = basename(shell_executable);
+		const char* const name = extract_filename(shell_executable);
 		
 		const struct Shell* shell = NULL;
 		

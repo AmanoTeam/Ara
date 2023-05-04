@@ -76,29 +76,70 @@ static int globals_initialize(void) {
 		strcpy(ca_bundle, app_root_directory);
 		strcat(ca_bundle, CA_CERT_FILENAME);
 		
-		const long long file_size = get_file_size(ca_bundle);
-		
 		struct FStream* const stream = fstream_open(ca_bundle, FSTREAM_READ);
 		
 		if (stream == NULL) {
+			const struct SystemError error = get_system_error();
+			
+			fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar abrir o arquivo em '%s': %s\r\n", ca_bundle, error.message);
+			return UERR_FSTREAM_FAILURE;
+		}
+		
+		if (fstream_seek(stream, 0, FSTREAM_SEEK_END) == -1) {
+			const struct SystemError error = get_system_error();
+			
+			fstream_close(stream);
+			
+			fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar mover a posição do arquivo em '%s': %s\r\n", ca_bundle, error.message);
+			return UERR_FSTREAM_FAILURE;
+		}
+		
+		const ssize_t file_size = fstream_tell(stream);
+		
+		if (file_size == -1) {
+			const struct SystemError error = get_system_error();
+			
+			fstream_close(stream);
+			
+			fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar obter a posição do arquivo em '%s': %s\r\n", ca_bundle, error.message);
+			return UERR_FSTREAM_FAILURE;
+		}
+		
+		if (fstream_seek(stream, 0, FSTREAM_SEEK_BEGIN) == -1) {
+			const struct SystemError error = get_system_error();
+			
+			fstream_close(stream);
+			
+			fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar mover a posição do arquivo em '%s': %s\r\n", ca_bundle, error.message);
 			return UERR_FSTREAM_FAILURE;
 		}
 		
 		curl_blob_global.data = malloc((size_t) file_size);
 		
 		if (curl_blob_global.data == NULL) {
+			const struct SystemError error = get_system_error();
+			
+			fstream_close(stream);
+			
+			fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar alocar memória do sistema: %s\r\n", error.message);
 			return UERR_MEMORY_ALLOCATE_FAILURE;
 		}
 		
-		const ssize_t rsize = fstream_read(stream, curl_blob_global.data, (size_t) file_size);
+		const ssize_t size = fstream_read(stream, curl_blob_global.data, (size_t) file_size);
 		
-		fstream_close(stream);
-		
-		if (rsize != (ssize_t) file_size) {
+		if (size == -1) {
+			const struct SystemError error = get_system_error();
+			
+			fstream_close(stream);
+			free(curl_blob_global.data);
+			
+			fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar ler os conteúdos do arquivo em '%s': %s\r\n", ca_bundle, error.message);
 			return UERR_FSTREAM_FAILURE;
 		}
 		
-		curl_blob_global.len = (size_t) rsize;
+		fstream_close(stream);
+		
+		curl_blob_global.len = (size_t) file_size;
 	#endif
 	
 	GLOBALS_INITIALIZED = 1;

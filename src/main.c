@@ -524,10 +524,14 @@ int main(void) {
 	strcat(accounts_file, LOCAL_ACCOUNTS_FILENAME);
 	
 	CURL* curl_easy = get_global_curl_easy();
+	
+	if (curl_easy == NULL) {
+		return EXIT_FAILURE;
+	}
+	
 	CURLM* curl_multi = get_global_curl_multi();
 	
-	if (curl_multi == NULL || curl_multi == NULL) {
-		fprintf(stderr, "- Ocorreu uma falha inesperada ao tentar inicializar o cliente HTTP!\r\n");
+	if (curl_multi == NULL) {
 		return EXIT_FAILURE;
 	}
 	

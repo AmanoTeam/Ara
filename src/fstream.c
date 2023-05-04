@@ -14,6 +14,11 @@
 #endif
 
 struct FStream* fstream_open(const char* const filename, const enum FStreamMode mode) {
+	/*
+	Opens a file on disk.
+	
+	Returns a null pointer on error.
+	*/
 	
 	#ifdef _WIN32
 		DWORD dwDesiredAccess = 0;
@@ -116,9 +121,9 @@ struct FStream* fstream_open(const char* const filename, const enum FStreamMode 
 
 ssize_t fstream_read(struct FStream* const stream, char* const buffer, const size_t size) {
 	/*
-	-1 = Read error
-	0 = EOF reached
-	1 = Read success
+	Reads a block of data.
+	
+	Returns (>=1) on success, (0) on EOF, (-1) on error.
 	*/
 	
 	#ifdef _WIN32
@@ -147,6 +152,11 @@ ssize_t fstream_read(struct FStream* const stream, char* const buffer, const siz
 }
 
 int fstream_write(struct FStream* const stream, const char* const buffer, const size_t size) {
+	/*
+	Writes a block of data.
+	
+	Returns (0) on success, (-1) on error.
+	*/
 	
 	#ifdef _WIN32
 		DWORD wsize = 0;
@@ -168,6 +178,11 @@ int fstream_write(struct FStream* const stream, const char* const buffer, const 
 }
 
 int fstream_seek(struct FStream* const stream, const long int offset, const enum FStreamSeek method) {
+	/*
+	Sets the current file position.
+	
+	Returns (0) on success, (-1) on error.
+	*/
 	
 	#ifdef _WIN32
 		DWORD whence = 0;
@@ -210,8 +225,40 @@ int fstream_seek(struct FStream* const stream, const long int offset, const enum
 	return 0;
 	
 }
+
+ssize_t fstream_tell(struct FStream* const stream) {
+	/*
+	Returns the current file offset.
 	
+	Returns (>=0) on success, (-1) on error.
+	*/
+	
+	#ifdef _WIN32
+		const DWORD value = SetFilePointer(stream->stream, 0, NULL, FILE_CURRENT);
+		
+		if (value == INVALID_SET_FILE_POINTER) {
+			return -1;
+		}
+		
+		return (ssize_t) value;
+	#else
+		const long int value = ftell(stream->stream);
+		
+		if (value == -1) {
+			return -1;
+		}
+		
+		return (ssize_t) value;
+	#endif
+	
+}
+
 int fstream_close(struct FStream* const stream) {
+	/*
+	Closes the stream.
+	
+	Returns (0) on success, (-1) on error.
+	*/
 	
 	#ifdef _WIN32
 		if (stream->stream != 0) {

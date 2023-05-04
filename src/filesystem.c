@@ -81,7 +81,7 @@ char* get_current_directory(void) {
 	/*
 	Returns the current working directory.
 	
-	Returns NULL on error.
+	Returns a null pointer on error.
 	*/
 	
 	#ifdef _WIN32
@@ -887,7 +887,7 @@ char* get_app_filename(char* const filename) {
 	/*
 	Returns the filename of the application's executable.
 	
-	Returns NULL on error.
+	Returns a null pointer on error.
 	*/
 	
 	#ifdef _WIN32
@@ -1064,58 +1064,5 @@ char* get_app_filename(char* const filename) {
 	#endif
 	
 	return filename;
-	
-}
-
-long long get_file_size(const char* const filename) {
-	/*
-	Returns the size of a file (in bytes).
-	
-	Returns -1 on error.
-	*/
-	
-	#ifdef _WIN32
-		WIN32_FIND_DATA data = {0};
-		
-		#ifdef _UNICODE
-			const int is_abs = is_absolute(filename);
-			
-			const int wfilenames = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
-			
-			if (wfilenames == 0) {
-				return -1;
-			}
-			
-			wchar_t wfilename[(is_abs ? wcslen(WIN10LP_PREFIX) : 0) + wfilenames];
-			
-			if (is_abs) {
-				wcscpy(wfilename, WIN10LP_PREFIX);
-			}
-			
-			if (MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfilename + (is_abs ? wcslen(WIN10LP_PREFIX) : 0), wfilenames) == 0) {
-				return -1;
-			}
-			
-			const HANDLE handle = FindFirstFileW(wfilename, &data);
-		#else
-			const HANDLE handle = FindFirstFileA(filename, &data);
-		#endif
-		
-		if (handle == INVALID_HANDLE_VALUE) {
-			return -1;
-		}
-		
-		FindClose(handle);
-		
-		return (data.nFileSizeHigh * MAXDWORD) + data.nFileSizeLow;
-	#else
-		struct stat st = {0};
-		
-		if (stat(filename, &st) == -1) {
-			return -1;
-		}
-		
-		return st.st_size;
-	#endif
 	
 }

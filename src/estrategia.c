@@ -106,7 +106,7 @@ int estrategia_authorize(
 	}
 	
 	curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, list);
-	curl_easy_setopt(curl_easy, CURLOPT_COPYPOSTFIELDS, post_fields);
+	curl_easy_setopt(curl_easy, CURLOPT_POSTFIELDS, post_fields);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, ESTRATEGIA_CONCURSOS_LOGIN_ENDPOINT);
@@ -181,7 +181,7 @@ int estrategia_authorize(
 	curl_easy_setopt(curl_easy, CURLOPT_URL, ESTRATEGIA_CONCURSOS_LOGIN2_ENDPOINT);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_discard_body_cb);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, NULL);
-	curl_easy_setopt(curl_easy, CURLOPT_COPYPOSTFIELDS, post_fields);
+	curl_easy_setopt(curl_easy, CURLOPT_POSTFIELDS, post_fields);
 	
 	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;

@@ -175,7 +175,7 @@ int youtube_parse(
 		return UERR_MEMORY_ALLOCATE_FAILURE;
 	}
 	
-	curl_easy_setopt(curl_easy, CURLOPT_COPYPOSTFIELDS, post_fields);
+	curl_easy_setopt(curl_easy, CURLOPT_POSTFIELDS, post_fields);
 	
 	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 		return UERR_CURL_FAILURE;
@@ -184,7 +184,7 @@ int youtube_parse(
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, NULL);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, NULL);
 	curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, NULL);
-	curl_easy_setopt(curl_easy, CURLOPT_COPYPOSTFIELDS, NULL);
+	curl_easy_setopt(curl_easy, CURLOPT_POSTFIELDS, NULL);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, NULL);
 	curl_easy_setopt(curl_easy, CURLOPT_HTTPGET, 1L);
 	

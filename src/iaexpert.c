@@ -715,7 +715,7 @@ int iaexpert_authorize(
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 	curl_easy_setopt(curl_easy, CURLOPT_COOKIEFILE, "");
-	curl_easy_setopt(curl_easy, CURLOPT_COPYPOSTFIELDS, post_fields);
+	curl_easy_setopt(curl_easy, CURLOPT_POSTFIELDS, post_fields);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, IAEXPERT_AJAX_ENDPOINT);
 	
 	if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
@@ -928,7 +928,7 @@ int iaexpert_get_resources(
 		buffer_t string __buffer_free__ = {0};
 		
 		curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
-		curl_easy_setopt(curl_easy, CURLOPT_COPYPOSTFIELDS, post_fields);
+		curl_easy_setopt(curl_easy, CURLOPT_POSTFIELDS, post_fields);
 		
 		if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 			return UERR_CURL_FAILURE;
@@ -1076,7 +1076,7 @@ int iaexpert_get_modules(
 			return code;
 		}
 		
-		curl_easy_setopt(curl_easy, CURLOPT_COPYPOSTFIELDS, post_fields);
+		curl_easy_setopt(curl_easy, CURLOPT_POSTFIELDS, post_fields);
 		
 		buffer_free(&string);
 		

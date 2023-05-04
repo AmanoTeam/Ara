@@ -97,7 +97,7 @@ int kiwify_authorize(
 	}
 	
 	curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, list);
-	curl_easy_setopt(curl_easy, CURLOPT_COPYPOSTFIELDS, post_fields);
+	curl_easy_setopt(curl_easy, CURLOPT_POSTFIELDS, post_fields);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, KIWIFY_LOGIN_ENDPOINT);

@@ -383,6 +383,14 @@ add_library(
 	submodules/bearssl/src/x509/x509_minimal_full.c
 )
 
+if (HAIKU)
+	target_compile_definitions(
+		bearssl
+		PRIVATE
+		BR_USE_URANDOM BR_USE_UNIX_TIME
+	)
+endif()
+
 set(BEARSSL_INCLUDE_DIRS submodules/bearssl/inc)
 set(BEARSSL_LIBRARY $<TARGET_FILE:bearssl>)
 

@@ -150,13 +150,13 @@ jobs:
       run: |
         declare -r OBGGCC_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/obggcc/releases/latest')")"
         declare -r OBGGCC_CROSS_TARBALL='/tmp/linux-cross.tar.xz'
-        declare -r OBGGCC_CROSS_URL="https://github.com/AmanoTeam/obggcc/releases/download/${OBGGCC_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
+        declare -r OBGGCC_CROSS_URL="https://github.com/AmanoTeam/obggcc/releases/download/${OBGGCC_CROSS_TAG}/x86_64-unknown-linux-gnu.tar.xz"
         
         curl --retry 10 --retry-delay 3 --silent --location --url "${OBGGCC_CROSS_URL}" --output "${OBGGCC_CROSS_TARBALL}"
         tar --directory="$(dirname "${OBGGCC_CROSS_TARBALL}")" --extract --file="${OBGGCC_CROSS_TARBALL}"
         
-        echo 'OBGGCC_TOOLCHAIN=/tmp/unknown-unknown-linux' >> "${GITHUB_ENV}"
-        echo '/tmp/unknown-unknown-linux/bin' >> "${GITHUB_PATH}"
+        echo 'OBGGCC_TOOLCHAIN=/tmp/obggcc' >> "${GITHUB_ENV}"
+        echo '/tmp/obggcc/bin' >> "${GITHUB_PATH}"
     - name: Setup OpenBSD cross compiler
       run: |
         declare -r OPENBSD_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/0p3nbsdcr0ss/releases/latest')")"
@@ -213,7 +213,7 @@ jobs:
             powerpc-unknown-linux-gnu
             i686-linux-android
             i686-linux-gnu
-            i486-unknown-linux-gnu
+            i386-unknown-linux-gnu
             i686-w64-mingw32
             i386-unknown-netbsdelf
             i386-unknown-freebsd

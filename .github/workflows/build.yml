@@ -104,37 +104,37 @@ jobs:
         echo "$(realpath './target/bin')" >> "${GITHUB_PATH}"
     - name: Setup NetBSD cross compiler
       run: | 
-        declare -r NETBSD_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/n3tbsdcr0ss/releases/latest')")"
+        declare -r NETBSD_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Dakini/releases/latest')")"
         declare -r NETBSD_CROSS_TARBALL='/tmp/netbsd-cross.tar.xz'
-        declare -r NETBSD_CROSS_URL="https://github.com/AmanoTeam/n3tbsdcr0ss/releases/download/${NETBSD_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
+        declare -r NETBSD_CROSS_URL="https://github.com/AmanoTeam/Dakini/releases/download/${NETBSD_CROSS_TAG}/x86_64-unknown-linux-gnu.tar.xz"
         
         curl --retry 10 --retry-delay 3 --silent --location --url "${NETBSD_CROSS_URL}" --output "${NETBSD_CROSS_TARBALL}"
         tar --directory="$(dirname "${NETBSD_CROSS_TARBALL}")" --extract --file="${NETBSD_CROSS_TARBALL}"
         
-        echo 'NETBSD_TOOLCHAIN=/tmp/unknown-unknown-netbsd' >> "${GITHUB_ENV}"
-        echo '/tmp/unknown-unknown-netbsd/bin' >> "${GITHUB_PATH}"
+        echo 'NETBSD_TOOLCHAIN=/tmp/dakini' >> "${GITHUB_ENV}"
+        echo '/tmp/dakini/bin' >> "${GITHUB_PATH}"
     - name: Setup FreeBSD cross compiler
       run: |
-        declare -r FREEBSD_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl  --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/fr33bsdcr0ss/releases/latest')")"
+        declare -r FREEBSD_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl  --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Loki/releases/latest')")"
         declare -r FREEBSD_CROSS_TARBALL='/tmp/freebsd-cross.tar.xz'
-        declare -r FREEBSD_CROSS_URL="https://github.com/AmanoTeam/fr33bsdcr0ss/releases/download/${FREEBSD_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
+        declare -r FREEBSD_CROSS_URL="https://github.com/AmanoTeam/Loki/releases/download/${FREEBSD_CROSS_TAG}/x86_64-unknown-linux-gnu.tar.xz"
         
         curl --silent --retry 10 --retry-delay 3 --location --url "${FREEBSD_CROSS_URL}" --output "${FREEBSD_CROSS_TARBALL}"
         tar --directory="$(dirname "${FREEBSD_CROSS_TARBALL}")" --extract --file="${FREEBSD_CROSS_TARBALL}"
         
-        echo 'FREEBSD_TOOLCHAIN=/tmp/unknown-unknown-freebsd' >> "${GITHUB_ENV}"
-        echo '/tmp/unknown-unknown-freebsd/bin' >> "${GITHUB_PATH}"
+        echo 'FREEBSD_TOOLCHAIN=/tmp/loki' >> "${GITHUB_ENV}"
+        echo '/tmp/loki/bin' >> "${GITHUB_PATH}"
     - name: Setup DragonFly cross compiler
       run: |
-        declare -r DRAGONFLY_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/dr4g0nflybsdcr0ss/releases/latest')")"
+        declare -r DRAGONFLY_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Venti/releases/latest')")"
         declare -r DRAGONFLY_CROSS_TARBALL='/tmp/freebsd-cross.tar.xz'
-        declare -r DRAGONFLY_CROSS_URL="https://github.com/AmanoTeam/dr4g0nflybsdcr0ss/releases/download/${DRAGONFLY_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
+        declare -r DRAGONFLY_CROSS_URL="https://github.com/AmanoTeam/dr4g0nflybsdcr0ss/releases/download/${DRAGONFLY_CROSS_TAG}/x86_64-unknown-linux-gnu.tar.xz"
         
         curl --retry 10 --retry-delay 3 --silent --location --url "${DRAGONFLY_CROSS_URL}" --output "${DRAGONFLY_CROSS_TARBALL}"
         tar --directory="$(dirname "${DRAGONFLY_CROSS_TARBALL}")" --extract --file="${DRAGONFLY_CROSS_TARBALL}"
         
-        echo 'DRAGONFLY_TOOLCHAIN=/tmp/unknown-unknown-dragonfly' >> "${GITHUB_ENV}"
-        echo '/tmp/unknown-unknown-dragonfly/bin' >> "${GITHUB_PATH}"
+        echo 'DRAGONFLY_TOOLCHAIN=/tmp/venti' >> "${GITHUB_ENV}"
+        echo '/tmp/venti/bin' >> "${GITHUB_PATH}"
     - name: Setup Haiku cross compiler
       run: |
         declare -r HAIKU_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/h4ikucr0ss/releases/latest')")"
@@ -159,26 +159,26 @@ jobs:
         echo '/tmp/obggcc/bin' >> "${GITHUB_PATH}"
     - name: Setup OpenBSD cross compiler
       run: |
-        declare -r OPENBSD_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/0p3nbsdcr0ss/releases/latest')")"
+        declare -r OPENBSD_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Atar/releases/latest')")"
         declare -r OPENBSD_CROSS_TARBALL='/tmp/openbsd-cross.tar.xz'
-        declare -r OPENBSD_CROSS_URL="https://github.com/AmanoTeam/0p3nbsdcr0ss/releases/download/${OPENBSD_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
+        declare -r OPENBSD_CROSS_URL="https://github.com/AmanoTeam/Atar/releases/download/${OPENBSD_CROSS_TAG}/x86_64-unknown-linux-gnu.tar.xz"
         
         curl --retry 10 --retry-delay 3 --silent --location --url "${OPENBSD_CROSS_URL}" --output "${OPENBSD_CROSS_TARBALL}"
         tar --directory="$(dirname "${OPENBSD_CROSS_TARBALL}")" --extract --file="${OPENBSD_CROSS_TARBALL}"
         
-        echo 'OPENBSD_TOOLCHAIN=/tmp/unknown-unknown-openbsd' >> "${GITHUB_ENV}"
-        echo '/tmp/unknown-unknown-openbsd/bin' >> "${GITHUB_PATH}"
+        echo 'OPENBSD_TOOLCHAIN=/tmp/atar' >> "${GITHUB_ENV}"
+        echo '/tmp/atar/bin' >> "${GITHUB_PATH}"
     - name: Setup Linux musl cross compiler
       run: |
-        declare -r MUSL_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/muslcr00s/releases/latest')")"
+        declare -r MUSL_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Raiden/releases/latest')")"
         declare -r MUSL_CROSS_TARBALL='/tmp/musl-cross.tar.xz'
-        declare -r MUSL_CROSS_URL="https://github.com/AmanoTeam/muslcr00s/releases/download/${MUSL_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
+        declare -r MUSL_CROSS_URL="https://github.com/AmanoTeam/Raiden/releases/download/${MUSL_CROSS_TAG}/x86_64-unknown-linux-gnu.tar.xz"
         
         curl --retry 10 --retry-delay 3 --silent --location --url "${MUSL_CROSS_URL}" --output "${MUSL_CROSS_TARBALL}"
         tar --directory="$(dirname "${MUSL_CROSS_TARBALL}")" --extract --file="${MUSL_CROSS_TARBALL}"
         
-        echo 'MUSL_TOOLCHAIN=/tmp/unknown-unknown-musl' >> "${GITHUB_ENV}"
-        echo '/tmp/unknown-unknown-musl/bin' >> "${GITHUB_PATH}"
+        echo 'MUSL_TOOLCHAIN=/tmp/raiden' >> "${GITHUB_ENV}"
+        echo '/tmp/raiden/bin' >> "${GITHUB_PATH}"
     - name: Setup Tizen cross compiler
       run: |
         declare -r TIZEN_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/t1z3ncr0ss/releases/latest')")"

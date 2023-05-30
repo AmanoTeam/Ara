@@ -38,6 +38,18 @@ static CURL* curl_easy_global = NULL;
 static CURLM* curl_multi_global = NULL;
 static struct curl_blob curl_blob_global = {0};
 
+void __curl_slist_free_all(struct curl_slist** ptr) {
+	curl_slist_free_all(*ptr);
+}
+
+void __curl_free(char** ptr) {
+	curl_free(*ptr);
+}
+
+void __curl_url_cleanup(CURLU** ptr) {
+	curl_url_cleanup(*ptr);
+}
+
 static void globals_destroy(void) {
 	
 	curl_multi_cleanup(curl_multi_global);

@@ -2,6 +2,6 @@
 
 #include "cleanup.h"
 
-void _free_(char** ptr) {
+void __free(char** ptr) {
 	free(*ptr);
 }

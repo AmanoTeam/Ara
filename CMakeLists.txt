@@ -558,7 +558,6 @@ string(REGEX MATCH "#define LIBAVUTIL_VERSION_MICRO *([0-9]+)" _ ${FILE_CONTENTS
 set(LIBAVUTIL_VERSION_MICRO "${CMAKE_MATCH_1}")
 
 if (UNIX)
-	
 	if ("${CMAKE_SYSTEM_NAME}" STREQUAL "OpenBSD")
 		set(LIBAVFORMAT_SOVERSION "${LIBAVFORMAT_VERSION_MAJOR}.${LIBAVFORMAT_VERSION_MINOR}")
 		set(LIBAVCODEC_SOVERSION "${LIBAVCODEC_VERSION_MAJOR}.${LIBAVCODEC_VERSION_MINOR}")
@@ -687,8 +686,6 @@ add_executable(
 	src/callbacks.c
 	src/cleanup.c
 	src/buffer.c
-	src/curl_cleanup.c
-	src/tidy_cleanup.c
 	src/curl.c
 	src/errors.c
 	src/html.c
@@ -709,6 +706,7 @@ add_executable(
 	src/cir.c
 	src/ffmpeg.c
 	src/walkdir.c
+	src/ttidy.c
 )
 
 add_executable(

@@ -18,9 +18,7 @@
 #include "query.h"
 #include "symbols.h"
 #include "curl.h"
-#include "curl_cleanup.h"
-#include "query_cleanup.h"
-#include "buffer_cleanup.h"
+#include "buffer.h"
 #include "kiwify.h"
 #include "vimeo.h"
 
@@ -222,7 +220,7 @@ int kiwify_get_resources(
 		
 		struct Query query __query_free__ = {0};
 		
-		add_parameter(&query, "page", page_number);
+		query_add_parameter(&query, "page", page_number);
 		
 		char* query_fields __free__ = NULL;
 		const int code = query_stringify(query, &query_fields);

@@ -1,5 +1,5 @@
-void _free_(char** ptr);
+void __free(char** ptr);
 
-#define __free__ __attribute__((__cleanup__(_free_)))
+#define __free__ __attribute__((__cleanup__(__free)))
 
 #pragma once

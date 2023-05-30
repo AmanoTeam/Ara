@@ -12,9 +12,7 @@
 #include "types.h"
 #include "panda.h"
 #include "buffer.h"
-#include "buffer_cleanup.h"
 #include "curl.h"
-#include "curl_cleanup.h"
 
 static const char PANDA_URL_PATTERN_START[] = "https://player-vz-";
 static const char PANDA_URL_PATTERN_END[] = ".tv.pandavideo.com.br/embed/";

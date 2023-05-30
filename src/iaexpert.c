@@ -17,10 +17,8 @@
 #include "query.h"
 #include "symbols.h"
 #include "curl.h"
-#include "curl_cleanup.h"
-#include "tidy_cleanup.h"
-#include "query_cleanup.h"
-#include "buffer_cleanup.h"
+#include "ttidy.h"
+#include "buffer.h"
 #include "iaexpert.h"
 #include "html.h"
 #include "vimeo.h"
@@ -464,12 +462,12 @@ static int tidy_extract_modules(
 				
 				struct Query query __query_free__ = {0};
 				
-				add_parameter(&query, "action", "ld30_ajax_pager");
-				add_parameter(&query, "ld-topic-page", paged);
-				add_parameter(&query, "pager_nonce", nonce);
-				add_parameter(&query, "context", context);
-				add_parameter(&query, "lesson_id", lesson_id);
-				add_parameter(&query, "course_id", course_id);
+				query_add_parameter(&query, "action", "ld30_ajax_pager");
+				query_add_parameter(&query, "ld-topic-page", paged);
+				query_add_parameter(&query, "pager_nonce", nonce);
+				query_add_parameter(&query, "context", context);
+				query_add_parameter(&query, "lesson_id", lesson_id);
+				query_add_parameter(&query, "course_id", course_id);
 				
 				char* query_fields __free__ = NULL;
 				code = query_stringify(query, &query_fields);
@@ -698,10 +696,10 @@ int iaexpert_authorize(
 	
 	struct Query query __query_free__ = {0};
 	
-	add_parameter(&query, "action", "arm_shortcode_form_ajax_action");
-	add_parameter(&query, "user_login", user);
-	add_parameter(&query, "user_pass", pass);
-	add_parameter(&query, "arm_action", "please-login");
+	query_add_parameter(&query, "action", "arm_shortcode_form_ajax_action");
+	query_add_parameter(&query, "user_login", user);
+	query_add_parameter(&query, "user_pass", pass);
+	query_add_parameter(&query, "arm_action", "please-login");
 	
 	char* post_fields __free__ = NULL;
 	const int code = query_stringify(query, &post_fields);
@@ -914,9 +912,9 @@ int iaexpert_get_resources(
 		
 		struct Query query __query_free__ = {0};
 		
-		add_parameter(&query, "action", "ld_course_list_shortcode_pager");
-		add_parameter(&query, "nonce", nonce);
-		add_parameter(&query, "paged", value);
+		query_add_parameter(&query, "action", "ld_course_list_shortcode_pager");
+		query_add_parameter(&query, "nonce", nonce);
+		query_add_parameter(&query, "paged", value);
 		
 		char* post_fields __free__ = NULL;
 		int code = query_stringify(query, &post_fields);
@@ -1066,8 +1064,8 @@ int iaexpert_get_modules(
 		
 		struct Query query __query_free__ = {0};
 		
-		add_parameter(&query, "course_id", course_id);
-		add_parameter(&query, "course_join", course_join);
+		query_add_parameter(&query, "course_id", course_id);
+		query_add_parameter(&query, "course_join", course_join);
 		
 		char* post_fields __free__ = NULL;
 		const int code = query_stringify(query, &post_fields);

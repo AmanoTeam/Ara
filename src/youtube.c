@@ -13,9 +13,7 @@
 #include "types.h"
 #include "youtube.h"
 #include "curl.h"
-#include "curl_cleanup.h"
-#include "query_cleanup.h"
-#include "buffer_cleanup.h"
+#include "buffer.h"
 #include "cleanup.h"
 
 static const char YOUTUBE_URL_PATTERN[] = "https://www.youtube.com/embed";
@@ -117,8 +115,8 @@ int youtube_parse(
 	
 	struct Query query __query_free__ = {0};
 	
-	add_parameter(&query, "token", YOUTUBE_PLAYER_KEY);
-	add_parameter(&query, "prettyPrint", "false");
+	query_add_parameter(&query, "token", YOUTUBE_PLAYER_KEY);
+	query_add_parameter(&query, "prettyPrint", "false");
 	
 	char* get_fields __free__ = NULL;
 	const int code = query_stringify(query, &get_fields);

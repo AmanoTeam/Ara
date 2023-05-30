@@ -23,4 +23,8 @@ typedef struct _TidyAttr tidy_attr_t;
 #define tidy_release tidyRelease
 #define tidy_opt_set_bool tidyOptSetBool
 
+void __tidy_release(const tidy_doc_t* const* ptr);
+
+#define __tidy_release__ __attribute__((__cleanup__(__tidy_release)))
+
 #pragma once

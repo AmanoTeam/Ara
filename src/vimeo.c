@@ -13,9 +13,7 @@
 #include "types.h"
 #include "vimeo.h"
 #include "buffer.h"
-#include "buffer_cleanup.h"
 #include "curl.h"
-#include "curl_cleanup.h"
 
 static const char VIMEO_URL_PATTERN[] = "https://player.vimeo.com/video";
 

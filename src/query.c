@@ -37,7 +37,7 @@ static int put_parameter(struct Query* obj, const struct Parameter parameter) {
 	
 }
 
-int add_parameter(struct Query* obj, const char* key, const char* value) {
+int query_add_parameter(struct Query* obj, const char* key, const char* value) {
 	
 	struct Parameter parameter = {0};
 	

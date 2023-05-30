@@ -18,9 +18,7 @@
 #include "query.h"
 #include "symbols.h"
 #include "curl.h"
-#include "curl_cleanup.h"
-#include "query_cleanup.h"
-#include "buffer_cleanup.h"
+#include "buffer.h"
 #include "estrategia.h"
 #include "estrategia_concursos.h"
 
@@ -89,7 +87,7 @@ static int estrategia_concursos_get_exclusives(
 		
 		struct Query query __query_free__ = {0};
 		
-		add_parameter(&query, "page", page_number);
+		query_add_parameter(&query, "page", page_number);
 		
 		char* query_fields __free__ = NULL;
 		const int code = query_stringify(query, &query_fields);

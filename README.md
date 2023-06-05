@@ -4,7 +4,7 @@ O SparkleC é um programa escrito em C que usufruí das APIs de algumas platafor
 
 # Instalação
 
-O programa está disponível para Android, Windows, Linux, MacOS, Haiku, Tizen e sistemas BSD.
+O programa está disponível para Android, Windows, Linux, MacOS, Haiku e sistemas BSD.
 
 Note que embora versões para MacOS, Haiku e BSD estejam disponíveis, as mesmas não são testadas com frequência. Caso encontre (ou não) problemas ao executar o SparkleC nessas plataformas, [reporte-nos](https://github.com/Kartatz/SparkleC/issues).
 

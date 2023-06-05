@@ -179,17 +179,6 @@ jobs:
         
         echo 'MUSL_TOOLCHAIN=/tmp/raiden' >> "${GITHUB_ENV}"
         echo '/tmp/raiden/bin' >> "${GITHUB_PATH}"
-    - name: Setup Tizen cross compiler
-      run: |
-        declare -r TIZEN_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/t1z3ncr0ss/releases/latest')")"
-        declare -r TIZEN_CROSS_TARBALL='/tmp/tizen-cross.tar.xz'
-        declare -r TIZEN_CROSS_URL="https://github.com/AmanoTeam/t1z3ncr0ss/releases/download/${TIZEN_CROSS_TAG}/x86_64-linux-gnu.tar.xz"
-        
-        curl --retry 10 --retry-delay 3 --silent --location --url "${TIZEN_CROSS_URL}" --output "${TIZEN_CROSS_TARBALL}"
-        tar --directory="$(dirname "${TIZEN_CROSS_TARBALL}")" --extract --file="${TIZEN_CROSS_TARBALL}"
-        
-        echo 'TIZEN_TOOLCHAIN=/tmp/unknown-unknown-tizen' >> "${GITHUB_ENV}"
-        echo '/tmp/unknown-unknown-tizen/bin' >> "${GITHUB_PATH}"
     - name: Build with CMake
       run: |
         declare -r MACHINE_HOST="$(gcc -dumpmachine)"
@@ -201,13 +190,9 @@ jobs:
             arm-linux-gnueabihf
             arm-unknown-linux-gnueabihf
             arm-unknown-linux-musleabihf
-            arm-tizenwd-linux-gnueabi
-            arm-tizenmd-linux-gnueabi
             armv7-w64-mingw32
             armv7a-linux-androideabi
             armv7l-unknown-linux-musleabihf
-            arm-tizenihld-linux-gnueabi
-            arm-tizenihd-linux-gnueabi
             powerpc-linux-gnu
             powerpc-unknown-netbsd
             powerpc-unknown-linux-gnu
@@ -219,8 +204,6 @@ jobs:
             i386-unknown-freebsd
             i386-unknown-openbsd
             i386-unknown-linux-musl
-            i386-tizenwe-linux-gnueabi
-            i386-tizenme-linux-gnueabi
             sh4-linux-gnu
             shle-unknown-netbsdelf
             m68k-linux-gnu
@@ -258,7 +241,6 @@ jobs:
             aarch64-unknown-freebsd
             aarch64-unknown-linux-gnu
             aarch64-unknown-linux-musl
-            aarch64-tizenihd-linux-gnueabi
             powerpc64-linux-gnu
             powerpc64le-linux-gnu
             powerpc-unknown-freebsd

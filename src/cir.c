@@ -64,7 +64,7 @@ int cir_init(struct CIR* const obj) {
 		
 		int actions = TCSAFLUSH;
 		
-		#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+		#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__OpenBSD__)
 			actions |= TCSASOFT;
 		#endif
 		

@@ -245,6 +245,7 @@ jobs:
             powerpc64le-linux-gnu
             powerpc-unknown-freebsd
             powerpc64-unknown-freebsd
+            powerpc64-unknown-freebsd_elfv2
             powerpc64le-unknown-linux-gnu
             powerpc64le-unknown-linux-musl
             s390x-linux-gnu

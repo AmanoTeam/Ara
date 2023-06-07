@@ -204,6 +204,7 @@ jobs:
             i386-unknown-freebsd
             i386-unknown-openbsd
             i386-unknown-linux-musl
+            i586-unknown-haiku
             sh4-linux-gnu
             shle-unknown-netbsdelf
             m68k-linux-gnu

@@ -74,7 +74,7 @@ int vimeo_parse(
 	
 	start += strlen(JSON_TREE_PATTERN);
 	
-	const char* const patterns[] = {"}; ", "}\n"};
+	const char* const patterns[] = {"}</script>", "}; ", "}\n"};
 	
 	const char* end = NULL;
 	

@@ -25,6 +25,7 @@ option(SPARKLEC_DISABLE_KIWIFY "Disable support for Kiwify" OFF)
 option(SPARKLEC_DISABLE_CERTIFICATE_VALIDATION "Disable SSL certificate validation in libcurl" OFF)
 
 set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
+set(CMAKE_POLICY_DEFAULT_CMP0048 NEW)
 
 # curl
 set(PICKY_COMPILER OFF)
@@ -71,6 +72,18 @@ endif()
 file(READ "${CMAKE_SOURCE_DIR}/submodules/tidy/include/tidyplatform.h" FILE_CONTENTS)
 string(REPLACE "TIDY_THREAD_LOCAL __thread" "TIDY_THREAD_LOCAL" FILE_CONTENTS "${FILE_CONTENTS}")
 file(WRITE "${CMAKE_SOURCE_DIR}/submodules/tidy/include/tidyplatform.h" "${FILE_CONTENTS}")
+
+file(READ "${CMAKE_SOURCE_DIR}/submodules/tidy/CMakeLists.txt" FILE_CONTENTS) 
+string(REPLACE "2.8.12" "2.8.12...3.13" FILE_CONTENTS "${FILE_CONTENTS}") 
+file(WRITE "${CMAKE_SOURCE_DIR}/submodules/tidy/CMakeLists.txt" "${FILE_CONTENTS}") 
+ 
+file(READ "${CMAKE_SOURCE_DIR}/submodules/curl/CMake/FindBearSSL.cmake" FILE_CONTENTS) 
+string(REPLACE "args(BEARSSL" "args(BearSSL" FILE_CONTENTS "${FILE_CONTENTS}") 
+file(WRITE "${CMAKE_SOURCE_DIR}/submodules/curl/CMake/FindBearSSL.cmake" "${FILE_CONTENTS}") 
+
+file(READ "${CMAKE_SOURCE_DIR}/submodules/jansson/CMakeLists.txt" FILE_CONTENTS) 
+string(REPLACE " 3.1" " 3.1...3.13" FILE_CONTENTS "${FILE_CONTENTS}") 
+file(WRITE "${CMAKE_SOURCE_DIR}/submodules/jansson/CMakeLists.txt" "${FILE_CONTENTS}") 
 
 # Workaround for build issues of Tidy on MacOS
 if (APPLE)

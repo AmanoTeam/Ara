@@ -423,45 +423,46 @@ set(FFMPEG_INSTALL_PREFIX "${FFMPEG_BUILD_DIRECTORY}/binaries")
 
 set(
 	FFMPEG_CONFIGURE_FLAGS
-	--disable-symver
-	--disable-asm
 	--disable-all
+	--disable-alsa
+	--disable-appkit
+	--disable-asm
+	--disable-audiotoolbox
+	--disable-avfoundation
+	--disable-bzlib
+	--disable-coreimage
+	--disable-debug
+	--disable-doc
+	--disable-iconv
+	--disable-libxcb
+	--disable-lzma
+	--disable-neon
+	--disable-network
+	--disable-pthreads
+	--disable-schannel
+	--disable-sdl2
+	--disable-securetransport
+	--disable-static
+	--disable-symver
+	--disable-videotoolbox
+	--disable-vulkan
+	--disable-w32threads
+	--disable-xlib
+	--disable-zlib
 	--enable-avcodec
 	--enable-avformat
 	--enable-avutil
-	--disable-zlib
-	--disable-network
-	--enable-small
-	--disable-lzma
-	--disable-pthreads
-	--disable-w32threads
-	--disable-sdl2
-	--disable-alsa
-	--disable-bzlib
-	--disable-iconv
-	--disable-xlib
-	--disable-libxcb
-	--disable-doc
-	--disable-static
-	--enable-shared
-	--disable-debug
-	--enable-ffmpeg
-	--enable-protocol=file,crypto
 	--enable-decoder=aac,h264
-	--enable-muxer=h264,mpegts
 	--enable-demuxer=aac,h264,hls
-	--disable-vulkan
-	--disable-neon
-	--disable-schannel
-	--prefix="${FFMPEG_INSTALL_PREFIX}"
+	--enable-ffmpeg
+	--enable-muxer=h264,mpegts
 	--enable-pic
-	--disable-appkit
-	--disable-coreimage
-	--disable-securetransport
-	--disable-avfoundation
-	--disable-audiotoolbox
-	--disable-videotoolbox
+	--enable-protocol=file,crypto
+	--enable-shared
+	--enable-small
 	--enable-version3
+	--extra-ldflags=-fPIC
+	--prefix="${FFMPEG_INSTALL_PREFIX}"
 )
 
 if (SPARKLEC_ENABLE_LTO)

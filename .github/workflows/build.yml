@@ -26,6 +26,48 @@ jobs:
         
         echo 'SPHYNX_HOME=/tmp/sphynx' >> "${GITHUB_ENV}"
         echo '/tmp/sphynx/bin' >> "${GITHUB_PATH}"
+        
+        declare -r names=(
+            'addr2line'
+            'ar'
+            'as'
+            'c++'
+            'c++filt'
+            'cpp'
+            'dwp'
+            'elfedit'
+            'g++'
+            'gcc'
+            'gcc-ar'
+            'gcc-nmz'
+            'gcc-ranlib'
+            'gcov'
+            'gcov-dump'
+            'gcov-tool'
+            'gprof'
+            'ld'
+            'ld.bfd'
+            'ld.gold'
+            'lto-dump'
+            'nm'
+            'objcopy'
+            'objdump'
+            'ranlib'
+            'readelf'
+            'size'
+            'strings'
+            'strip'
+        )
+        
+        cd '/tmp/sphynx/bin'
+        
+        for name in "${names[@]}"; do
+            if [ -f "./x86_64-unknown-linux-gnu-${name}" ]; then
+                continue
+            fi
+            
+            ln --symbolic "./${name}" "./x86_64-unknown-linux-gnu-${name}"
+        done
     - name: Setup Android cross compiler
       uses: nttld/setup-ndk@main
       id: setup-ndk

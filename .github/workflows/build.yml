@@ -178,6 +178,17 @@ jobs:
         
         echo 'RAIDEN_HOME=/tmp/raiden' >> "${GITHUB_ENV}"
         echo '/tmp/raiden/bin' >> "${GITHUB_PATH}"
+    - name: Setup SerenityOS cross compiler
+      run: | 
+        declare -r SENNA_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Senna/releases/latest')")"
+        declare -r SENNA_TARBALL='/tmp/toolchain.tar.xz'
+        declare -r SENNA_URL="https://github.com/AmanoTeam/Senna/releases/download/${SENNA_TAG}/x86_64-unknown-linux-gnu.tar.xz"
+        
+        curl --retry 10 --retry-delay 3 --silent --location --url "${SENNA_URL}" --output "${SENNA_TARBALL}"
+        tar --directory="$(dirname "${SENNA_TARBALL}")" --extract --file="${SENNA_TARBALL}"
+        
+        echo 'SENNA_HOME=/tmp/senna' >> "${GITHUB_ENV}"
+        echo '/tmp/senna/bin' >> "${GITHUB_PATH}"
     - name: Build with CMake
       run: |
         declare -r targets=(

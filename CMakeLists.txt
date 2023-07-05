@@ -85,6 +85,21 @@ file(READ "${CMAKE_SOURCE_DIR}/submodules/jansson/CMakeLists.txt" FILE_CONTENTS)
 string(REPLACE " 3.1" " 3.1...3.13" FILE_CONTENTS "${FILE_CONTENTS}") 
 file(WRITE "${CMAKE_SOURCE_DIR}/submodules/jansson/CMakeLists.txt" "${FILE_CONTENTS}") 
 
+if (SERENITYOS)
+	file(READ "${CMAKE_SOURCE_DIR}/submodules/ffmpeg/libavutil/thread.h" FILE_CONTENTS) 
+	string(REPLACE "#if HAVE_PRCTL" "#if !defined(__serenity__) && HAVE_PRCTL" FILE_CONTENTS "${FILE_CONTENTS}") 
+	file(WRITE "${CMAKE_SOURCE_DIR}/submodules/ffmpeg/libavutil/thread.h" "${FILE_CONTENTS}") 
+	
+	file(READ "${CMAKE_SOURCE_DIR}/submodules/tidy/include/tidyplatform.h" FILE_CONTENTS) 
+	string(REPLACE "if HAS_FUTIME" "if !defined(__serenity__) && HAS_FUTIME" FILE_CONTENTS "${FILE_CONTENTS}")
+	string(REPLACE "ulong" "u_long" FILE_CONTENTS "${FILE_CONTENTS}")
+	file(WRITE "${CMAKE_SOURCE_DIR}/submodules/tidy/include/tidyplatform.h" "${FILE_CONTENTS}") 
+	
+	file(READ "${CMAKE_SOURCE_DIR}/submodules/tidy/include/tidy.h" FILE_CONTENTS) 
+	string(REPLACE "ulong" "u_long" FILE_CONTENTS "${FILE_CONTENTS}")
+	file(WRITE "${CMAKE_SOURCE_DIR}/submodules/tidy/include/tidy.h" "${FILE_CONTENTS}") 
+endif()
+
 # Workaround for build issues of Tidy on MacOS
 if (APPLE)
 	add_compile_options(-Wno-undef-prefix)
@@ -472,15 +487,17 @@ endif()
 if (CMAKE_CROSSCOMPILING)
 	string(TOLOWER "${CMAKE_SYSTEM_NAME}" system_name)
 	
-	if ("${system_name}" STREQUAL "windows")
+	if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
 		set(system_name "mingw32")
+	elseif ("${CMAKE_SYSTEM_NAME}" STREQUAL "SerenityOS")
+		set(system_name "none")
 	endif()
 	
 	list(APPEND FFMPEG_CONFIGURE_FLAGS "--cross-prefix=${TOOLCHAIN_PREFIX}-")
 	list(APPEND FFMPEG_CONFIGURE_FLAGS "--target-os=${system_name}")
 	list(APPEND FFMPEG_CONFIGURE_FLAGS "--arch=${CMAKE_SYSTEM_PROCESSOR}")
 	
-	if ("${system_name}" STREQUAL "android")
+	if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Android")
 		list(APPEND FFMPEG_CONFIGURE_FLAGS "--as=${ANDROID_TOOLCHAIN_ROOT}/bin/${TOOLCHAIN_PREFIX}-clang")
 		list(APPEND FFMPEG_CONFIGURE_FLAGS "--ld=${ANDROID_TOOLCHAIN_ROOT}/bin/${TOOLCHAIN_PREFIX}-clang")
 		list(APPEND FFMPEG_CONFIGURE_FLAGS "--cc=${ANDROID_TOOLCHAIN_ROOT}/bin/${TOOLCHAIN_PREFIX}-clang")
@@ -488,10 +505,6 @@ if (CMAKE_CROSSCOMPILING)
 		list(APPEND FFMPEG_CONFIGURE_FLAGS "--as=${CMAKE_C_COMPILER}")
 		list(APPEND FFMPEG_CONFIGURE_FLAGS "--ld=${CMAKE_C_COMPILER}")
 		list(APPEND FFMPEG_CONFIGURE_FLAGS "--cc=${CMAKE_C_COMPILER}")
-	endif()
-	
-	if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "mipsel" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "mips")
-		list(APPEND FFMPEG_CONFIGURE_FLAGS "--extra-ldflags=-fpic")
 	endif()
 	
 	list(APPEND FFMPEG_CONFIGURE_FLAGS "--nm=${CMAKE_NM}")

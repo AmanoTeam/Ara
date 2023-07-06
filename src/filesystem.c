@@ -17,7 +17,7 @@
 	#include <dirent.h>
 #endif
 
-#if !defined(_WIN32) && !defined(__FreeBSD__) && !defined(__NetBSD__) && !defined(__DragonFly__) && !defined(__APPLE__) && !defined(__HAIKU__) && !defined(__OpenBSD__)
+#if !defined(_WIN32) && !defined(__FreeBSD__) && !defined(__NetBSD__) && !defined(__DragonFly__) && !defined(__APPLE__) && !defined(__HAIKU__) && !defined(__OpenBSD__) && !defined(__serenity__)
 	#include <sys/syscall.h>
 	
 	struct linux_dirent {
@@ -442,77 +442,78 @@ int directory_empty(const char* const directory) {
 		
 		return (int) status;
 	#else
-		#ifdef __HAIKU__
-			const int fd = _kern_open_dir(-1, directory);
-		#else
-			const int fd = open(directory, O_RDONLY | O_DIRECTORY);
-		#endif
-		
-		if (fd == -1) {
-			return -1;
-		}
-		
-		#if defined(__APPLE__) || defined(__HAIKU__)
-			struct dirent buffer[3] = {'\0'};
-		#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__OpenBSD__)
-			struct dirent buffer[2] = {'\0'};
-		#else
-			struct linux_dirent buffer[2] = {'\0'};
-		#endif
-		
-		while (1) {
-			#if defined(__APPLE__)
-				long base = 0;
-				const int size = getdirentries64(fd, (char*) buffer, sizeof(buffer), &base);
-			#elif defined(__HAIKU__)
-				const ssize_t size = _kern_read_dir(fd, buffer, sizeof(buffer), sizeof(buffer) / sizeof(*buffer));
-			#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__OpenBSD__)
-				const ssize_t size = getdents(fd, (char*) buffer, sizeof(buffer));
+		#ifndef __serenity__
+			#ifdef __HAIKU__
+				const int fd = _kern_open_dir(-1, directory);
 			#else
-				const long size = syscall(SYS_getdents, fd, buffer, sizeof(buffer));
+				const int fd = open(directory, O_RDONLY | O_DIRECTORY);
 			#endif
 			
-			if (size == 0) {
-				close(fd);
-				break;
+			if (fd == -1) {
+				return -1;
 			}
 			
-			#ifdef __HAIKU__
-				if (size < 0) {
-					return -1;
-				}
+			#if defined(__APPLE__) || defined(__HAIKU__)
+				struct dirent buffer[3] = {'\0'};
+			#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__OpenBSD__)
+				struct dirent buffer[2] = {'\0'};
 			#else
-				if (size == -1) {
+				struct linux_dirent buffer[2] = {'\0'};
+			#endif
+			
+			while (1) {
+				#if defined(__APPLE__)
+					long base = 0;
+					const int size = getdirentries64(fd, (char*) buffer, sizeof(buffer), &base);
+				#elif defined(__HAIKU__)
+					const ssize_t size = _kern_read_dir(fd, buffer, sizeof(buffer), sizeof(buffer) / sizeof(*buffer));
+				#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__OpenBSD__)
+					const ssize_t size = getdents(fd, (char*) buffer, sizeof(buffer));
+				#else
+					const long size = syscall(SYS_getdents, fd, buffer, sizeof(buffer));
+				#endif
+				
+				if (size == 0) {
 					close(fd);
+					break;
+				}
+				
+				#ifdef __HAIKU__
+					if (size < 0) {
+						return -1;
+					}
+				#else
+					if (size == -1) {
+						close(fd);
+						
+						if (errno == EINVAL) {
+							return 0;
+						}
+						
+						return -1;
+					}
+				#endif
+				
+				for (long index = 0; index < size;) {
+					#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__APPLE__) || defined(__OpenBSD__) || defined(__HAIKU__)
+						struct dirent* item = (struct dirent*) (((char*) buffer) + index);
+					#else
+						struct linux_dirent* item = (struct linux_dirent*) (((char*) buffer) + index);
+					#endif
 					
-					if (errno == EINVAL) {
+					if (!(strcmp(item->d_name, ".") == 0 || strcmp(item->d_name, "..") == 0)) {
+						close(fd);
 						return 0;
 					}
 					
-					return -1;
+					#ifdef __DragonFly__
+						index += _DIRENT_DIRSIZ(item);
+					#else
+						index += item->d_reclen;
+					#endif
 				}
-			#endif
-			
-			for (long index = 0; index < size;) {
-				#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__APPLE__) || defined(__OpenBSD__) || defined(__HAIKU__)
-					struct dirent* item = (struct dirent*) (((char*) buffer) + index);
-				#else
-					struct linux_dirent* item = (struct linux_dirent*) (((char*) buffer) + index);
-				#endif
-				
-				if (!(strcmp(item->d_name, ".") == 0 || strcmp(item->d_name, "..") == 0)) {
-					close(fd);
-					return 0;
-				}
-				
-				#ifdef __DragonFly__
-					index += _DIRENT_DIRSIZ(item);
-				#else
-					index += item->d_reclen;
-				#endif
 			}
-		}
-		
+		#endif
 		return 1;
 	#endif
 	

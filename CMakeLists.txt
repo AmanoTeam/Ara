@@ -97,7 +97,7 @@ if (SERENITYOS)
 	
 	file(READ "${CMAKE_SOURCE_DIR}/submodules/tidy/include/tidy.h" FILE_CONTENTS) 
 	string(REPLACE "ulong" "u_long" FILE_CONTENTS "${FILE_CONTENTS}")
-	file(WRITE "${CMAKE_SOURCE_DIR}/submodules/tidy/include/tidy.h" "${FILE_CONTENTS}") 
+	file(WRITE "${CMAKE_SOURCE_DIR}/submodules/tidy/include/tidy.h" "${FILE_CONTENTS}")
 endif()
 
 # Workaround for build issues of Tidy on MacOS
@@ -431,6 +431,14 @@ set_target_properties(
 	PROPERTIES
 	IMPORTED_LOCATION $<TARGET_FILE:bearssl>
 )
+
+if (SERENITYOS)
+	target_compile_definitions(
+		tidy-share
+		PRIVATE
+		ulong=u_long
+	)
+endif()
 
 set(FFMPEG_SOURCE_DIRECTORY "${CMAKE_SOURCE_DIR}/submodules/ffmpeg")
 set(FFMPEG_BUILD_DIRECTORY "${CMAKE_BINARY_DIR}/ffmpeg-build")

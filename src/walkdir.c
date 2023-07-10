@@ -1,27 +1,29 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _WIN32
+#if defined(_WIN32)
 	#include <windows.h>
-#else
+#endif
+
+#if !defined(_WIN32)
 	#include <dirent.h>
 #endif
 
-#ifdef __HAIKU__
+#if defined(__HAIKU__)
 	#include <sys/stat.h>
 #endif
 
 #include "walkdir.h"
 #include "symbols.h"
 
-#ifdef _WIN32
+#if defined(_WIN32)
 	#include "filesystem.h"
 #endif
 
 int walkdir_init(struct WalkDir* const walkdir, const char* const directory) {
 	
-	#ifdef _WIN32
-		#ifdef UNICODE
+	#if defined(_WIN32)
+		#if defined(_UNICODE)
 			const int absolute = is_absolute(directory);
 			
 			const int wpatterns = MultiByteToWideChar(CP_UTF8, 0, directory, -1, NULL, 0);
@@ -87,7 +89,7 @@ int walkdir_init(struct WalkDir* const walkdir, const char* const directory) {
 			return -1;
 		}
 		
-		#ifdef __HAIKU__
+		#if defined(__HAIKU__)
 			walkdir->directory = directory;
 		#endif
 	#endif
@@ -98,8 +100,8 @@ int walkdir_init(struct WalkDir* const walkdir, const char* const directory) {
 
 const struct WalkDirItem* walkdir_next(struct WalkDir* const walkdir) {
 	
-	#ifdef _WIN32
-		#ifdef UNICODE
+	#if defined(_WIN32)
+		#if defined(_UNICODE)
 			if (walkdir->item.index > 0) {
 				if (FindNextFileW(walkdir->handle, &walkdir->data) == 0) {
 					return NULL;
@@ -123,11 +125,7 @@ const struct WalkDirItem* walkdir_next(struct WalkDir* const walkdir) {
 			strcpy(walkdir->item.name, walkdir->data.cFileName);
 		#endif
 		
-		if ((walkdir->data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) > 0) {
-			walkdir->item.type = WALKDIR_ITEM_DIRECTORY;
-		} else {
-			walkdir->item.type = WALKDIR_ITEM_FILE;
-		}
+		walkdir->item.type = (walkdir->data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) > 0 ? WALKDIR_ITEM_DIRECTORY : WALKDIR_ITEM_FILE;
 	#else
 		const struct dirent* const item = readdir(walkdir->dir);
 		
@@ -135,13 +133,13 @@ const struct WalkDirItem* walkdir_next(struct WalkDir* const walkdir) {
 			return NULL;
 		}
 		
-		if (strlen(item->d_name) > (sizeof(walkdir->item.name) -1)) {
+		if (strlen(item->d_name) > (sizeof(walkdir->item.name) - 1)) {
 			return NULL;
 		}
 		
 		strcpy(walkdir->item.name, item->d_name);
 		
-		#ifdef __HAIKU__
+		#if defined(__HAIKU__)
 			char path[strlen(walkdir->directory) + strlen(PATH_SEPARATOR) + strlen(item->d_name) + 1];
 			strcpy(path, walkdir->directory);
 			strcat(path, PATH_SEPARATOR);
@@ -154,7 +152,7 @@ const struct WalkDirItem* walkdir_next(struct WalkDir* const walkdir) {
 			}
 		#endif
 		
-		#ifdef __HAIKU__
+		#if defined(__HAIKU__)
 			switch (st.st_mode & S_IFMT) {
 				case S_IFDIR:
 				case S_IFBLK:
@@ -199,7 +197,7 @@ const struct WalkDirItem* walkdir_next(struct WalkDir* const walkdir) {
 
 void walkdir_free(struct WalkDir* const walkdir) {
 	
-	#ifdef _WIN32
+	#if defined(_WIN32)
 		FindClose(walkdir->handle);
 	#else
 		closedir(walkdir->dir);

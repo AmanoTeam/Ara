@@ -1,7 +1,10 @@
-#ifdef _WIN32
+#if defined(_WIN32)
 	#include <windows.h>
-#else
+#endif
+
+#if !defined(_WIN32)
 	#include <stdio.h>
+	#include <unistd.h>
 	#include <termios.h>
 #endif
 
@@ -14,7 +17,7 @@ int erase_screen(void) {
 	Returns (0) on success, (-1) on error.
 	*/
 	
-	#ifdef _WIN32
+	#if defined(_WIN32)
 		const HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
 		
 		if (handle == INVALID_HANDLE_VALUE) {
@@ -32,7 +35,7 @@ int erase_screen(void) {
 		DWORD wrote = 0;
 		COORD origin = {0};
 		
-		#ifdef _UNICODE
+		#if defined(_UNICODE)
 			const BOOL status = FillConsoleOutputCharacterW(handle, L' ', value, origin, &wrote);
 		#else
 			const BOOL status = FillConsoleOutputCharacterA(handle, ' ', value, origin, &wrote);
@@ -52,7 +55,13 @@ int erase_screen(void) {
 			return -1;
 		}
 	#else
-		if (printf("\033[2J") < 1) {
+		const int fd = fileno(stdout);
+		
+		if (fd == -1) {
+			return -1;
+		}
+		
+		if (write(fd, "\033[2J", 4) == -1) {
 			return -1;
 		}
 	#endif
@@ -68,7 +77,7 @@ int erase_line(void) {
 	Returns (0) on success, (-1) on error.
 	*/
 	
-	#ifdef _WIN32
+	#if defined(_WIN32)
 		const HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
 		
 		if (handle == INVALID_HANDLE_VALUE) {
@@ -91,7 +100,7 @@ int erase_line(void) {
 		DWORD wrote = 0;
 		DWORD value = (DWORD) (info.dwSize.X - origin.X);
 		
-		#ifdef _UNICODE
+		#if defined(_UNICODE)
 			const BOOL status = FillConsoleOutputCharacterW(handle, L' ', value, origin, &wrote);
 		#else
 			const BOOL status = FillConsoleOutputCharacterA(handle, ' ', value, origin, &wrote);
@@ -105,11 +114,17 @@ int erase_line(void) {
 			return -1;
 		}
 	#else
-		if (printf("\033[2K") < 1) {
+		const int fd = fileno(stdout);
+		
+		if (fd == -1) {
 			return -1;
 		}
 		
-		if (printf("\033[1G") < 1) {
+		if (write(fd, "\033[2K", 4) == -1) {
+			return -1;
+		}
+		
+		if (write(fd, "\033[1G", 4) == -1) {
 			return -1;
 		}
 	#endif

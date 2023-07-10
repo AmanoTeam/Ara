@@ -2,10 +2,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _WIN32
+#if defined(_WIN32)
 	#include <windows.h>
 	#include <conio.h>
-#else
+#endif
+
+#if !defined(_WIN32)
 	#include <termios.h>
 	#include <unistd.h>
 #endif
@@ -22,7 +24,7 @@ int cir_init(struct CIR* const obj) {
 	Returns (0) on success, (-1) on error.
 	*/
 	
-	#ifdef _WIN32
+	#if defined(_WIN32)
 		const HANDLE handle = GetStdHandle(STD_INPUT_HANDLE);
 		
 		if (handle == INVALID_HANDLE_VALUE) {
@@ -86,7 +88,7 @@ const struct CIKey* cir_get(struct CIR* const obj) {
 	
 	memset(obj->tmp, '\0', sizeof(obj->tmp));
 	
-	#ifdef _WIN32
+	#if defined(_WIN32)
 		const HANDLE handle = GetStdHandle(STD_INPUT_HANDLE);
 		
 		if (handle == INVALID_HANDLE_VALUE) {
@@ -94,11 +96,11 @@ const struct CIKey* cir_get(struct CIR* const obj) {
 		}
 	#endif
 	
-	#ifdef _WIN32
+	#if defined(_WIN32)
 		INPUT_RECORD input = {0};
 		DWORD count = 0;
 		
-		#ifdef _UNICODE
+		#if defined(_UNICODE)
 			const BOOL status = ReadConsoleInputW(handle, &input, 1, &count);
 		#else
 			const BOOL status = ReadConsoleInputA(handle, &input, 1, &count);
@@ -114,7 +116,7 @@ const struct CIKey* cir_get(struct CIR* const obj) {
 			return &KEYBOARD_KEY_EMPTY;
 		}
 		
-		#ifdef _UNICODE
+		#if defined(_UNICODE)
 			if (event->uChar.UnicodeChar == L'\0') {
 				obj->tmp[0] = (char) event->wVirtualKeyCode;
 			} else {
@@ -144,7 +146,7 @@ const struct CIKey* cir_get(struct CIR* const obj) {
 	for (size_t index = 0; index < (sizeof(keys) / sizeof(*keys)); index++) {
 		const struct CIKey* const key = &keys[index];
 		
-		#ifdef _WIN32
+		#if defined(_WIN32)
 			if (key->code == (DWORD) *obj->tmp) {
 				return key;
 			}
@@ -169,7 +171,7 @@ int cir_free(struct CIR* const obj) {
 	Returns (0) on success, (-1) on error.
 	*/
 	
-	#ifdef _WIN32
+	#if defined(_WIN32)
 		const HANDLE handle = GetStdHandle(STD_INPUT_HANDLE);
 		
 		if (handle == INVALID_HANDLE_VALUE) {
@@ -188,7 +190,7 @@ int cir_free(struct CIR* const obj) {
 		
 		int actions = TCSAFLUSH;
 		
-		#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+		#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__OpenBSD__)
 			actions |= TCSASOFT;
 		#endif
 		

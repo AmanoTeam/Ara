@@ -17,7 +17,7 @@ static const char SEMICOLON[] = ";";
 static const char APOSTROPHE[] = "'";
 static const char ASTERISK[] = "*";
 
-#ifdef _WIN32
+#if defined(_WIN32)
 	#define PATH_SEPARATOR "\\"
 #else
 	#define PATH_SEPARATOR "/"

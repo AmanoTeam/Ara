@@ -15,7 +15,7 @@ jobs:
     - uses: actions/checkout@main
       with:
         submodules: true
-    - name: Setup Linux cross compiler
+    - name: Setup Linux cross-compiler
       run: | 
         declare -r SPHYNX_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Sphynx/releases/latest')")"
         declare -r SPHYNX_TARBALL='/tmp/toolchain.tar.xz'
@@ -26,59 +26,17 @@ jobs:
         
         echo 'SPHYNX_HOME=/tmp/sphynx' >> "${GITHUB_ENV}"
         echo '/tmp/sphynx/bin' >> "${GITHUB_PATH}"
-        
-        declare -r names=(
-            'addr2line'
-            'ar'
-            'as'
-            'c++'
-            'c++filt'
-            'cpp'
-            'dwp'
-            'elfedit'
-            'g++'
-            'gcc'
-            'gcc-ar'
-            'gcc-nmz'
-            'gcc-ranlib'
-            'gcov'
-            'gcov-dump'
-            'gcov-tool'
-            'gprof'
-            'ld'
-            'ld.bfd'
-            'ld.gold'
-            'lto-dump'
-            'nm'
-            'objcopy'
-            'objdump'
-            'ranlib'
-            'readelf'
-            'size'
-            'strings'
-            'strip'
-        )
-        
-        cd '/tmp/sphynx/bin'
-        
-        for name in "${names[@]}"; do
-            if [ -f "./x86_64-unknown-linux-gnu-${name}" ]; then
-                continue
-            fi
-            
-            ln --symbolic "./${name}" "./x86_64-unknown-linux-gnu-${name}"
-        done
-    - name: Setup Android cross compiler
+    - name: Setup Android cross-compiler
       uses: nttld/setup-ndk@main
       id: setup-ndk
       with:
         ndk-version: r25c
-    - name: Post setup settings for Android cross compiler
+    - name: Post setup settings for Android cross-compiler
       run: |
         echo 'ANDROID_HOME=${{ steps.setup-ndk.outputs.ndk-path }}' >> "${GITHUB_ENV}"
         sudo sed -i '/CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG/d' /usr/local/share/cmake-*/Modules/Platform/Android.cmake
         echo '${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin' >> "${GITHUB_PATH}"
-    - name: Setup Windows cross compiler
+    - name: Setup Windows cross-compiler
       run: |
         declare -r LLVM_MINGW_TAG='20230320'
         declare -r LLVM_MINGW_TARBALL='/tmp/toolchain.tar.xz'
@@ -89,7 +47,7 @@ jobs:
         
         echo "LLVM_MINGW_HOME=$(dirname "${LLVM_MINGW_TARBALL}")/$(basename "${LLVM_MINGW_URL}" '.tar.xz')" >> "${GITHUB_ENV}"
         echo "$(dirname "${LLVM_MINGW_TARBALL}")/$(basename "${LLVM_MINGW_URL}" '.tar.xz')/bin" >> "${GITHUB_PATH}"
-    - name: Setup MacOS X cross compiler
+    - name: Setup MacOS X cross-compiler
       run: |
         git clone --depth='1' 'https://github.com/tpoechtrager/osxcross.git'
         
@@ -101,7 +59,7 @@ jobs:
         
         echo "OSXCROSS_HOME=$(realpath './target')" >> "${GITHUB_ENV}"
         echo "$(realpath './target/bin')" >> "${GITHUB_PATH}"
-    - name: Setup NetBSD cross compiler
+    - name: Setup NetBSD cross-compiler
       run: | 
         declare -r DAKINI_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Dakini/releases/latest')")"
         declare -r DAKINI_TARBALL='/tmp/toolchain.tar.xz'
@@ -112,7 +70,7 @@ jobs:
         
         echo 'DAKINI_HOME=/tmp/dakini' >> "${GITHUB_ENV}"
         echo '/tmp/dakini/bin' >> "${GITHUB_PATH}"
-    - name: Setup FreeBSD cross compiler
+    - name: Setup FreeBSD cross-compiler
       run: |
         declare -r LOKI_TAG="$(jq --raw-output '.tag_name' <<< "$(curl  --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Loki/releases/latest')")"
         declare -r LOKI_TARBALL='/tmp/toolchain.tar.xz'
@@ -123,7 +81,7 @@ jobs:
         
         echo 'LOKI_HOME=/tmp/loki' >> "${GITHUB_ENV}"
         echo '/tmp/loki/bin' >> "${GITHUB_PATH}"
-    - name: Setup DragonFly cross compiler
+    - name: Setup DragonFly cross-compiler
       run: |
         declare -r DRAGONFLY_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Venti/releases/latest')")"
         declare -r DRAGONFLY_CROSS_TARBALL='/tmp/toolchain.tar.xz'
@@ -134,7 +92,7 @@ jobs:
         
         echo 'DRAGONFLY_TOOLCHAIN=/tmp/venti' >> "${GITHUB_ENV}"
         echo '/tmp/venti/bin' >> "${GITHUB_PATH}"
-    - name: Setup Haiku cross compiler
+    - name: Setup Haiku cross-compiler
       run: |
         declare -r SIL_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Sil/releases/latest')")"
         declare -r SIL_TARBALL='/tmp/toolchain.tar.xz'
@@ -145,7 +103,7 @@ jobs:
         
         echo 'SIL_HOME=/tmp/sil' >> "${GITHUB_ENV}"
         echo '/tmp/sil/bin' >> "${GITHUB_PATH}"
-    - name: Setup OBGGCC cross compiler
+    - name: Setup OBGGCC cross-compiler
       run: |
         declare -r OBGGCC_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/obggcc/releases/latest')")"
         declare -r OBGGCC_TARBALL='/tmp/toolchain.tar.xz'
@@ -156,7 +114,7 @@ jobs:
         
         echo 'OBGGCC_HOME=/tmp/obggcc' >> "${GITHUB_ENV}"
         echo '/tmp/obggcc/bin' >> "${GITHUB_PATH}"
-    - name: Setup OpenBSD cross compiler
+    - name: Setup OpenBSD cross-compiler
       run: |
         declare -r ATAR_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Atar/releases/latest')")"
         declare -r ATAR_TARBALL='/tmp/toolchain.tar.xz'
@@ -167,7 +125,7 @@ jobs:
         
         echo 'ATAR_HOME=/tmp/atar' >> "${GITHUB_ENV}"
         echo '/tmp/atar/bin' >> "${GITHUB_PATH}"
-    - name: Setup Linux musl cross compiler
+    - name: Setup Linux musl cross-compiler
       run: |
         declare -r RAIDEN_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Raiden/releases/latest')")"
         declare -r RAIDEN_TARBALL='/tmp/toolchain.tar.xz'
@@ -178,7 +136,7 @@ jobs:
         
         echo 'RAIDEN_HOME=/tmp/raiden' >> "${GITHUB_ENV}"
         echo '/tmp/raiden/bin' >> "${GITHUB_PATH}"
-    - name: Setup SerenityOS cross compiler
+    - name: Setup SerenityOS cross-compiler
       run: | 
         declare -r SENNA_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Senna/releases/latest')")"
         declare -r SENNA_TARBALL='/tmp/toolchain.tar.xz'

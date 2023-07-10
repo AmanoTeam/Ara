@@ -1,35 +1,14 @@
-#ifndef _WIN32
-	#define _GNU_SOURCE
-#endif
-
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _WIN32
+#if defined(_WIN32)
 	#include <windows.h>
 	#include <fileapi.h>
 	#include <shlwapi.h>
-#else
-	#include <unistd.h>
-	#include <sys/stat.h>
-	#include <errno.h>
-	#include <limits.h>
-	#include <dirent.h>
 #endif
 
-#if !defined(_WIN32) && !defined(__FreeBSD__) && !defined(__NetBSD__) && !defined(__DragonFly__) && !defined(__APPLE__) && !defined(__HAIKU__) && !defined(__OpenBSD__) && !defined(__serenity__)
-	#include <sys/syscall.h>
-	
-	struct linux_dirent {
-		unsigned long d_ino;
-		off_t d_off;
-		unsigned short d_reclen;
-		char d_name[];
-	};
-	
-	#if defined(__aarch64__) || (defined(__riscv) && __LP64__)
-		#define SYS_getdents SYS_getdents64
-	#endif
+#if defined(__FreeBSD__)
+	#include <sys/types.h>
 #endif
 
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__OpenBSD__)
@@ -40,19 +19,21 @@
 	#include <sys/param.h>
 	#include <copyfile.h>
 	#include <mach-o/dyld.h>
-	
-	int getdirentries64(int fd, char *buf, int nbytes, long *basep) __asm("___getdirentries64");
 #endif
 
 #if defined(__HAIKU__)
 	#include <FindDirectory.h>
-	
-	int _kern_open_dir(int fd, const char *path);
-	ssize_t _kern_read_dir(int fd, struct dirent *buffer, size_t bufferSize, size_t maxCount);
 #endif
 
 #if !defined(__HAIKU__)
 	#include <fcntl.h>
+#endif
+
+#if !defined(_WIN32)
+	#include <unistd.h>
+	#include <sys/stat.h>
+	#include <errno.h>
+	#include <limits.h>
 #endif
 
 #include "fstream.h"
@@ -60,7 +41,11 @@
 #include "filesystem.h"
 #include "walkdir.h"
 
-#ifdef _WIN32
+#if !(defined(_WIN32) || defined(__serenity__))
+	#include "getdents.h"
+#endif
+
+#if defined(_WIN32)
 	int is_absolute(const char* const path) {
 		/*
 		Checks whether a given path is absolute.
@@ -68,7 +53,7 @@
 		On Windows, network paths are considered absolute too.
 		*/
 		
-		#ifdef _WIN32
+		#if defined(_WIN32)
 			return (*path == *PATH_SEPARATOR || (strlen(path) > 1 && isalpha(*path) && path[1] == *COLON));
 		#else
 			return (*path == *PATH_SEPARATOR);
@@ -84,8 +69,8 @@ char* get_current_directory(void) {
 	Returns a null pointer on error.
 	*/
 	
-	#ifdef _WIN32
-		#ifdef _UNICODE
+	#if defined(_WIN32)
+		#if defined(_UNICODE)
 			const DWORD size = GetCurrentDirectoryW(0, NULL);
 			
 			if (size == 0) {
@@ -166,8 +151,8 @@ int remove_file(const char* const filename) {
 	Returns (0) on success, (-1) on error.
 	*/
 	
-	#ifdef _WIN32
-		#ifdef _UNICODE
+	#if defined(_WIN32)
+		#if defined(_UNICODE)
 			const int is_abs = is_absolute(filename);
 			
 			const int wfilenames = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
@@ -193,14 +178,14 @@ int remove_file(const char* const filename) {
 		
 		if (status == 0) {
 			if (GetLastError() == ERROR_ACCESS_DENIED) {
-				#ifdef _UNICODE
+				#if defined(_UNICODE)
 					const BOOL status = SetFileAttributesW(wfilename, FILE_ATTRIBUTE_NORMAL);
 				#else
 					const BOOL status = SetFileAttributesA(filename, FILE_ATTRIBUTE_NORMAL);
 				#endif
 				
 				if (status == 1) {
-					#ifdef _UNICODE
+					#if defined(_UNICODE)
 						const BOOL status = DeleteFileW(wfilename);
 					#else
 						const BOOL status = DeleteFileA(filename);
@@ -237,8 +222,8 @@ static int remove_empty_directory(const char* const directory) {
 	Returns (0) on success, (-1) on error.
 	*/
 	
-	#ifdef _WIN32
-		#ifdef _UNICODE
+	#if defined(_WIN32)
+		#if defined(_UNICODE)
 			const int is_abs = is_absolute(directory);
 			
 			const int wdirectorys = MultiByteToWideChar(CP_UTF8, 0, directory, -1, NULL, 0);
@@ -344,8 +329,8 @@ int directory_exists(const char* const directory) {
 	Returns (1) if directory exists, (0) if it does not exists, (-1) on error.
 	*/
 	
-	#ifdef _WIN32
-		#ifdef _UNICODE
+	#if defined(_WIN32)
+		#if defined(_UNICODE)
 			const int is_abs = is_absolute(directory);
 			
 			const int wdirectorys = MultiByteToWideChar(CP_UTF8, 0, directory, -1, NULL, 0);
@@ -401,8 +386,8 @@ int directory_empty(const char* const directory) {
 	Returns (1) if directory is empty, (0) if it does not, (-1) on error.
 	*/
 	
-	#ifdef _WIN32
-		#ifdef _UNICODE
+	#if defined(_WIN32)
+		#if defined(_UNICODE)
 			const int is_abs = is_absolute(directory);
 			
 			const int wdirectorys = MultiByteToWideChar(CP_UTF8, 0, directory, -1, NULL, 0);
@@ -434,7 +419,7 @@ int directory_empty(const char* const directory) {
 			return -1;
 		}
 		
-		#ifdef _UNICODE
+		#if defined(_UNICODE)
 			const BOOL status = PathIsDirectoryEmptyW(wdirectory);
 		#else
 			const BOOL status = PathIsDirectoryEmptyA(directory);
@@ -442,78 +427,46 @@ int directory_empty(const char* const directory) {
 		
 		return (int) status;
 	#else
-		#ifndef __serenity__
-			#ifdef __HAIKU__
-				const int fd = _kern_open_dir(-1, directory);
-			#else
-				const int fd = open(directory, O_RDONLY | O_DIRECTORY);
-			#endif
+		#if !defined(__serenity__)
+			const int fd = open_dir(directory);
 			
 			if (fd == -1) {
 				return -1;
 			}
 			
-			#if defined(__APPLE__) || defined(__HAIKU__)
-				struct dirent buffer[3] = {'\0'};
-			#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__OpenBSD__)
-				struct dirent buffer[2] = {'\0'};
-			#else
-				struct linux_dirent buffer[2] = {'\0'};
-			#endif
+			struct directory_entry buffer[3] = {0};
 			
 			while (1) {
-				#if defined(__APPLE__)
-					long base = 0;
-					const int size = getdirentries64(fd, (char*) buffer, sizeof(buffer), &base);
-				#elif defined(__HAIKU__)
-					const ssize_t size = _kern_read_dir(fd, buffer, sizeof(buffer), sizeof(buffer) / sizeof(*buffer));
-				#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__OpenBSD__)
-					const ssize_t size = getdents(fd, (char*) buffer, sizeof(buffer));
-				#else
-					const long size = syscall(SYS_getdents, fd, buffer, sizeof(buffer));
-				#endif
+				const ssize_t size = get_directory_entries(fd, (char*) buffer, sizeof(buffer));
 				
 				if (size == 0) {
-					close(fd);
+					close_dir(fd);
 					break;
 				}
 				
-				#ifdef __HAIKU__
-					if (size < 0) {
-						return -1;
+				if (size == -1) {
+					close_dir(fd);
+					
+					if (errno == EINVAL) {
+						return 0;
 					}
-				#else
-					if (size == -1) {
-						close(fd);
-						
-						if (errno == EINVAL) {
-							return 0;
-						}
-						
-						return -1;
-					}
-				#endif
+					
+					return -1;
+				}
 				
 				for (long index = 0; index < size;) {
-					#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__APPLE__) || defined(__OpenBSD__) || defined(__HAIKU__)
-						struct dirent* item = (struct dirent*) (((char*) buffer) + index);
-					#else
-						struct linux_dirent* item = (struct linux_dirent*) (((char*) buffer) + index);
-					#endif
+					struct directory_entry* item = (struct directory_entry*) (((char*) buffer) + index);
 					
 					if (!(strcmp(item->d_name, ".") == 0 || strcmp(item->d_name, "..") == 0)) {
 						close(fd);
 						return 0;
 					}
 					
-					#ifdef __DragonFly__
-						index += _DIRENT_DIRSIZ(item);
-					#else
-						index += item->d_reclen;
-					#endif
+					index += directory_entry_size(item);
 				}
 			}
 		#endif
+		
 		return 1;
 	#endif
 	
@@ -526,8 +479,8 @@ int file_exists(const char* const filename) {
 	Returns (1) if file exists, (0) if it does not exists, (-1) on error.
 	*/
 	
-	#ifdef _WIN32
-		#ifdef _UNICODE
+	#if defined(_WIN32)
+		#if defined(_UNICODE)
 			const int is_abs = is_absolute(filename);
 			
 			const int wfilenames = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
@@ -585,8 +538,8 @@ static int raw_create_dir(const char* const directory) {
 	Returns (1) on success, (0) if it already exists, (-1) on error.
 	*/
 	
-	#ifdef _WIN32
-		#ifdef _UNICODE
+	#if defined(_WIN32)
+		#if defined(_UNICODE)
 			const int is_abs = is_absolute(directory);
 			
 			const int wdirectorys = MultiByteToWideChar(CP_UTF8, 0, directory, -1, NULL, 0);
@@ -619,7 +572,7 @@ static int raw_create_dir(const char* const directory) {
 		}
 	#else
 		if (mkdir(directory, 0777) == -1) {
-			#ifdef __HAIKU__
+			#if defined(__HAIKU__)
 				if (errno == EEXIST || errno == EROFS) {
 					return 0;
 				}
@@ -652,7 +605,7 @@ int create_directory(const char* const directory) {
 	
 	int omit_next = 0;
 	
-	#ifdef _WIN32
+	#if defined(_WIN32)
 		omit_next = is_absolute(directory);
 	#endif
 	
@@ -697,7 +650,7 @@ int copy_file(const char* const source, const char* const destination) {
 	*/
 	
 	#if defined(_WIN32)
-		#ifdef _UNICODE
+		#if defined(_UNICODE)
 			int is_abs = is_absolute(source);
 			
 			const int wsources = MultiByteToWideChar(CP_UTF8, 0, source, -1, NULL, 0);
@@ -808,8 +761,8 @@ int move_file(const char* const source, const char* const destination) {
 	Returns (0) on success, (-1) on error.
 	*/
 	
-	#ifdef _WIN32
-		#ifdef _UNICODE
+	#if defined(_WIN32)
+		#if defined(_UNICODE)
 			int is_abs = is_absolute(source);
 			
 			const int wsources = MultiByteToWideChar(CP_UTF8, 0, source, -1, NULL, 0);
@@ -891,8 +844,8 @@ char* get_app_filename(char* const filename) {
 	Returns a null pointer on error.
 	*/
 	
-	#ifdef _WIN32
-		#ifdef _UNICODE
+	#if defined(_WIN32)
+		#if defined(_UNICODE)
 			wchar_t wfilename[PATH_MAX];
 			const DWORD code = GetModuleFileNameW(0, wfilename, (DWORD) (sizeof(wfilename) / sizeof(*wfilename)));
 			
@@ -909,7 +862,7 @@ char* get_app_filename(char* const filename) {
 			}
 		#endif
 	#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
-		#ifdef __NetBSD__
+		#if defined(__NetBSD__)
 			const int call[] = {
 				CTL_KERN,
 				KERN_PROC_ARGS,

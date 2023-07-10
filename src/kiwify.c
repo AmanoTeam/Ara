@@ -173,8 +173,6 @@ int kiwify_get_resources(
 	strcat(authorization, SPACE);
 	strcat(authorization, credentials->access_token);
 	
-	buffer_t string __buffer_free__ = {0};
-	
 	const char* const headers[][2] = {
 		{HTTP_HEADER_AUTHORIZATION, authorization}
 	};

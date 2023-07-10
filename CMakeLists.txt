@@ -744,6 +744,14 @@ add_executable(
 	src/ttidy.c
 )
 
+if (NOT (WIN32 OR SERENITYOS))
+	target_sources(
+		sparklec
+		PRIVATE
+		src/getdents.c
+	)
+endif()
+
 add_executable(
 	sparklec-install
 	src/install.c
@@ -755,6 +763,14 @@ add_executable(
 	src/cleanup.c
 	src/walkdir.c
 )
+
+if (NOT (WIN32 OR SERENITYOS))
+	target_sources(
+		sparklec-install
+		PRIVATE
+		src/getdents.c
+	)
+endif()
 
 if (SPARKLEC_DISABLE_CERTIFICATE_VALIDATION) 
 	target_compile_definitions(

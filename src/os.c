@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _WIN32
+#if defined(_WIN32)
 	#include <windows.h>
 #else
 	#include <unistd.h>
@@ -11,7 +11,7 @@
 #include "os.h"
 #include "filesystem.h"
 
-#ifndef __HAIKU__
+#if !defined(__HAIKU__)
 	int is_administrator(void) {
 		/*
 		Returns whether the caller's process is a member of the Administrators local
@@ -20,7 +20,7 @@
 		Returns (1) on true, (0) on false, (-1) on error.
 		*/
 		
-		#ifdef _WIN32
+		#if defined(_WIN32)
 			SID_IDENTIFIER_AUTHORITY authority = {
 				.Value = SECURITY_NT_AUTHORITY
 			};
@@ -73,8 +73,8 @@ char* get_configuration_directory(void) {
 	Returns NULL on error.
 	*/
 	
-	#ifdef _WIN32
-		#ifdef _UNICODE
+	#if defined(_WIN32)
+		#if defined(_UNICODE)
 			const wchar_t* const wdirectory = _wgetenv(L"APPDATA");
 			
 			if (wdirectory == NULL) {
@@ -152,8 +152,8 @@ char* get_temporary_directory(void) {
 	Returns NULL on error.
 	*/
 	
-	#ifdef _WIN32
-		#ifdef _UNICODE
+	#if defined(_WIN32)
+		#if defined(_UNICODE)
 			const size_t wdirectorys = (size_t) GetTempPathW(0, NULL);
 			
 			if (wdirectorys == 0) {
@@ -266,8 +266,8 @@ char* get_home_directory(void) {
 	Returns NULL on error.
 	*/
 	
-	#ifdef _WIN32
-		#ifdef _UNICODE
+	#if defined(_WIN32)
+		#if defined(_UNICODE)
 			const wchar_t* const wdirectory = _wgetenv(L"USERPROFILE");
 			
 			if (wdirectory == NULL) {
@@ -344,7 +344,7 @@ char* find_exe(const char* const name) {
 		}
 	#endif
 	
-	#ifdef _WIN32
+	#if defined(_WIN32)
 		const char* const separator = SEMICOLON;
 	#else
 		const char* const separator = COLON;

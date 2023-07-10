@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#ifdef _WIN32
+#if defined(_WIN32)
 	#include <windows.h>
 	#include <fileapi.h>
 #else
@@ -20,57 +20,57 @@ struct FStream* fstream_open(const char* const filename, const enum FStreamMode 
 	Returns a null pointer on error.
 	*/
 	
-	#ifdef _WIN32
-		DWORD dwDesiredAccess = 0;
-		DWORD dwCreationDisposition = 0;
-		const DWORD dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL;
+	#if defined(_WIN32)
+		DWORD desired_access = 0;
+		DWORD creation_disposition = 0;
+		const DWORD flags_and_attributes = FILE_ATTRIBUTE_NORMAL;
 		
 		switch (mode) {
 			case FSTREAM_WRITE:
-				dwDesiredAccess |= GENERIC_WRITE;
-				dwCreationDisposition |= CREATE_ALWAYS;
+				desired_access |= GENERIC_WRITE;
+				creation_disposition |= CREATE_ALWAYS;
 				break;
 			case FSTREAM_READ:
-				dwDesiredAccess |= GENERIC_READ;
-				dwCreationDisposition |= OPEN_EXISTING;
+				desired_access |= GENERIC_READ;
+				creation_disposition |= OPEN_EXISTING;
 				break;
 			case FSTREAM_APPEND:
-				dwDesiredAccess |= FILE_APPEND_DATA;
-				dwCreationDisposition |= OPEN_EXISTING;
+				desired_access |= FILE_APPEND_DATA;
+				creation_disposition |= OPEN_EXISTING;
 				break;
 		}
 		
-		#ifdef _UNICODE
+		#if defined(_UNICODE)
 			const int wcsize = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
 			
 			if (wcsize == 0) {
 				return NULL;
 			}
 			
-			wchar_t lpFileName[wcslen(WIN10LP_PREFIX) + wcsize];
-			wcscpy(lpFileName, WIN10LP_PREFIX);
+			wchar_t name[wcslen(WIN10LP_PREFIX) + wcsize];
+			wcscpy(name, WIN10LP_PREFIX);
 			
-			if (MultiByteToWideChar(CP_UTF8, 0, filename, -1, lpFileName + wcslen(WIN10LP_PREFIX), wcsize) == 0) {
+			if (MultiByteToWideChar(CP_UTF8, 0, filename, -1, name + wcslen(WIN10LP_PREFIX), wcsize) == 0) {
 				return NULL;
 			}
 			
 			HANDLE handle = CreateFileW(
-				lpFileName,
-				dwDesiredAccess,
+				name,
+				desired_access,
 				0,
 				NULL,
-				dwCreationDisposition,
-				dwFlagsAndAttributes,
+				creation_disposition,
+				flags_and_attributes,
 				NULL
 			);
 		#else
 			HANDLE handle = CreateFileA(
 				filename,
-				dwDesiredAccess,
+				desired_access,
 				0,
 				NULL,
-				dwCreationDisposition,
-				dwFlagsAndAttributes,
+				creation_disposition,
+				flags_and_attributes,
 				NULL
 			);
 		#endif
@@ -86,21 +86,21 @@ struct FStream* fstream_open(const char* const filename, const enum FStreamMode 
 			}
 		}
 	#else
-		const char* smode = NULL;
+		const char* fmode = NULL;
 		
 		switch (mode) {
 			case FSTREAM_WRITE:
-				smode = "wb";
+				fmode = "wb";
 				break;
 			case FSTREAM_READ:
-				smode = "r";
+				fmode = "r";
 				break;
 			case FSTREAM_APPEND:
-				smode = "a";
+				fmode = "a";
 				break;
 		}
 		
-		FILE* handle = fopen(filename, smode);
+		FILE* handle = fopen(filename, fmode);
 		
 		if (handle == NULL) {
 			return NULL;
@@ -126,7 +126,7 @@ ssize_t fstream_read(struct FStream* const stream, char* const buffer, const siz
 	Returns (>=1) on success, (0) on EOF, (-1) on error.
 	*/
 	
-	#ifdef _WIN32
+	#if defined(_WIN32)
 		DWORD rsize = 0;
 		const BOOL status = ReadFile(stream->stream, buffer, (DWORD) size, &rsize, NULL);
 		
@@ -158,7 +158,7 @@ int fstream_write(struct FStream* const stream, const char* const buffer, const 
 	Returns (0) on success, (-1) on error.
 	*/
 	
-	#ifdef _WIN32
+	#if defined(_WIN32)
 		DWORD wsize = 0;
 		const BOOL status = WriteFile(stream->stream, buffer, (DWORD) size, &wsize, NULL);
 		
@@ -184,7 +184,7 @@ int fstream_seek(struct FStream* const stream, const long int offset, const enum
 	Returns (0) on success, (-1) on error.
 	*/
 	
-	#ifdef _WIN32
+	#if defined(_WIN32)
 		DWORD whence = 0;
 		
 		switch (method) {
@@ -233,23 +233,21 @@ ssize_t fstream_tell(struct FStream* const stream) {
 	Returns (>=0) on success, (-1) on error.
 	*/
 	
-	#ifdef _WIN32
+	#if defined(_WIN32)
 		const DWORD value = SetFilePointer(stream->stream, 0, NULL, FILE_CURRENT);
 		
 		if (value == INVALID_SET_FILE_POINTER) {
 			return -1;
 		}
-		
-		return (ssize_t) value;
 	#else
 		const long int value = ftell(stream->stream);
 		
 		if (value == -1) {
 			return -1;
 		}
-		
-		return (ssize_t) value;
 	#endif
+	
+	return (ssize_t) value;
 	
 }
 
@@ -260,7 +258,7 @@ int fstream_close(struct FStream* const stream) {
 	Returns (0) on success, (-1) on error.
 	*/
 	
-	#ifdef _WIN32
+	#if defined(_WIN32)
 		if (stream->stream != 0) {
 			const BOOL status = CloseHandle(stream->stream);
 			

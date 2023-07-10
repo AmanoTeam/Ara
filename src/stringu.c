@@ -2,9 +2,11 @@
 #include <string.h>
 #include <ctype.h>
 
-#ifdef _WIN32
+#if defined(_WIN32)
 	#define NAME_MAX (_MAX_FNAME - 1)
-#else
+#endif
+
+#if !defined(_WIN32)
 	#include <limits.h>
 	#include <sys/types.h>
 #endif
@@ -109,7 +111,7 @@ char* normalize_filename(char* filename) {
 	for (size_t index = 0; index < strlen(filename); index++) {
 		char* const ch = &filename[index];
 		
-		if (iscntrl(*ch) || strchr(INVALID_FILENAME_CHARS, *ch) != NULL) {
+		if (iscntrl((unsigned char) *ch) || strchr(INVALID_FILENAME_CHARS, *ch) != NULL) {
 			*ch = *UNDERSCORE;
 		}
 	}
@@ -162,7 +164,7 @@ char* strip(char* const s) {
 	position--;
 	
 	while (position != start) {
-		if (!(iscntrl(*position) || isspace(*position))) {
+		if (!(iscntrl((unsigned char) *position) || isspace((unsigned char) *position))) {
 			break;
 		}
 		
@@ -173,7 +175,7 @@ char* strip(char* const s) {
 	position = start;
 	
 	while (position != end) {
-		if (!(iscntrl(*position) || isspace(*position))) {
+		if (!(iscntrl((unsigned char) *position) || isspace((unsigned char) *position))) {
 			break;
 		}
 		
@@ -282,7 +284,7 @@ char* get_parent_directory(const char* const source, char* const destination, co
 			break;
 		}
 		
-		if (index == 0 && len > 2 && isalpha(*source) && source[1] == *COLON && source[2] == *PATH_SEPARATOR) {
+		if (index == 0 && len > 2 && isalpha((unsigned char) *source) && source[1] == *COLON && source[2] == *PATH_SEPARATOR) {
 			memcpy(destination, source, 3);
 			destination[3] = '\0';
 		}

@@ -106,7 +106,7 @@ static int globals_initialize(void) {
 			return UERR_FSTREAM_FAILURE;
 		}
 		
-		const ssize_t file_size = fstream_tell(stream);
+		const long int file_size = fstream_tell(stream);
 		
 		if (file_size == -1) {
 			const struct SystemError error = get_system_error();

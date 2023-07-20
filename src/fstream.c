@@ -3,7 +3,9 @@
 #if defined(_WIN32)
 	#include <windows.h>
 	#include <fileapi.h>
-#else
+#endif
+
+#if !defined(_WIN32)
 	#include <stdio.h>
 #endif
 
@@ -11,6 +13,23 @@
 
 #if defined(_WIN32) && defined(_UNICODE)
 	#include "symbols.h"
+#endif
+
+/*
+fseeko()/ftello() availability:
+
+On Linux: available when defined(_LARGEFILE64_SOURCE) or _POSIX_C_SOURCE >= 200112L
+On Apple, Android, Haiku and SerenityOS: available by default
+On FreeBSD and DragonFly BSD: available when __POSIX_VISIBLE >= 200112 or __XSI_VISIBLE >= 500
+On NetBSD: available when __POSIX_VISIBLE >= 200112 or __XSI_VISIBLE >= 500 or defined(_NETBSD_SOURCE)
+*/
+
+#if ((defined(__linux__) && (defined(_LARGEFILE64_SOURCE) || _POSIX_C_SOURCE >= 200112L)) || defined(__HAIKU__) || defined(__serenity__) || \
+	((defined(__FreeBSD__) || defined(__DragonFly__)) && (__POSIX_VISIBLE >= 200112 || __XSI_VISIBLE >= 500)) || \
+	defined(__OpenBSD__) || (defined(__NetBSD__) && (__POSIX_VISIBLE >= 200112 || __XSI_VISIBLE >= 500 || defined(_NETBSD_SOURCE))) || \
+	defined(__ANDROID__) || defined(__APPLE__))
+	#define HAVE_FSEEKO 1
+	#define HAVE_FTELLO 1
 #endif
 
 struct FStream* fstream_open(const char* const filename, const enum FStreamMode mode) {
@@ -217,16 +236,22 @@ int fstream_seek(struct FStream* const stream, const long int offset, const enum
 				break;
 		}
 		
-		if (fseek(stream->stream, offset, whence) != 0) {
-			return -1;
-		}
+		#if defined(HAVE_FSEEKO)
+			if (fseeko(stream->stream, offset, whence) != 0) {
+				return -1;
+			}
+		#else
+			if (fseek(stream->stream, offset, whence) != 0) {
+				return -1;
+			}
+		#endif
 	#endif
 	
 	return 0;
 	
 }
 
-ssize_t fstream_tell(struct FStream* const stream) {
+long int fstream_tell(struct FStream* const stream) {
 	/*
 	Returns the current file offset.
 	
@@ -240,14 +265,18 @@ ssize_t fstream_tell(struct FStream* const stream) {
 			return -1;
 		}
 	#else
-		const long int value = ftell(stream->stream);
+		#if defined(HAVE_FTELLO)
+			const long int value = ftello(stream->stream);
+		#else
+			const long int value = ftell(stream->stream);
+		#endif
 		
 		if (value == -1) {
 			return -1;
 		}
 	#endif
 	
-	return (ssize_t) value;
+	return value;
 	
 }
 

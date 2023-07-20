@@ -15,6 +15,11 @@ jobs:
     - uses: actions/checkout@main
       with:
         submodules: true
+    - name: Free up some space
+      run: | 
+        rm --recursive --force '/opt' || true
+        sudo apt update
+        sudo apt install clang libz-dev
     - name: Setup Linux cross-compiler
       run: | 
         declare -r SPHYNX_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Sphynx/releases/latest')")"
@@ -55,7 +60,7 @@ jobs:
         
         cd './osxcross'
         
-        CMAKE_BUILD_PARALLEL_LEVEL='100' SDK_VERSION='11.3' OSX_VERSION_MIN='10.6' ./build.sh <<< ''
+        JOBS='38' SDK_VERSION='11.3' OSX_VERSION_MIN='10.6' ./build.sh <<< ''
         
         echo "OSXCROSS_HOME=$(realpath './target')" >> "${GITHUB_ENV}"
         echo "$(realpath './target/bin')" >> "${GITHUB_PATH}"

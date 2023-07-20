@@ -30,7 +30,7 @@ struct FStream* fstream_open(const char* const filename, const enum FStreamMode 
 ssize_t fstream_read(struct FStream* const stream, char* const buffer, const size_t size);
 int fstream_write(struct FStream* const stream, const char* const buffer, const size_t size);
 int fstream_seek(struct FStream* const stream, const long int offset, const enum FStreamSeek method);
-ssize_t fstream_tell(struct FStream* const stream);
+long int fstream_tell(struct FStream* const stream);
 int fstream_close(struct FStream* const stream);
 
 #pragma once

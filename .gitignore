@@ -8,3 +8,4 @@ CPackSourceConfig.cmake
 _deps/
 lib*.*
 sparklec*
+ffmpeg-build

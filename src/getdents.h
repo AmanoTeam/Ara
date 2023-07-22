@@ -1,16 +1,30 @@
 #include <stdlib.h>
 
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || \
-	defined(__OpenBSD__) || defined(__HAIKU__) || defined(__APPLE__)
-	#include <dirent.h>
-	#define directory_entry dirent
+#if defined(__linux__)
+	#include <features.h>
+	
+	#if !defined(__USE_GNU)
+		#define __MUSL__ 1
+	#endif
 #endif
 
-#if defined(__linux__)
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || \
+	defined(__OpenBSD__) || defined(__HAIKU__) || defined(__APPLE__) || \
+	(defined(__linux__) && (defined(__GLIBC__) || defined(__MUSL__)))
+	#include <dirent.h>
+	
+	#if defined(__GLIBC__) && defined(_LARGEFILE64_SOURCE)
+		#define directory_entry dirent64
+	#else
+		#define directory_entry dirent
+	#endif
+#endif
+
+#if defined(__linux__) && !(defined(__GLIBC__) || defined(__MUSL__))
 	#include <sys/syscall.h>
 	#include <sys/types.h>
 	
-	#if defined(_LARGEFILE64_SOURCE) && defined(SYS_getdents64)
+	#if defined(SYS_getdents64)
 		struct linux_dirent64 {
 			ino64_t d_ino;
 			off64_t d_off;

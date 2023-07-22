@@ -18,8 +18,6 @@ jobs:
     - name: Free up some space
       run: | 
         rm --recursive --force '/opt' || true
-        sudo apt update
-        sudo apt install clang libz-dev
     - name: Setup Linux cross-compiler
       run: | 
         declare -r SPHYNX_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Sphynx/releases/latest')")"

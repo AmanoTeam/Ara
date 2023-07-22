@@ -1,9 +1,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _WIN32
+#if defined(_WIN32)
 	#include <synchapi.h>
-#else
+#endif
+
+#if !defined(_WIN32)
 	#include <unistd.h>
 #endif
 

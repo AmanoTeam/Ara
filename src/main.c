@@ -2,14 +2,16 @@
 #include <string.h>
 #include <errno.h>
 
-#ifdef _WIN32
+#if defined(_WIN32)
 	#include <stdio.h>
 	
-	#ifdef _UNICODE
+	#if defined(_UNICODE)
 		#include <fcntl.h>
 		#include <io.h>
 	#endif
-#else
+#endif
+
+#if !defined(_WIN32)
 	#include <sys/resource.h>
 #endif
 
@@ -379,10 +381,10 @@ static int m3u8_download(const char* const url, const char* const output) {
 
 int main(void) {
 	
-	#ifdef _WIN32
+	#if defined(_WIN32)
 		_setmaxstdio(2048);
 		
-		#ifdef _UNICODE
+		#if defined(_UNICODE)
 			_setmode(_fileno(stdout), _O_WTEXT);
 			_setmode(_fileno(stderr), _O_WTEXT);
 			_setmode(_fileno(stdin), _O_WTEXT);

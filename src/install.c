@@ -2,14 +2,16 @@
 #include <stdio.h>
 #include <limits.h>
 
-#ifdef _WIN32
+#if defined(_WIN32)
 	#include <windows.h>
 	
-	#ifdef _UNICODE
+	#if defined(_UNICODE)
 		#include <fcntl.h>
 		#include <io.h>
 	#endif
-#else
+#endif
+
+#if !defined(_WIN32)
 	#include <sys/stat.h>
 #endif
 
@@ -18,10 +20,10 @@
 #include <libavformat/version.h>
 #include <libavutil/version.h>
 
-#ifdef _WIN32
+#if defined(_WIN32)
 	#include "wregistry.h"
 
-	#ifdef _UNICODE
+	#if defined(_UNICODE)
 		#include "wio.h"
 	#endif
 #endif
@@ -37,7 +39,7 @@
 #define STRINGIFY_HELPER(x) #x
 #define STRINGIFY(x) STRINGIFY_HELPER(x)
 
-#ifndef _WIN32
+#if !defined(_WIN32)
 	struct Shell {
 		char* name;
 		char* rc;
@@ -266,7 +268,7 @@ int main(void) {
 			return EXIT_FAILURE;
 		}
 		
-		#ifndef _WIN32
+		#if !defined(_WIN32)
 			const char* const name = basename(destination_file);
 			
 			if (strcmp(name, "sparklec") == 0) {

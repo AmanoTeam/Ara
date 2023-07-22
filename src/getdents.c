@@ -13,12 +13,9 @@
 	#include <unistd.h>
 #endif
 
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__OpenBSD__)
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || \
+	defined(__OpenBSD__) || (defined(__linux__) && (defined(__GLIBC__) || defined(__MUSL__)))
 	#include <dirent.h>
-#endif
-
-#if defined(__linux__)
-	#include <unistd.h>
 #endif
 
 #if defined(__HAIKU__)
@@ -54,15 +51,40 @@ int open_dir(const char* const directory) {
 #endif
 
 #if defined(__linux__)
-	ssize_t get_directory_entries(int fd, char* const buffer, const size_t buffer_size) {
-		#if defined(SYS_getdents64)
-			const long size = syscall(SYS_getdents64, fd, buffer, buffer_size);
-		#else
-			const long size = syscall(SYS_getdents, fd, buffer, buffer_size);
-		#endif
-		
-		return (ssize_t) size;
-	}
+	#if defined(__GLIBC__)
+		ssize_t get_directory_entries(int fd, char* const buffer, const size_t buffer_size) {
+			
+			#if defined(_LARGEFILE64_SOURCE)
+				off64_t base = 0;
+				const ssize_t size = getdirentries64(fd, buffer, buffer_size, &base);
+			#else
+				off_t base = 0;
+				const ssize_t size = getdirentries(fd, buffer, buffer_size, &base);
+			#endif
+			
+			return size;
+			
+		}
+	#elif defined(__MUSL__)
+		ssize_t get_directory_entries(int fd, char* const buffer, const size_t buffer_size) {
+			
+			const ssize_t size = (ssize_t) getdents(fd, buffer, buffer_size);
+			return size;
+			
+		}
+	#else
+		ssize_t get_directory_entries(int fd, char* const buffer, const size_t buffer_size) {
+			
+			#if defined(SYS_getdents64)
+				const long size = syscall(SYS_getdents64, fd, buffer, buffer_size);
+			#else
+				const long size = syscall(SYS_getdents, fd, buffer, buffer_size);
+			#endif
+			
+			return (ssize_t) size;
+			
+		}
+	#endif
 #endif
 
 #if defined(__APPLE__)

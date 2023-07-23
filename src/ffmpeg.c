@@ -96,6 +96,11 @@ int ffmpeg_copy_streams(const char* const* const sources, const char* const dest
 			
 			const int output_stream_index = index + source_index;
 			
+			if (input_stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO && input_stream->codecpar->sample_rate < 1) {
+				streams_index[output_stream_index] = -1;
+				continue;
+			}
+			
 			if (!(input_stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO || input_stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)) {
 				streams_index[output_stream_index] = -1;
 				continue;

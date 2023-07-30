@@ -29,6 +29,17 @@ jobs:
         
         echo 'SPHYNX_HOME=/tmp/sphynx' >> "${GITHUB_ENV}"
         echo '/tmp/sphynx/bin' >> "${GITHUB_PATH}"
+    - name: Setup Linux IA-64 cross-compiler
+      run: | 
+        declare -r LAX_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Lax/releases/latest')")"
+        declare -r LAX_TARBALL='/tmp/toolchain.tar.xz'
+        declare -r LAX_URL="https://github.com/AmanoTeam/Lax/releases/download/${LAX_TAG}/x86_64-unknown-linux-gnu.tar.xz"
+        
+        curl --retry 10 --retry-delay 3 --silent --location --url "${LAX_URL}" --output "${LAX_TARBALL}"
+        tar --directory="$(dirname "${LAX_TARBALL}")" --extract --file="${LAX_TARBALL}"
+        
+        echo 'LAX_HOME=/tmp/lax' >> "${GITHUB_ENV}"
+        echo '/tmp/lax/bin' >> "${GITHUB_PATH}"
     - name: Setup Android cross-compiler
       uses: nttld/setup-ndk@main
       id: setup-ndk
@@ -93,7 +104,7 @@ jobs:
         curl --retry 10 --retry-delay 3 --silent --location --url "${DRAGONFLY_CROSS_URL}" --output "${DRAGONFLY_CROSS_TARBALL}"
         tar --directory="$(dirname "${DRAGONFLY_CROSS_TARBALL}")" --extract --file="${DRAGONFLY_CROSS_TARBALL}"
         
-        echo 'DRAGONFLY_TOOLCHAIN=/tmp/venti' >> "${GITHUB_ENV}"
+        echo 'VENTI_HOME=/tmp/venti' >> "${GITHUB_ENV}"
         echo '/tmp/venti/bin' >> "${GITHUB_PATH}"
     - name: Setup Haiku cross-compiler
       run: |
@@ -156,6 +167,7 @@ jobs:
             # hppa-unknown-openbsd
             # riscv64-unknown-freebsd
             # vax-unknown-netbsdelf
+            ia64-unknown-linux-gnu
             aarch64-apple-darwin
             aarch64-linux-android
             aarch64-linux-gnu
@@ -192,6 +204,7 @@ jobs:
             mips-unknown-linux-gnu
             mips-unknown-netbsd
             mips64-linux-gnuabi64
+            mips64-unknown-linux-musl
             mips64el-linux-gnuabi64
             mips64el-unknown-linux-gnuabi64
             mipsel-linux-gnu

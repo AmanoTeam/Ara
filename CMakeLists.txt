@@ -22,7 +22,7 @@ endif()
 option(SPARKLEC_DISABLE_IAEXPERT "Disable support for IA Expert Academy" OFF)
 option(SPARKLEC_DISABLE_KIWIFY "Disable support for Kiwify" OFF)
 
-option(SPARKLEC_DISABLE_CERTIFICATE_VALIDATION "Disable SSL certificate validation in libcurl" OFF)
+option(SPARKLEC_DISABLE_CERTIFICATE_VALIDATION "Disable SSL certificate validation in libcurl_shared" OFF)
 
 set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
 set(CMAKE_POLICY_DEFAULT_CMP0048 NEW)
@@ -427,7 +427,7 @@ add_subdirectory(submodules/jansson EXCLUDE_FROM_ALL)
 add_subdirectory(submodules/tidy EXCLUDE_FROM_ALL)
 
 set_target_properties(
-	libcurl
+	libcurl_shared
 	PROPERTIES
 	IMPORTED_LOCATION $<TARGET_FILE:bearssl>
 )
@@ -708,7 +708,7 @@ foreach(source ${libraries})
 endforeach()
 
 # Disable SO versioning for all third-party packages
-foreach(target jansson libcurl tidy-share)
+foreach(target jansson libcurl_shared tidy-share)
 	set_target_properties(
 		${target}
 		PROPERTIES
@@ -922,7 +922,7 @@ endforeach()
 if (APPLE)
 	foreach(property BUILD_RPATH INSTALL_RPATH)
 		set_target_properties(
-			libcurl
+			libcurl_shared
 			PROPERTIES
 			${property} "@loader_path"
 		)
@@ -930,7 +930,7 @@ if (APPLE)
 elseif (UNIX)
 	foreach(property BUILD_RPATH INSTALL_RPATH)
 		set_target_properties(
-			libcurl
+			libcurl_shared
 			PROPERTIES
 			${property} "$ORIGIN"
 		)
@@ -938,7 +938,7 @@ elseif (UNIX)
 endif()
 
 foreach(property RUNTIME_OUTPUT_DIRECTORY LIBRARY_OUTPUT_DIRECTORY)
-	foreach(target jansson libcurl tidy-share)
+	foreach(target jansson libcurl_shared tidy-share)
 		set_target_properties(
 			${target}
 			PROPERTIES
@@ -989,7 +989,7 @@ if (SPARKLEC_ENABLE_LTO)
 	check_ipo_supported(RESULT SPARKLEC_HAS_LTO LANGUAGES C)
 	
 	if (SPARKLEC_HAS_LTO)
-		foreach(target sparklec sparklec-install bearssl jansson libcurl tidy-share)
+		foreach(target sparklec sparklec-install bearssl jansson libcurl_shared tidy-share)
 			set_target_properties(
 				${target}
 				PROPERTIES
@@ -1018,7 +1018,7 @@ endif()
 target_link_libraries(
 	sparklec
 	jansson
-	libcurl
+	libcurl_shared
 	tidy-share
 	libavformat
 	libavcodec
@@ -1030,7 +1030,7 @@ target_link_libraries(
 	bearssl
 )
 
-foreach(target sparklec sparklec-install bearssl jansson libcurl tidy-share)
+foreach(target sparklec sparklec-install bearssl jansson libcurl_shared tidy-share)
 	install(
 		TARGETS ${target}
 		RUNTIME DESTINATION bin
@@ -1054,7 +1054,7 @@ if (APPLE)
 	set(
 		names
 		"../../libjansson.dylib"
-		"../../../libcurl.dylib"
+		"../../../libcurl_shared.dylib"
 		"../../libtidy.dylib"
 	)
 	

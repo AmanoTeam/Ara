@@ -22,7 +22,7 @@ endif()
 option(SPARKLEC_DISABLE_IAEXPERT "Disable support for IA Expert Academy" OFF)
 option(SPARKLEC_DISABLE_KIWIFY "Disable support for Kiwify" OFF)
 
-option(SPARKLEC_DISABLE_CERTIFICATE_VALIDATION "Disable SSL certificate validation in libcurl_shared" OFF)
+option(SPARKLEC_DISABLE_CERTIFICATE_VALIDATION "Disable SSL certificate validation in libcurl" OFF)
 
 set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
 set(CMAKE_POLICY_DEFAULT_CMP0048 NEW)
@@ -479,6 +479,7 @@ set(
 	--enable-demuxer=aac,h264,hls
 	--enable-ffmpeg
 	--enable-muxer=h264,mpegts
+	--enable-parser=h264
 	--enable-pic
 	--enable-protocol=file,crypto
 	--enable-shared
@@ -1054,7 +1055,7 @@ if (APPLE)
 	set(
 		names
 		"../../libjansson.dylib"
-		"../../../libcurl_shared.dylib"
+		"../../../libcurl.dylib"
 		"../../libtidy.dylib"
 	)
 	

@@ -20,22 +20,22 @@ jobs:
         rm --recursive --force '/opt' || true
     - name: Setup Linux cross-compiler
       run: | 
-        declare -r SPHYNX_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Sphynx/releases/latest')")"
+        declare -r SPHYNX_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/Sphynx/releases/latest')")"
         declare -r SPHYNX_TARBALL='/tmp/toolchain.tar.xz'
         declare -r SPHYNX_URL="https://github.com/AmanoTeam/Sphynx/releases/download/${SPHYNX_TAG}/x86_64-unknown-linux-gnu.tar.xz"
         
-        curl --retry 10 --retry-delay 3 --silent --location --url "${SPHYNX_URL}" --output "${SPHYNX_TARBALL}"
+        curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --location --url "${SPHYNX_URL}" --output "${SPHYNX_TARBALL}"
         tar --directory="$(dirname "${SPHYNX_TARBALL}")" --extract --file="${SPHYNX_TARBALL}"
         
         echo 'SPHYNX_HOME=/tmp/sphynx' >> "${GITHUB_ENV}"
         echo '/tmp/sphynx/bin' >> "${GITHUB_PATH}"
     - name: Setup Linux IA-64 cross-compiler
       run: | 
-        declare -r LAX_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Lax/releases/latest')")"
+        declare -r LAX_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/Lax/releases/latest')")"
         declare -r LAX_TARBALL='/tmp/toolchain.tar.xz'
         declare -r LAX_URL="https://github.com/AmanoTeam/Lax/releases/download/${LAX_TAG}/x86_64-unknown-linux-gnu.tar.xz"
         
-        curl --retry 10 --retry-delay 3 --silent --location --url "${LAX_URL}" --output "${LAX_TARBALL}"
+        curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --location --url "${LAX_URL}" --output "${LAX_TARBALL}"
         tar --directory="$(dirname "${LAX_TARBALL}")" --extract --file="${LAX_TARBALL}"
         
         echo 'LAX_HOME=/tmp/lax' >> "${GITHUB_ENV}"
@@ -52,20 +52,20 @@ jobs:
         echo '${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin' >> "${GITHUB_PATH}"
     - name: Setup Windows cross-compiler
       run: |
-        declare -r LLVM_MINGW_TAG='20230320'
+        declare -r LLVM_MINGW_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/LLVMMinGW-Builds/releases/latest')")"
         declare -r LLVM_MINGW_TARBALL='/tmp/toolchain.tar.xz'
-        declare -r LLVM_MINGW_URL="https://github.com/mstorsjo/llvm-mingw/releases/download/${LLVM_MINGW_TAG}/llvm-mingw-${LLVM_MINGW_TAG}-msvcrt-ubuntu-18.04-x86_64.tar.xz"
+        declare -r LLVM_MINGW_URL="https://github.com/AmanoTeam/LLVMMinGW-Builds/releases/download/${LLVM_MINGW_TAG}/x86_64-unknown-linux-gnu.tar.xz"
         
-        curl --retry 10 --retry-delay 3 --silent --location --url "${LLVM_MINGW_URL}" --output "${LLVM_MINGW_TARBALL}"
+        curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --location --url "${LLVM_MINGW_URL}" --output "${LLVM_MINGW_TARBALL}"
         tar --directory="$(dirname "${LLVM_MINGW_TARBALL}")" --extract --file="${LLVM_MINGW_TARBALL}"
         
-        echo "LLVM_MINGW_HOME=$(dirname "${LLVM_MINGW_TARBALL}")/$(basename "${LLVM_MINGW_URL}" '.tar.xz')" >> "${GITHUB_ENV}"
-        echo "$(dirname "${LLVM_MINGW_TARBALL}")/$(basename "${LLVM_MINGW_URL}" '.tar.xz')/bin" >> "${GITHUB_PATH}"
+        echo 'LLVM_MINGW_HOME=/tmp/llvm-mingw' >> "${GITHUB_ENV}"
+        echo '/tmp/llvm-mingw/bin' >> "${GITHUB_PATH}"
     - name: Setup MacOS X cross-compiler
       run: |
         git clone --depth='1' 'https://github.com/tpoechtrager/osxcross.git'
         
-        curl --retry 10 --retry-delay 3 --silent --location --url 'https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.3.sdk.tar.xz' --output './osxcross/tarballs/MacOSX11.3.sdk.tar.xz'
+        curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --location --url 'https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.3.sdk.tar.xz' --output './osxcross/tarballs/MacOSX11.3.sdk.tar.xz'
         
         cd './osxcross'
         
@@ -75,88 +75,88 @@ jobs:
         echo "$(realpath './target/bin')" >> "${GITHUB_PATH}"
     - name: Setup NetBSD cross-compiler
       run: | 
-        declare -r DAKINI_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Dakini/releases/latest')")"
+        declare -r DAKINI_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/Dakini/releases/latest')")"
         declare -r DAKINI_TARBALL='/tmp/toolchain.tar.xz'
         declare -r DAKINI_URL="https://github.com/AmanoTeam/Dakini/releases/download/${DAKINI_TAG}/x86_64-unknown-linux-gnu.tar.xz"
         
-        curl --retry 10 --retry-delay 3 --silent --location --url "${DAKINI_URL}" --output "${DAKINI_TARBALL}"
+        curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --location --url "${DAKINI_URL}" --output "${DAKINI_TARBALL}"
         tar --directory="$(dirname "${DAKINI_TARBALL}")" --extract --file="${DAKINI_TARBALL}"
         
         echo 'DAKINI_HOME=/tmp/dakini' >> "${GITHUB_ENV}"
         echo '/tmp/dakini/bin' >> "${GITHUB_PATH}"
     - name: Setup FreeBSD cross-compiler
       run: |
-        declare -r LOKI_TAG="$(jq --raw-output '.tag_name' <<< "$(curl  --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Loki/releases/latest')")"
+        declare -r LOKI_TAG="$(jq --raw-output '.tag_name' <<< "$(curl  --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/Loki/releases/latest')")"
         declare -r LOKI_TARBALL='/tmp/toolchain.tar.xz'
         declare -r LOKI_URL="https://github.com/AmanoTeam/Loki/releases/download/${LOKI_TAG}/x86_64-unknown-linux-gnu.tar.xz"
         
-        curl --silent --retry 10 --retry-delay 3 --location --url "${LOKI_URL}" --output "${LOKI_TARBALL}"
+        curl --silent --connect-timeout '10' --retry '15' --retry-all-errors --fail --location --url "${LOKI_URL}" --output "${LOKI_TARBALL}"
         tar --directory="$(dirname "${LOKI_TARBALL}")" --extract --file="${LOKI_TARBALL}"
         
         echo 'LOKI_HOME=/tmp/loki' >> "${GITHUB_ENV}"
         echo '/tmp/loki/bin' >> "${GITHUB_PATH}"
     - name: Setup DragonFly cross-compiler
       run: |
-        declare -r DRAGONFLY_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Venti/releases/latest')")"
+        declare -r DRAGONFLY_CROSS_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/Venti/releases/latest')")"
         declare -r DRAGONFLY_CROSS_TARBALL='/tmp/toolchain.tar.xz'
         declare -r DRAGONFLY_CROSS_URL="https://github.com/AmanoTeam/dr4g0nflybsdcr0ss/releases/download/${DRAGONFLY_CROSS_TAG}/x86_64-unknown-linux-gnu.tar.xz"
         
-        curl --retry 10 --retry-delay 3 --silent --location --url "${DRAGONFLY_CROSS_URL}" --output "${DRAGONFLY_CROSS_TARBALL}"
+        curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --location --url "${DRAGONFLY_CROSS_URL}" --output "${DRAGONFLY_CROSS_TARBALL}"
         tar --directory="$(dirname "${DRAGONFLY_CROSS_TARBALL}")" --extract --file="${DRAGONFLY_CROSS_TARBALL}"
         
         echo 'VENTI_HOME=/tmp/venti' >> "${GITHUB_ENV}"
         echo '/tmp/venti/bin' >> "${GITHUB_PATH}"
     - name: Setup Haiku cross-compiler
       run: |
-        declare -r SIL_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Sil/releases/latest')")"
+        declare -r SIL_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/Sil/releases/latest')")"
         declare -r SIL_TARBALL='/tmp/toolchain.tar.xz'
         declare -r SIL_URL="https://github.com/AmanoTeam/Sil/releases/download/${SIL_TAG}/x86_64-unknown-linux-gnu.tar.xz"
         
-        curl --retry 10 --retry-delay 3 --silent --location --url "${SIL_URL}" --output "${SIL_TARBALL}"
+        curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --location --url "${SIL_URL}" --output "${SIL_TARBALL}"
         tar --directory="$(dirname "${SIL_TARBALL}")" --extract --file="${SIL_TARBALL}"
         
         echo 'SIL_HOME=/tmp/sil' >> "${GITHUB_ENV}"
         echo '/tmp/sil/bin' >> "${GITHUB_PATH}"
     - name: Setup OBGGCC cross-compiler
       run: |
-        declare -r OBGGCC_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/obggcc/releases/latest')")"
+        declare -r OBGGCC_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/obggcc/releases/latest')")"
         declare -r OBGGCC_TARBALL='/tmp/toolchain.tar.xz'
         declare -r OBGGCC_URL="https://github.com/AmanoTeam/obggcc/releases/download/${OBGGCC_TAG}/x86_64-unknown-linux-gnu.tar.xz"
         
-        curl --retry 10 --retry-delay 3 --silent --location --url "${OBGGCC_URL}" --output "${OBGGCC_TARBALL}"
+        curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --location --url "${OBGGCC_URL}" --output "${OBGGCC_TARBALL}"
         tar --directory="$(dirname "${OBGGCC_TARBALL}")" --extract --file="${OBGGCC_TARBALL}"
         
         echo 'OBGGCC_HOME=/tmp/obggcc' >> "${GITHUB_ENV}"
         echo '/tmp/obggcc/bin' >> "${GITHUB_PATH}"
     - name: Setup OpenBSD cross-compiler
       run: |
-        declare -r ATAR_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Atar/releases/latest')")"
+        declare -r ATAR_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/Atar/releases/latest')")"
         declare -r ATAR_TARBALL='/tmp/toolchain.tar.xz'
         declare -r ATAR_URL="https://github.com/AmanoTeam/Atar/releases/download/${ATAR_TAG}/x86_64-unknown-linux-gnu.tar.xz"
         
-        curl --retry 10 --retry-delay 3 --silent --location --url "${ATAR_URL}" --output "${ATAR_TARBALL}"
+        curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --location --url "${ATAR_URL}" --output "${ATAR_TARBALL}"
         tar --directory="$(dirname "${ATAR_TARBALL}")" --extract --file="${ATAR_TARBALL}"
         
         echo 'ATAR_HOME=/tmp/atar' >> "${GITHUB_ENV}"
         echo '/tmp/atar/bin' >> "${GITHUB_PATH}"
     - name: Setup Linux musl cross-compiler
       run: |
-        declare -r RAIDEN_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Raiden/releases/latest')")"
+        declare -r RAIDEN_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/Raiden/releases/latest')")"
         declare -r RAIDEN_TARBALL='/tmp/toolchain.tar.xz'
         declare -r RAIDEN_URL="https://github.com/AmanoTeam/Raiden/releases/download/${RAIDEN_TAG}/x86_64-unknown-linux-gnu.tar.xz"
         
-        curl --retry 10 --retry-delay 3 --silent --location --url "${RAIDEN_URL}" --output "${RAIDEN_TARBALL}"
+        curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --location --url "${RAIDEN_URL}" --output "${RAIDEN_TARBALL}"
         tar --directory="$(dirname "${RAIDEN_TARBALL}")" --extract --file="${RAIDEN_TARBALL}"
         
         echo 'RAIDEN_HOME=/tmp/raiden' >> "${GITHUB_ENV}"
         echo '/tmp/raiden/bin' >> "${GITHUB_PATH}"
     - name: Setup SerenityOS cross-compiler
       run: | 
-        declare -r SENNA_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --retry 10 --retry-delay 3 --silent --url 'https://api.github.com/repos/AmanoTeam/Senna/releases/latest')")"
+        declare -r SENNA_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/Senna/releases/latest')")"
         declare -r SENNA_TARBALL='/tmp/toolchain.tar.xz'
         declare -r SENNA_URL="https://github.com/AmanoTeam/Senna/releases/download/${SENNA_TAG}/x86_64-unknown-linux-gnu.tar.xz"
         
-        curl --retry 10 --retry-delay 3 --silent --location --url "${SENNA_URL}" --output "${SENNA_TARBALL}"
+        curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --location --url "${SENNA_URL}" --output "${SENNA_TARBALL}"
         tar --directory="$(dirname "${SENNA_TARBALL}")" --extract --file="${SENNA_TARBALL}"
         
         echo 'SENNA_HOME=/tmp/senna' >> "${GITHUB_ENV}"

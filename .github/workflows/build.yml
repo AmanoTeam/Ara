@@ -263,7 +263,7 @@ jobs:
 
             declare SPARKLEC_ENABLE_LTO=ON
 
-            if [[ "${target}" == *-apple-darwin ]]; then
+            if [[ "${target}" == *-apple-darwin ]] || [[ "${target}" == *-w64-mingw32 ]]; then
                 SPARKLEC_ENABLE_LTO=OFF
             fi
             

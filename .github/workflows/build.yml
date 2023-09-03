@@ -161,12 +161,104 @@ jobs:
         
         echo 'SENNA_HOME=/tmp/senna' >> "${GITHUB_ENV}"
         echo '/tmp/senna/bin' >> "${GITHUB_PATH}"
+    - name: Setup Kindle cross-compiler
+      run: | 
+        declare -r KEL_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/Kel/releases/latest')")"
+        declare -r KEL_TARBALL='/tmp/toolchain.tar.xz'
+        declare -r KEL_URL="https://github.com/AmanoTeam/Kel/releases/download/${KEL_TAG}/x86_64-unknown-linux-gnu.tar.xz"
+        
+        curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --location --url "${KEL_URL}" --output "${KEL_TARBALL}"
+        tar --directory="$(dirname "${KEL_TARBALL}")" --extract --file="${KEL_TARBALL}"
+        
+        echo 'KEL_HOME=/tmp/kel' >> "${GITHUB_ENV}"
+        echo '/tmp/kel/bin' >> "${GITHUB_PATH}"
+    - name: Setup PocketBook cross-compiler
+      run: | 
+        declare -r NERO_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/Nero/releases/latest')")"
+        declare -r NERO_TARBALL='/tmp/toolchain.tar.xz'
+        declare -r NERO_URL="https://github.com/AmanoTeam/Nero/releases/download/${NERO_TAG}/x86_64-unknown-linux-gnu.tar.xz"
+        
+        curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --location --url "${NERO_URL}" --output "${NERO_TARBALL}"
+        tar --directory="$(dirname "${NERO_TARBALL}")" --extract --file="${NERO_TARBALL}"
+        
+        echo 'NERO_HOME=/tmp/nero' >> "${GITHUB_ENV}"
+        echo '/tmp/nero/bin' >> "${GITHUB_PATH}"
+    - name: Setup reMarkable cross-compiler
+      run: | 
+        declare -r NAN_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/Nan/releases/latest')")"
+        declare -r NAN_TARBALL='/tmp/toolchain.tar.xz'
+        declare -r NAN_URL="https://github.com/AmanoTeam/Nan/releases/download/${NAN_TAG}/x86_64-unknown-linux-gnu.tar.xz"
+        
+        curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --location --url "${NAN_URL}" --output "${NAN_TARBALL}"
+        tar --directory="$(dirname "${NAN_TARBALL}")" --extract --file="${NAN_TARBALL}"
+        
+        echo 'NAN_HOME=/tmp/nan' >> "${GITHUB_ENV}"
+        echo '/tmp/nan/bin' >> "${GITHUB_PATH}"
+    - name: Setup Cervantes cross-compiler
+      run: | 
+        declare -r NIL_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/Nil/releases/latest')")"
+        declare -r NIL_TARBALL='/tmp/toolchain.tar.xz'
+        declare -r NIL_URL="https://github.com/AmanoTeam/Nil/releases/download/${NIL_TAG}/x86_64-unknown-linux-gnu.tar.xz"
+        
+        curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --location --url "${NIL_URL}" --output "${NIL_TARBALL}"
+        tar --directory="$(dirname "${NIL_TARBALL}")" --extract --file="${NIL_TARBALL}"
+        
+        echo 'NIL_HOME=/tmp/nil' >> "${GITHUB_ENV}"
+        echo '/tmp/nil/bin' >> "${GITHUB_PATH}"
+    - name: Setup Bookeen cross-compiler
+      run: | 
+        declare -r AI_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/Ai/releases/latest')")"
+        declare -r AI_TARBALL='/tmp/toolchain.tar.xz'
+        declare -r AI_URL="https://github.com/AmanoTeam/Ai/releases/download/${AI_TAG}/x86_64-unknown-linux-gnu.tar.xz"
+        
+        curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --location --url "${AI_URL}" --output "${AI_TARBALL}"
+        tar --directory="$(dirname "${AI_TARBALL}")" --extract --file="${AI_TARBALL}"
+        
+        echo 'AI_HOME=/tmp/ai' >> "${GITHUB_ENV}"
+        echo '/tmp/ai/bin' >> "${GITHUB_PATH}"
+    - name: Setup Kobo cross-compiler
+      run: | 
+        declare -r KAL_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/Kal/releases/latest')")"
+        declare -r KAL_TARBALL='/tmp/toolchain.tar.xz'
+        declare -r KAL_URL="https://github.com/AmanoTeam/Kal/releases/download/${KAL_TAG}/x86_64-unknown-linux-gnu.tar.xz"
+        
+        curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --location --url "${KAL_URL}" --output "${KAL_TARBALL}"
+        tar --directory="$(dirname "${KAL_TARBALL}")" --extract --file="${KAL_TARBALL}"
+        
+        echo 'KAL_HOME=/tmp/kal' >> "${GITHUB_ENV}"
+        echo '/tmp/kal/bin' >> "${GITHUB_PATH}"
+    - name: Setup Tizen cross-compiler
+      run: | 
+        declare -r NUL_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/Nul/releases/latest')")"
+        declare -r NUL_TARBALL='/tmp/toolchain.tar.xz'
+        declare -r NUL_URL="https://github.com/AmanoTeam/Nul/releases/download/${NUL_TAG}/x86_64-unknown-linux-gnu.tar.xz"
+        
+        curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --location --url "${NUL_URL}" --output "${NUL_TARBALL}"
+        tar --directory="$(dirname "${NUL_TARBALL}")" --extract --file="${NUL_TARBALL}"
+        
+        echo 'NUL_HOME=/tmp/nul' >> "${GITHUB_ENV}"
+        echo '/tmp/nul/bin' >> "${GITHUB_PATH}"
     - name: Build with CMake
       run: |
         declare -r targets=(
             # hppa-unknown-openbsd
             # riscv64-unknown-freebsd
             # vax-unknown-netbsdelf
+            arm-kobo-linux-gnueabihf
+            arm-bookeen-linux-gnueabi
+            arm-obreey-linux-gnueabi
+            arm-cervantes-linux-gnueabi
+            arm-remarkable-linux-gnueabihf
+            arm-kindlepw2-linux-gnueabi
+            arm-kindle5-linux-gnueabi
+            arm-kindle-linux-gnueabi
+            arm-tizenwearable-linux-gnueabi
+            arm-tizenmobile-linux-gnueabi
+            arm-tizeniot-linux-gnueabi
+            arm-tizeniotheadless-linux-gnueabi
+            i386-tizenmobile-linux-gnueabi
+            i386-tizenwearable-linux-gnueabi
+            aarch64-tizeniot-linux-gnu
             ia64-unknown-linux-gnu
             aarch64-apple-darwin
             aarch64-linux-android

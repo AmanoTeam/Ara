@@ -1,28 +1,28 @@
 cmake_minimum_required(VERSION 3.13)
 
 project(
-	SparkleC
+	Ara
 	VERSION 0.7
 	DESCRIPTION "Yet another CLI download utility"
-	HOMEPAGE_URL "https://github.com/Kartatz/SparkleC"
+	HOMEPAGE_URL "https://github.com/AmanoTeam/Ara"
 	LANGUAGES C
 )
 
-option(SPARKLEC_ENABLE_LTO "Turn on compiler Link Time Optimizations" OFF)
+option(ARA_ENABLE_LTO "Turn on compiler Link Time Optimizations" OFF)
 
-option(SPARKLEC_DISABLE_HOTMART "Disable support for Hotmart" OFF)
-option(SPARKLEC_DISABLE_ESTRATEGIA "Disable support for Estratégia websites" OFF)
+option(ARA_DISABLE_HOTMART "Disable support for Hotmart" OFF)
+option(ARA_DISABLE_ESTRATEGIA "Disable support for Estratégia websites" OFF)
 
-if (NOT SPARKLEC_DISABLE_ESTRATEGIA)
-	option(SPARKLEC_DISABLE_ESTRATEGIA_CONCURSOS "Disable support for Estratégia Concursos" OFF)
-	option(SPARKLEC_DISABLE_ESTRATEGIA_VESTIBULARES "Disable support for Estratégia Vestibulares" OFF)
-	option(SPARKLEC_DISABLE_ESTRATEGIA_MILITARES "Disable support for Estratégia Militares" OFF)
+if (NOT ARA_DISABLE_ESTRATEGIA)
+	option(ARA_DISABLE_ESTRATEGIA_CONCURSOS "Disable support for Estratégia Concursos" OFF)
+	option(ARA_DISABLE_ESTRATEGIA_VESTIBULARES "Disable support for Estratégia Vestibulares" OFF)
+	option(ARA_DISABLE_ESTRATEGIA_MILITARES "Disable support for Estratégia Militares" OFF)
 endif()
 
-option(SPARKLEC_DISABLE_IAEXPERT "Disable support for IA Expert Academy" OFF)
-option(SPARKLEC_DISABLE_KIWIFY "Disable support for Kiwify" OFF)
+option(ARA_DISABLE_IAEXPERT "Disable support for IA Expert Academy" OFF)
+option(ARA_DISABLE_KIWIFY "Disable support for Kiwify" OFF)
 
-option(SPARKLEC_DISABLE_CERTIFICATE_VALIDATION "Disable SSL certificate validation in libcurl" OFF)
+option(ARA_DISABLE_CERTIFICATE_VALIDATION "Disable SSL certificate validation in libcurl" OFF)
 
 set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
 set(CMAKE_POLICY_DEFAULT_CMP0048 NEW)
@@ -489,7 +489,7 @@ set(
 	--prefix="${FFMPEG_INSTALL_PREFIX}"
 )
 
-if (SPARKLEC_ENABLE_LTO)
+if (ARA_ENABLE_LTO)
 	list(APPEND FFMPEG_CONFIGURE_FLAGS "--enable-lto")
 endif()
 
@@ -718,7 +718,7 @@ foreach(target jansson libcurl_shared tidy-share)
 endforeach()
 
 add_executable(
-	sparklec
+	ara
 	src/callbacks.c
 	src/cleanup.c
 	src/buffer.c
@@ -747,14 +747,14 @@ add_executable(
 
 if (NOT (WIN32 OR SERENITYOS))
 	target_sources(
-		sparklec
+		ara
 		PRIVATE
 		src/getdents.c
 	)
 endif()
 
 add_executable(
-	sparklec-install
+	ara-install
 	src/install.c
 	src/filesystem.c
 	src/os.c
@@ -767,119 +767,119 @@ add_executable(
 
 if (NOT (WIN32 OR SERENITYOS))
 	target_sources(
-		sparklec-install
+		ara-install
 		PRIVATE
 		src/getdents.c
 	)
 endif()
 
-if (SPARKLEC_DISABLE_CERTIFICATE_VALIDATION) 
+if (ARA_DISABLE_CERTIFICATE_VALIDATION) 
 	target_compile_definitions(
-		sparklec
+		ara
 		PRIVATE
-		SPARKLEC_DISABLE_CERTIFICATE_VALIDATION
+		ARA_DISABLE_CERTIFICATE_VALIDATION
 	)
 endif()
 
-if (SPARKLEC_DISABLE_HOTMART)
+if (ARA_DISABLE_HOTMART)
 	target_compile_definitions(
-		sparklec
+		ara
 		PRIVATE
-		SPARKLEC_DISABLE_HOTMART
+		ARA_DISABLE_HOTMART
 	)
 else()
 	target_sources(
-		sparklec
+		ara
 		PRIVATE
 		src/hotmart.c
 	)
 endif()
 
-if (NOT SPARKLEC_DISABLE_ESTRATEGIA)
+if (NOT ARA_DISABLE_ESTRATEGIA)
 	target_sources(
-		sparklec
+		ara
 		PRIVATE
 		src/estrategia.c
 	)
 	
-	if (SPARKLEC_DISABLE_ESTRATEGIA_CONCURSOS)
+	if (ARA_DISABLE_ESTRATEGIA_CONCURSOS)
 		target_compile_definitions(
-			sparklec
+			ara
 			PRIVATE
-			SPARKLEC_DISABLE_ESTRATEGIA_CONCURSOS
+			ARA_DISABLE_ESTRATEGIA_CONCURSOS
 		)
 	else()
 		target_sources(
-			sparklec
+			ara
 			PRIVATE
 			src/estrategia_concursos.c
 		)
 	endif()
 	
-	if (SPARKLEC_DISABLE_ESTRATEGIA_VESTIBULARES)
+	if (ARA_DISABLE_ESTRATEGIA_VESTIBULARES)
 		target_compile_definitions(
-			sparklec
+			ara
 			PRIVATE
-			SPARKLEC_DISABLE_ESTRATEGIA_VESTIBULARES
+			ARA_DISABLE_ESTRATEGIA_VESTIBULARES
 		)
 	else()
 		target_sources(
-			sparklec
+			ara
 			PRIVATE
 			src/estrategia_vestibulares.c
 		)
 	endif()
 	
-	if (SPARKLEC_DISABLE_ESTRATEGIA_MILITARES)
+	if (ARA_DISABLE_ESTRATEGIA_MILITARES)
 		target_compile_definitions(
-			sparklec
+			ara
 			PRIVATE
-			SPARKLEC_DISABLE_ESTRATEGIA_MILITARES
+			ARA_DISABLE_ESTRATEGIA_MILITARES
 		)
 	else()
 		target_sources(
-			sparklec
+			ara
 			PRIVATE
 			src/estrategia_militares.c
 		)
 	endif()
 else()
 	target_compile_definitions(
-		sparklec
+		ara
 		PRIVATE
-		SPARKLEC_DISABLE_ESTRATEGIA
+		ARA_DISABLE_ESTRATEGIA
 	)
 endif()
 
-if (SPARKLEC_DISABLE_IAEXPERT)
+if (ARA_DISABLE_IAEXPERT)
 	target_compile_definitions(
-		sparklec
+		ara
 		PRIVATE
-		SPARKLEC_DISABLE_IAEXPERT
+		ARA_DISABLE_IAEXPERT
 	)
 else()
 	target_sources(
-		sparklec
+		ara
 		PRIVATE
 		src/iaexpert.c
 	)
 endif()
 
-if (SPARKLEC_DISABLE_KIWIFY)
+if (ARA_DISABLE_KIWIFY)
 	target_compile_definitions(
-		sparklec
+		ara
 		PRIVATE
-		SPARKLEC_DISABLE_KIWIFY
+		ARA_DISABLE_KIWIFY
 	)
 else()
 	target_sources(
-		sparklec
+		ara
 		PRIVATE
 		src/kiwify.c
 	)
 endif()
 
-foreach(target sparklec sparklec-install)
+foreach(target ara ara-install)
 	target_compile_options(
 		${target}
 		PRIVATE
@@ -943,14 +943,14 @@ foreach(property RUNTIME_OUTPUT_DIRECTORY LIBRARY_OUTPUT_DIRECTORY)
 		set_target_properties(
 			${target}
 			PROPERTIES
-			${property} $<TARGET_FILE_DIR:sparklec>
+			${property} $<TARGET_FILE_DIR:ara>
 		)
 	endforeach()
 endforeach()
 
 # Enable Unicode on Windows builds
 if (WIN32)
-	foreach(target sparklec sparklec-install)
+	foreach(target ara ara-install)
 		target_sources(
 			${target}
 			PRIVATE
@@ -977,20 +977,20 @@ if (WIN32)
 	endforeach()
 	
 	target_sources(
-		sparklec-install
+		ara-install
 		PRIVATE
 		src/wregistry.c
 	)
 endif()
 
-if (SPARKLEC_ENABLE_LTO)
-	set(SPARKLEC_HAS_LTO OFF)
+if (ARA_ENABLE_LTO)
+	set(ARA_HAS_LTO OFF)
 	
 	include(CheckIPOSupported)
-	check_ipo_supported(RESULT SPARKLEC_HAS_LTO LANGUAGES C)
+	check_ipo_supported(RESULT ARA_HAS_LTO LANGUAGES C)
 	
-	if (SPARKLEC_HAS_LTO)
-		foreach(target sparklec sparklec-install bearssl jansson libcurl_shared tidy-share)
+	if (ARA_HAS_LTO)
+		foreach(target ara ara-install bearssl jansson libcurl_shared tidy-share)
 			set_target_properties(
 				${target}
 				PROPERTIES
@@ -1002,14 +1002,14 @@ endif()
 
 if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 	target_link_options(
-		sparklec
+		ara
 		BEFORE
 		PRIVATE
 		-Wl,-rpath-link,. -L.
 	)
 elseif (WIN32)
 	target_link_options(
-		sparklec
+		ara
 		BEFORE
 		PRIVATE
 		-L.
@@ -1017,7 +1017,7 @@ elseif (WIN32)
 endif()
 
 target_link_libraries(
-	sparklec
+	ara
 	jansson
 	libcurl_shared
 	tidy-share
@@ -1027,11 +1027,11 @@ target_link_libraries(
 )
 
 target_link_libraries(
-	sparklec-install
+	ara-install
 	bearssl
 )
 
-foreach(target sparklec sparklec-install bearssl jansson libcurl_shared tidy-share)
+foreach(target ara ara-install bearssl jansson libcurl_shared tidy-share)
 	install(
 		TARGETS ${target}
 		RUNTIME DESTINATION bin
@@ -1071,14 +1071,14 @@ if (APPLE)
 		MATH(EXPR index "${index}+1")
 	endforeach()
 	
-	set(executable $<TARGET_FILE:sparklec>)
+	set(executable $<TARGET_FILE:ara>)
 	
 	foreach(old_rpath ${names})
 		get_filename_component(basename "${old_rpath}" NAME)
 		set(new_rpath "@loader_path/../lib/${basename}")
 		
 		add_custom_command(
-			TARGET sparklec POST_BUILD
+			TARGET ara POST_BUILD
 			COMMAND "${CMAKE_INSTALL_NAME_TOOL}" -change "${old_rpath}" "${new_rpath}" "${executable}"
 			COMMENT "-- Changing hardcoded rpath of '${executable}' from '${old_rpath}' to '${new_rpath}'"
 		)

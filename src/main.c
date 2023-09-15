@@ -34,7 +34,7 @@
 #include "buffer.h"
 #include "providers.h"
 #include "input.h"
-#include "sparklec.h"
+#include "ara.h"
 #include "cir.h"
 #include "terminal.h"
 #include "ffmpeg.h"

@@ -1,32 +1,32 @@
 #include "resources.h"
 
-#ifndef SPARKLEC_DISABLE_HOTMART
+#ifndef ARA_DISABLE_HOTMART
 	#include "hotmart.h"
 #endif
 
-#ifdef SPARKLEC_DISABLE_ESTRATEGIA
-	#define SPARKLEC_DISABLE_ESTRATEGIA_CONCURSOS
-	#define SPARKLEC_DISABLE_ESTRATEGIA_VESTIBULARES
-	#define SPARKLEC_DISABLE_ESTRATEGIA_MILITARES
+#ifdef ARA_DISABLE_ESTRATEGIA
+	#define ARA_DISABLE_ESTRATEGIA_CONCURSOS
+	#define ARA_DISABLE_ESTRATEGIA_VESTIBULARES
+	#define ARA_DISABLE_ESTRATEGIA_MILITARES
 #endif
 
-#ifndef SPARKLEC_DISABLE_ESTRATEGIA_CONCURSOS
+#ifndef ARA_DISABLE_ESTRATEGIA_CONCURSOS
 	#include "estrategia_concursos.h"
 #endif
 
-#ifndef SPARKLEC_DISABLE_ESTRATEGIA_VESTIBULARES
+#ifndef ARA_DISABLE_ESTRATEGIA_VESTIBULARES
 	#include "estrategia_vestibulares.h"
 #endif
 
-#ifndef SPARKLEC_DISABLE_ESTRATEGIA_MILITARES
+#ifndef ARA_DISABLE_ESTRATEGIA_MILITARES
 	#include "estrategia_militares.h"
 #endif
 
-#ifndef SPARKLEC_DISABLE_IAEXPERT
+#ifndef ARA_DISABLE_IAEXPERT
 	#include "iaexpert.h"
 #endif
 
-#ifndef SPARKLEC_DISABLE_KIWIFY
+#ifndef ARA_DISABLE_KIWIFY
 	#include "kiwify.h"
 #endif
 
@@ -46,7 +46,7 @@ struct Provider {
 };
 
 static const struct Provider PROVIDERS[] = {
-#ifndef SPARKLEC_DISABLE_HOTMART
+#ifndef ARA_DISABLE_HOTMART
 	{
 		.label = "Hotmart",
 		.url = "https://hotmart.com",
@@ -60,7 +60,7 @@ static const struct Provider PROVIDERS[] = {
 		.directory = "Hotmart"
 	},
 #endif
-#ifndef SPARKLEC_DISABLE_ESTRATEGIA_CONCURSOS
+#ifndef ARA_DISABLE_ESTRATEGIA_CONCURSOS
 	{
 		.label = "Estratégia Concursos",
 		.url = "https://estrategiaconcursos.com.br",
@@ -74,7 +74,7 @@ static const struct Provider PROVIDERS[] = {
 		.directory = "Estratégia"
 	},
 #endif
-#ifndef SPARKLEC_DISABLE_ESTRATEGIA_VESTIBULARES
+#ifndef ARA_DISABLE_ESTRATEGIA_VESTIBULARES
 	{
 		.label = "Estratégia Vestibulares",
 		.url = "https://vestibulares.estrategia.com",
@@ -88,7 +88,7 @@ static const struct Provider PROVIDERS[] = {
 		.directory = "Estratégia"
 	},
 #endif
-#ifndef SPARKLEC_DISABLE_ESTRATEGIA_MILITARES
+#ifndef ARA_DISABLE_ESTRATEGIA_MILITARES
 	{
 		.label = "Estratégia Militares",
 		.url = "https://militares.estrategia.com",
@@ -102,7 +102,7 @@ static const struct Provider PROVIDERS[] = {
 		.directory = "Estratégia"
 	},
 #endif
-#ifndef SPARKLEC_DISABLE_IAEXPERT
+#ifndef ARA_DISABLE_IAEXPERT
 	{
 		.label = "IA Expert Academy",
 		.url = "https://iaexpert.academy",
@@ -113,10 +113,10 @@ static const struct Provider PROVIDERS[] = {
 			.get_module = &iaexpert_get_module,
 			.get_page = &iaexpert_get_page
 		},
-		.directory = "IA Expert Academy"
+		.directory = "IAExpertAcademy"
 	},
 #endif
-#ifndef SPARKLEC_DISABLE_KIWIFY
+#ifndef ARA_DISABLE_KIWIFY
 	{
 		.label = "Kiwify",
 		.url = "https://kiwify.com.br",

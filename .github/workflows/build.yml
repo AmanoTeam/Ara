@@ -353,14 +353,14 @@ jobs:
         for target in "${targets[@]}"; do
             echo "Building for ${target}"
 
-            declare SPARKLEC_ENABLE_LTO=ON
+            declare ARA_ENABLE_LTO=ON
 
             if [[ "${target}" == *-apple-darwin ]] || [[ "${target}" == *-w64-mingw32 ]]; then
-                SPARKLEC_ENABLE_LTO=OFF
+                ARA_ENABLE_LTO=OFF
             fi
             
             cmake -Wno-dev \
-                -DSPARKLEC_ENABLE_LTO="${SPARKLEC_ENABLE_LTO}" \
+                -DARA_ENABLE_LTO="${ARA_ENABLE_LTO}" \
                 -DCMAKE_TOOLCHAIN_FILE="./.github/workflows/cmake_toolchains/${target}.cmake" \
                 -DCMAKE_INSTALL_PREFIX="${target}" \
                 -DCMAKE_BUILD_TYPE=MinSizeRel ../ 1>/dev/null
@@ -396,7 +396,7 @@ jobs:
       uses: softprops/action-gh-release@master
       with:
         tag_name: v${{ env.VERSION_TAG }}
-        name: SparkleC v${{ env.VERSION_TAG }}
+        name: Ara v${{ env.VERSION_TAG }}
         files: ./output/*
         draft: true
         prerelease: false

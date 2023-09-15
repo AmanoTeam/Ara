@@ -66,7 +66,7 @@
 #endif
 
 static const char* const INSTALL_FILES[] = {
-	EXECUTABLE_DIRECTORY PATH_SEPARATOR "sparklec" EXECUTABLE_EXTENSION,
+	EXECUTABLE_DIRECTORY PATH_SEPARATOR "ara" EXECUTABLE_EXTENSION,
 	SHARED_LIBRARY_DIRECTORY PATH_SEPARATOR "libjansson" SHARED_LIBRARY_EXTENSION,
 	SHARED_LIBRARY_DIRECTORY PATH_SEPARATOR "libbearssl" SHARED_LIBRARY_EXTENSION,
 	SHARED_LIBRARY_DIRECTORY PATH_SEPARATOR "libcurl" SHARED_LIBRARY_EXTENSION,
@@ -160,7 +160,7 @@ int main(void) {
 	char install_directory[strlen(home) + strlen(PATH_SEPARATOR) + 9 + 1];
 	strcpy(install_directory, home);
 	strcat(install_directory, PATH_SEPARATOR);
-	strcat(install_directory, ".sparklec");
+	strcat(install_directory, ".ara");
 	
 	for (size_t index = 0; index < sizeof(INSTALL_FILES) / sizeof(*INSTALL_FILES); index++) {
 		const char* const filename = INSTALL_FILES[index];
@@ -271,7 +271,7 @@ int main(void) {
 		#if !defined(_WIN32)
 			const char* const name = basename(destination_file);
 			
-			if (strcmp(name, "sparklec") == 0) {
+			if (strcmp(name, "ara") == 0) {
 				printf("+ Aplicando permissões de executável para o arquivo em '%s'\r\n", destination_file);
 				
 				if (chmod(destination_file, S_IRWXU) == -1) {
@@ -284,7 +284,7 @@ int main(void) {
 		#endif
 	}
 	
-	char* const executable = find_exe("sparklec");
+	char* const executable = find_exe("ara");
 	
 	free(executable);
 	

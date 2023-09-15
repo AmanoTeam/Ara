@@ -18,7 +18,7 @@
 #include "fstream.h"
 #include "errors.h"
 
-#ifndef SPARKLEC_DISABLE_CERTIFICATE_VALIDATION
+#ifndef ARA_DISABLE_CERTIFICATE_VALIDATION
 	static const char CA_CERT_FILENAME[] = 
 		PATH_SEPARATOR
 		"etc"
@@ -79,7 +79,7 @@ static int globals_initialize(void) {
 	
 	atexit(globals_destroy);
 	
-	#ifndef SPARKLEC_DISABLE_CERTIFICATE_VALIDATION
+	#ifndef ARA_DISABLE_CERTIFICATE_VALIDATION
 		char app_filename[PATH_MAX];
 		get_app_filename(app_filename);
 		
@@ -177,7 +177,7 @@ static int curl_set_options(CURL* handle) {
 	curl_easy_setopt(handle, CURLOPT_DNS_CACHE_TIMEOUT, -1L);
 	curl_easy_setopt(handle, CURLOPT_DNS_SHUFFLE_ADDRESSES, 1L);
 	
-	#ifdef SPARKLEC_DISABLE_CERTIFICATE_VALIDATION
+	#ifdef ARA_DISABLE_CERTIFICATE_VALIDATION
 		curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
 	#else
 		if (curl_blob_global.data == NULL) {

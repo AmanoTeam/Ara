@@ -24,6 +24,12 @@
 
 #include "getdents.h"
 
+#if defined(__HAIKU__)
+	int _kern_open_dir(int, const char*);
+	ssize_t _kern_read_dir(int, struct dirent*, size_t, size_t);
+	int _kern_close(int);
+#endif
+
 int open_dir(const char* const directory) {
 	
 	#ifdef __HAIKU__
@@ -68,7 +74,7 @@ int open_dir(const char* const directory) {
 	#elif defined(__MUSL__)
 		ssize_t get_directory_entries(int fd, char* const buffer, const size_t buffer_size) {
 			
-			const ssize_t size = (ssize_t) getdents(fd, buffer, buffer_size);
+			const ssize_t size = (ssize_t) getdents(fd, (struct dirent*) buffer, buffer_size);
 			return size;
 			
 		}
@@ -101,13 +107,9 @@ int open_dir(const char* const directory) {
 #endif
 
 #if defined(__HAIKU__)
-	int _kern_open_dir(int, const char*);
-	ssize_t _kern_read_dir(int, struct dirent*, size_t, size_t);
-	int _kern_close(int);
-	
 	ssize_t get_directory_entries(int fd, char* const buffer, const size_t buffer_size) {
 		
-		const ssize_t size = _kern_read_dir(fd, buffer, buffer_size, sizeof(*buffer));
+		const ssize_t size = _kern_read_dir(fd, (struct dirent*) buffer, buffer_size, sizeof(*buffer));
 		
 		if (size < 0) {
 			__set_errno(size);

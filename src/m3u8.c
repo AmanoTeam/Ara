@@ -132,7 +132,7 @@ int m3u8_parse(struct Tags* tags, const char* const s) {
 			end--;
 			
 			while (end != start) {
-				if (!isspace(*end)) {
+				if (!isspace((unsigned char) *end)) {
 					break;
 				}
 				

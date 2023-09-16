@@ -104,6 +104,14 @@ int vimeo_parse(
 		return UERR_JSON_CANNOT_PARSE;
 	}
 	
+	const json_t* obj = json_object_get(tree, "view");
+	
+	const json_int_t status = json_integer_value(obj);
+	
+	if (status != 1) {
+		return UERR_NO_STREAMS_AVAILABLE;
+	}
+	
 	const json_t* video = json_object_get(tree, "video");
 	
 	if (video == NULL) {
@@ -114,7 +122,7 @@ int vimeo_parse(
 		return UERR_JSON_NON_MATCHING_TYPE;
 	}
 	
-	const json_t* obj = json_object_get(video, "title");
+	obj = json_object_get(video, "title");
 	
 	if (obj == NULL) {
 		return UERR_JSON_MISSING_REQUIRED_KEY;

@@ -28,7 +28,7 @@
 		"cert.pem";
 #endif
 
-static const char HTTP_DEFAULT_USER_AGENT[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.5563.111 Safari/537.36";
+static const char HTTP_DEFAULT_USER_AGENT[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.5993.70 Safari/537.36";
 static const long HTTP_MAX_CONCURRENT_CONNECTIONS = 30L;
 static const size_t HTTP_MAX_RETRIES = 10;
 

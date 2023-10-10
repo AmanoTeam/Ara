@@ -8,6 +8,7 @@
 	#define ARA_DISABLE_ESTRATEGIA_CONCURSOS
 	#define ARA_DISABLE_ESTRATEGIA_VESTIBULARES
 	#define ARA_DISABLE_ESTRATEGIA_MILITARES
+	#define ARA_DISABLE_ESTRATEGIA_MEDICINA
 #endif
 
 #ifndef ARA_DISABLE_ESTRATEGIA_CONCURSOS
@@ -20,6 +21,10 @@
 
 #ifndef ARA_DISABLE_ESTRATEGIA_MILITARES
 	#include "estrategia_militares.h"
+#endif
+
+#ifndef ARA_DISABLE_ESTRATEGIA_MEDICINA
+	#include "estrategia_medicina.h"
 #endif
 
 #ifndef ARA_DISABLE_IAEXPERT
@@ -98,6 +103,20 @@ static const struct Provider PROVIDERS[] = {
 			.get_modules = &estrategia_militares_get_modules,
 			.get_module = &estrategia_militares_get_module,
 			.get_page = &estrategia_militares_get_page
+		},
+		.directory = "Estratégia"
+	},
+#endif
+#ifndef ARA_DISABLE_ESTRATEGIA_MEDICINA
+	{
+		.label = "Estratégia Medicina",
+		.url = "https://medicina.estrategia.com",
+		.methods = {
+			.authorize = &estrategia_medicina_authorize,
+			.get_resources = &estrategia_medicina_get_resources,
+			.get_modules = &estrategia_medicina_get_modules,
+			.get_module = &estrategia_medicina_get_module,
+			.get_page = &estrategia_medicina_get_page
 		},
 		.directory = "Estratégia"
 	},

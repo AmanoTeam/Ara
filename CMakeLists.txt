@@ -17,6 +17,7 @@ if (NOT ARA_DISABLE_ESTRATEGIA)
 	option(ARA_DISABLE_ESTRATEGIA_CONCURSOS "Disable support for Estratégia Concursos" OFF)
 	option(ARA_DISABLE_ESTRATEGIA_VESTIBULARES "Disable support for Estratégia Vestibulares" OFF)
 	option(ARA_DISABLE_ESTRATEGIA_MILITARES "Disable support for Estratégia Militares" OFF)
+	option(ARA_DISABLE_ESTRATEGIA_MEDICINA "Disable support for Estratégia Medicina" OFF)
 endif()
 
 option(ARA_DISABLE_IAEXPERT "Disable support for IA Expert Academy" OFF)
@@ -841,6 +842,20 @@ if (NOT ARA_DISABLE_ESTRATEGIA)
 			ara
 			PRIVATE
 			src/estrategia_militares.c
+		)
+	endif()
+	
+	if (ARA_DISABLE_ESTRATEGIA_MEDICINA)
+		target_compile_definitions(
+			ara
+			PRIVATE
+			ARA_DISABLE_ESTRATEGIA_MEDICINA
+		)
+	else()
+		target_sources(
+			ara
+			PRIVATE
+			src/estrategia_medicina.c
 		)
 	endif()
 else()

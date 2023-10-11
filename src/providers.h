@@ -35,6 +35,10 @@
 	#include "kiwify.h"
 #endif
 
+#ifndef ARA_DISABLE_LOJA_CONCURSEIRO
+	#include "loja_concurseiro.h"
+#endif
+
 struct ProviderMethods {
 	int (*authorize)(const char* const, const char* const, struct Credentials* const);
 	int (*get_resources)(const struct Credentials* const, struct Resources* const);
@@ -147,6 +151,20 @@ static const struct Provider PROVIDERS[] = {
 			.get_page = &kiwify_get_page
 		},
 		.directory = "Kiwify"
+	},
+#endif
+#ifndef ARA_DISABLE_LOJA_CONCURSEIRO
+	{
+		.label = "Loja do Concurseiro",
+		.url = "https://www.lojadoconcurseiro.com.br",
+		.methods = {
+			.authorize = &loja_concurseiro_authorize,
+			.get_resources = &loja_concurseiro_get_resources,
+			.get_modules = &loja_concurseiro_get_modules,
+			.get_module = &loja_concurseiro_get_module,
+			.get_page = &loja_concurseiro_get_page
+		},
+		.directory = "LojaDoConcurseiro"
 	},
 #endif
 };

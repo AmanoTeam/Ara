@@ -16,6 +16,7 @@ static const char UNDERSCORE[] = "_";
 static const char SEMICOLON[] = ";";
 static const char APOSTROPHE[] = "'";
 static const char ASTERISK[] = "*";
+static const char QUESTION[] = "?";
 
 #if defined(_WIN32)
 	#define PATH_SEPARATOR "\\"

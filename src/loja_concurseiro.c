@@ -20,6 +20,7 @@
 #include "curl.h"
 #include "buffer.h"
 #include "vimeo.h"
+#include "youtube.h"
 #include "loja_concurseiro.h"
 
 static const char HTTP_HEADER_AUTHORIZATION[] = "Authorization";
@@ -45,6 +46,10 @@ static const char LOJA_CONCURSEIRO_ATTACHMENT_TOKEN[] = "302c723b348f75072df5af8
 static const char AULAS[] = "aulas";
 
 static const char VIMEO_VIDEO_HOMEPAGE[] = "https://player.vimeo.com/video";
+static const char YOUTUBE_VIDEO_HOMEPAGE[] = "https://www.youtube.com/embed";
+
+#define PLAYER_VIMEO 1
+#define PLAYER_YOUTUBE 2
 
 int loja_concurseiro_authorize(
 	const char* const username,
@@ -882,8 +887,23 @@ int loja_concurseiro_get_module(
 				return UERR_JSON_NON_MATCHING_TYPE;
 			}
 			
-			const char* const vimeo_id = json_string_value(obj);
-					
+			const char* video_id = json_string_value(obj);
+			const int player_type = (*video_id == '\0' ? PLAYER_YOUTUBE : PLAYER_VIMEO);
+			
+			if (player_type == PLAYER_YOUTUBE) {
+				const json_t* obj = json_object_get(item, "caminho");
+				
+				if (obj == NULL) {
+					return UERR_JSON_MISSING_REQUIRED_KEY;
+				}
+				
+				if (!json_is_string(obj)) {
+					return UERR_JSON_NON_MATCHING_TYPE;
+				}
+				
+				video_id = json_string_value(obj);
+			}
+			
 			struct Page page = {
 				.id = malloc(strlen(id) + 1),
 				.name = malloc(strlen(name) + 1),
@@ -912,7 +932,7 @@ int loja_concurseiro_get_module(
 			
 			struct Media media = {
 				.video = {
-					.url = malloc(strlen(VIMEO_VIDEO_HOMEPAGE) + strlen(SLASH) + strlen(vimeo_id) + 1)
+					.url = malloc(strlen(player_type == PLAYER_VIMEO ? VIMEO_VIDEO_HOMEPAGE : YOUTUBE_VIDEO_HOMEPAGE) + strlen(SLASH) + strlen(video_id) + 1)
 				}
 			};
 			
@@ -920,9 +940,9 @@ int loja_concurseiro_get_module(
 				return UERR_MEMORY_ALLOCATE_FAILURE;
 			}
 			
-			strcpy(media.video.url, VIMEO_VIDEO_HOMEPAGE);
+			strcpy(media.video.url, player_type == PLAYER_VIMEO ? VIMEO_VIDEO_HOMEPAGE : YOUTUBE_VIDEO_HOMEPAGE);
 			strcat(media.video.url, SLASH);
-			strcat(media.video.url, vimeo_id);
+			strcat(media.video.url, video_id);
 			
 			page.medias.items[page.medias.offset++] = media;
 			module->pages.items[module->pages.offset++] = page;
@@ -949,11 +969,28 @@ int loja_concurseiro_get_page(
 	(void) credentials;
 	
 	struct Media* const media = &page->medias.items[0];
+	char* url __free__ = media->video.url;
 	
-	const int code = vimeo_parse(media->video.url, resource, page, media, resource->url);
+	media->video.url = NULL;
 	
-	if (!(code == UERR_SUCCESS || code == UERR_NO_STREAMS_AVAILABLE)) {
-		return code;
+	printf("+ A mídia localizada em '%s' aponta para uma fonte externa, verificando se é possível processá-la\r\n", url);
+	
+	if (vimeo_matches(url)) {
+		const int code = vimeo_parse(url, resource, page, media, resource->url);
+		
+		if (!(code == UERR_SUCCESS || code == UERR_NO_STREAMS_AVAILABLE)) {
+			return code;
+		}
+	} else if (youtube_matches(url)) {
+		const int code = youtube_parse(url, resource, page, media, NULL);
+		
+		if (!(code == UERR_SUCCESS || code == UERR_NO_STREAMS_AVAILABLE)) {
+			return code;
+		}
+	}
+	
+	if (media->video.url == NULL) {
+		fprintf(stderr, "- A URL é inválida ou não foi reconhecida. Por favor, reporte-a ao desenvolvedor.\r\n");
 	}
 	
 	return UERR_SUCCESS;

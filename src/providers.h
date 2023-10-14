@@ -31,10 +31,6 @@
 	#include "iaexpert.h"
 #endif
 
-#ifndef ARA_DISABLE_KIWIFY
-	#include "kiwify.h"
-#endif
-
 #ifndef ARA_DISABLE_LOJA_CONCURSEIRO
 	#include "loja_concurseiro.h"
 #endif
@@ -137,20 +133,6 @@ static const struct Provider PROVIDERS[] = {
 			.get_page = &iaexpert_get_page
 		},
 		.directory = "IAExpertAcademy"
-	},
-#endif
-#ifndef ARA_DISABLE_KIWIFY
-	{
-		.label = "Kiwify",
-		.url = "https://kiwify.com.br",
-		.methods = {
-			.authorize = &kiwify_authorize,
-			.get_resources = &kiwify_get_resources,
-			.get_modules = &kiwify_get_modules,
-			.get_module = &kiwify_get_module,
-			.get_page = &kiwify_get_page
-		},
-		.directory = "Kiwify"
 	},
 #endif
 #ifndef ARA_DISABLE_LOJA_CONCURSEIRO

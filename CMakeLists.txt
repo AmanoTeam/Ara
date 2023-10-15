@@ -22,6 +22,7 @@ endif()
 
 option(ARA_DISABLE_IAEXPERT "Disable support for IA Expert Academy" OFF)
 option(ARA_DISABLE_LOJA_CONCURSEIRO "Disable support for Loja do Concurseiro" OFF)
+option(ARA_DISABLE_FOCUS_CONCURSOS "Disable support for Focus Concursos" OFF)
 
 option(ARA_DISABLE_CERTIFICATE_VALIDATION "Disable SSL certificate validation in libcurl" OFF)
 
@@ -744,6 +745,7 @@ add_executable(
 	src/ffmpeg.c
 	src/walkdir.c
 	src/ttidy.c
+	src/uri.c
 )
 
 if (NOT (WIN32 OR SERENITYOS))
@@ -891,6 +893,20 @@ else()
 		ara
 		PRIVATE
 		src/loja_concurseiro.c
+	)
+endif()
+
+if (ARA_DISABLE_FOCUS_CONCURSOS)
+	target_compile_definitions(
+		ara
+		PRIVATE
+		ARA_DISABLE_FOCUS_CONCURSOS
+	)
+else()
+	target_sources(
+		ara
+		PRIVATE
+		src/focus_concursos.c
 	)
 endif()
 

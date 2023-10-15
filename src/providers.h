@@ -35,6 +35,10 @@
 	#include "loja_concurseiro.h"
 #endif
 
+#ifndef ARA_DISABLE_FOCUS_CONCURSOS
+	#include "focus_concursos.h"
+#endif
+
 struct ProviderMethods {
 	int (*authorize)(const char* const, const char* const, struct Credentials* const);
 	int (*get_resources)(const struct Credentials* const, struct Resources* const);
@@ -147,6 +151,20 @@ static const struct Provider PROVIDERS[] = {
 			.get_page = &loja_concurseiro_get_page
 		},
 		.directory = "LojaDoConcurseiro"
+	},
+#endif
+#ifndef ARA_DISABLE_FOCUS_CONCURSOS
+	{
+		.label = "Focus Concursos",
+		.url = "https://www.focusconcursos.com.br",
+		.methods = {
+			.authorize = &focus_concursos_authorize,
+			.get_resources = &focus_concursos_get_resources,
+			.get_modules = &focus_concursos_get_modules,
+			.get_module = &focus_concursos_get_module,
+			.get_page = &focus_concursos_get_page
+		},
+		.directory = "FocusConcursos"
 	},
 #endif
 };

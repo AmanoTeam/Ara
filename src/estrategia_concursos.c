@@ -494,7 +494,7 @@ int estrategia_concursos_get_resources(
 				.url = malloc(strlen(ESTRATEGIA_CONCURSOS_COURSE_HOMEPAGE) + strlen(SLASH) + strlen(sid) + strlen(SLASH) + strlen(AULAS) + 1)
 			};
 			
-			if (resource.id == NULL || resource.name == NULL || resource.dirname == NULL || resource.short_dirname == NULL ||  resource.qualification.id == NULL || resource.qualification.name == NULL || resource.qualification.dirname == NULL || resource.qualification.short_dirname == NULL) {
+			if (resource.id == NULL || resource.name == NULL || resource.dirname == NULL || resource.short_dirname == NULL ||  resource.qualification.id == NULL || resource.qualification.name == NULL || resource.qualification.dirname == NULL || resource.qualification.short_dirname == NULL || resource.url == NULL) {
 				return UERR_MEMORY_ALLOCATE_FAILURE;
 			}
 			
@@ -1122,7 +1122,7 @@ int estrategia_concursos_get_module(
 			.video = {
 				.id = malloc(strlen(sid) + 1),
 				.filename = malloc(strlen(name) + strlen(DOT) + strlen(MP4_FILE_EXTENSION) + 1),
-				.short_filename = malloc(strlen(name) + strlen(DOT) + strlen(MP4_FILE_EXTENSION) + 1),
+				.short_filename = malloc(strlen(sid) + strlen(DOT) + strlen(MP4_FILE_EXTENSION) + 1),
 				.url = malloc(strlen(stream_uri) + 1)
 			}
 		};

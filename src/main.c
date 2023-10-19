@@ -216,6 +216,7 @@ static int m3u8_download(const char* const url, const char* const output) {
 				return UERR_FAILURE;
 			}
 			
+			curl_easy_setopt(handle, CURLOPT_REFERER, url);
 			curl_easy_setopt(handle, CURLOPT_URL, segment_url);
 			
 			char value[intlen(segment_number) + 1];

@@ -118,6 +118,7 @@ static int m3u8_download(const char* const url, const char* const output) {
 	
 	buffer_t string __buffer_free__ = {0};
 	
+	curl_easy_setopt(curl_easy, CURLOPT_REFERER, url);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, url);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, curl_write_string_cb);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, &string);
@@ -366,6 +367,7 @@ static int m3u8_download(const char* const url, const char* const output) {
 		return UERR_FAILURE;
 	}
 	
+	curl_easy_setopt(curl_easy, CURLOPT_REFERER, NULL);
 	curl_easy_setopt(curl_easy, CURLOPT_URL, NULL);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, NULL);
 	curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, NULL);

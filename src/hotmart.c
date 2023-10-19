@@ -848,6 +848,7 @@ int hotmart_get_page(
 			
 			if (strcmp(media_type, "VIDEO") == 0) {
 				curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, NULL);
+				curl_easy_setopt(curl_easy, CURLOPT_REFERER, url);
 				curl_easy_setopt(curl_easy, CURLOPT_URL, url);
 				
 				buffer_free(&string);
@@ -855,6 +856,8 @@ int hotmart_get_page(
 				if (curl_easy_perform_retry(curl_easy) != CURLE_OK) {
 					return UERR_CURL_FAILURE;
 				}
+				
+				curl_easy_setopt(curl_easy, CURLOPT_REFERER, NULL);
 				
 				curl_easy_setopt(curl_easy, CURLOPT_URL, NULL);
 				

@@ -325,9 +325,9 @@ int vimeo_parse(
 			return UERR_CURL_FAILURE;
 		}
 			
-		struct Tags tags = {0};
+		struct M3U8Playlist playlist = {0};
 		
-		if (m3u8_parse(&tags, string.s) != UERR_SUCCESS) {
+		if (m3u8_parse(&playlist, string.s) != UERR_SUCCESS) {
 			return UERR_M3U8_PARSE_FAILURE;
 		}
 		
@@ -336,12 +336,12 @@ int vimeo_parse(
 		const char* video_stream = NULL;
 		const char* audio_stream = NULL;
 		
-		for (size_t index = 0; index < tags.offset; index++) {
-			const struct Tag* const tag = &tags.items[index];
+		for (size_t index = 0; index < playlist.tags.offset; index++) {
+			const struct M3U8Tag* const tag = &playlist.tags.items[index];
 			
 			switch (tag->type) {
 				case EXT_X_STREAM_INF: {
-					const struct Attribute* const attribute = attributes_get(&tag->attributes, "RESOLUTION");
+					const struct M3U8Attribute* const attribute = m3u8tag_getattr(tag, "RESOLUTION");
 					
 					if (attribute == NULL) {
 						return UERR_M3U8_MISSING_REQUIRED_ATTRIBUTE;
@@ -370,7 +370,7 @@ int vimeo_parse(
 						break;
 					}
 					
-					const struct Attribute* attribute = attributes_get(&tag->attributes, "TYPE");
+					const struct M3U8Attribute* attribute = m3u8tag_getattr(tag, "TYPE");
 					
 					if (attribute == NULL) {
 						return UERR_M3U8_MISSING_REQUIRED_ATTRIBUTE;
@@ -380,7 +380,7 @@ int vimeo_parse(
 						break;
 					}
 					
-					 attribute = attributes_get(&tag->attributes, "URI");
+					 attribute = m3u8tag_getattr(tag, "URI");
 					
 					if (attribute == NULL) {
 						return UERR_M3U8_MISSING_REQUIRED_ATTRIBUTE;

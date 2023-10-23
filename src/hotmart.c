@@ -748,7 +748,7 @@ int hotmart_get_page(
 		const json_t* item = NULL;
 		const size_t array_size = json_array_size(obj);
 		
-		page->medias.size = sizeof(struct Media) * array_size;
+		page->medias.size = sizeof(*page->medias.items) * array_size;
 		page->medias.items = malloc(page->medias.size);
 		
 		if (page->medias.items == NULL) {
@@ -861,23 +861,23 @@ int hotmart_get_page(
 				
 				curl_easy_setopt(curl_easy, CURLOPT_URL, NULL);
 				
-				struct Tags tags = {0};
+				struct M3U8Playlist playlist = {0};
 				
-				if (m3u8_parse(&tags, string.s) != UERR_SUCCESS) {
+				if (m3u8_parse(&playlist, string.s) != M3U8ERR_SUCCESS) {
 					return UERR_M3U8_PARSE_FAILURE;
 				}
 				
 				int last_width = 0;
 				const char* playlist_uri = NULL;
 				
-				for (size_t index = 0; index < tags.offset; index++) {
-					struct Tag* tag = &tags.items[index];
+				for (size_t index = 0; index < playlist.tags.offset; index++) {
+					const struct M3U8Tag* const tag = &playlist.tags.items[index];
 					
 					if (tag->type != EXT_X_STREAM_INF) {
 						continue;
 					}
 					
-					const struct Attribute* const attribute = attributes_get(&tag->attributes, "RESOLUTION");
+					const struct M3U8Attribute* const attribute = m3u8tag_getattr(tag, "RESOLUTION");
 					
 					const char* const start = attribute->value;
 					const char* const end = strstr(start, "x");

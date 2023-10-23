@@ -127,16 +127,16 @@ static int m3u8_download(const char* const url, const char* const output) {
 		return UERR_CURL_FAILURE;
 	}
 	
-	struct Tags tags = {0};
+	struct M3U8Playlist playlist = {0};
 	
-	if (m3u8_parse(&tags, string.s) != UERR_SUCCESS) {
+	if (m3u8_parse(&playlist, string.s) != M3U8ERR_SUCCESS) {
 		fprintf(stderr, "- Ocorreu uma falha inesperada!\r\n");
-		return UERR_FAILURE;
+		return UERR_M3U8_PARSE_FAILURE;
 	}
 	
 	int segment_number = 1;
 	
-	struct Download dl_queue[tags.offset];
+	struct Download dl_queue[playlist.tags.offset];
 	size_t dl_total = 0;
 	size_t dl_done = 0;
 	
@@ -148,11 +148,11 @@ static int m3u8_download(const char* const url, const char* const output) {
 	CURLU* cu __curl_url_cleanup__ = curl_url();
 	curl_url_set(cu, CURLUPART_URL, url, 0);
 	
-	for (size_t index = 0; index < tags.offset; index++) {
-		struct Tag* const tag = &tags.items[index];
+	for (size_t index = 0; index < playlist.tags.offset; index++) {
+		struct M3U8Tag* const tag = &playlist.tags.items[index];
 		
 		if (tag->type == EXT_X_KEY) {
-			struct Attribute* const attribute = attributes_get(&tag->attributes, "URI");
+			struct M3U8Attribute* const attribute = m3u8tag_getattr(tag, "URI");
 			
 			curl_url_set(cu, CURLUPART_URL, url, 0);
 			curl_url_set(cu, CURLUPART_URL, attribute->value, 0);
@@ -165,7 +165,7 @@ static int m3u8_download(const char* const url, const char* const output) {
 			strcat(filename, DOT);
 			strcat(filename, KEY_FILE_EXTENSION);
 			
-			attribute_set_value(attribute, filename);
+			m3u8tag_setattr(tag, "URI", filename);
 			
 			CURL* handle = curl_easy_new();
 			
@@ -229,7 +229,7 @@ static int m3u8_download(const char* const url, const char* const output) {
 			strcat(segment_filename, DOT);
 			strcat(segment_filename, TS_FILE_EXTENSION);
 			
-			tag_set_uri(tag, segment_filename);
+			m3u8tag_set(tag, M3U8TAG_SET_URI, segment_filename);
 			
 			stream = fstream_open(segment_filename, FSTREAM_WRITE);
 			
@@ -275,7 +275,7 @@ static int m3u8_download(const char* const url, const char* const output) {
 			strcat(filename, DOT);
 			strcat(filename, TS_FILE_EXTENSION);
 			
-			tag_set_uri(tag, filename);
+			m3u8tag_set(tag, M3U8TAG_SET_URI, filename);
 			
 			CURL* handle = curl_easy_new();
 			
@@ -333,11 +333,11 @@ static int m3u8_download(const char* const url, const char* const output) {
 		return UERR_FAILURE;
 	}
 			
-	const int status = tags_dumpf(&tags, stream);
+	const int status = m3u8_dumpf(&playlist, stream);
 	
-	m3u8_free(&tags);
+	m3u8_free(&playlist);
 	
-	if (status == -1) {
+	if (status != M3U8ERR_SUCCESS) {
 		const struct SystemError error = get_system_error();
 		
 		fstream_close(stream);

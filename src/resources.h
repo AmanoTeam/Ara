@@ -24,6 +24,7 @@ struct Media {
 	struct AudioStream audio;
 	struct VideoStream video;
 	char* path;
+	char* uri;
 };
 
 struct Medias {

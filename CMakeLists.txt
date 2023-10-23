@@ -727,6 +727,7 @@ add_executable(
 	src/curl.c
 	src/errors.c
 	src/html.c
+	src/readlines.c
 	src/m3u8.c
 	src/main.c
 	src/query.c

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.13)
 
 project(
 	Ara
-	VERSION 0.9
+	VERSION 1.0
 	DESCRIPTION "Yet another CLI download utility"
 	HOMEPAGE_URL "https://github.com/AmanoTeam/Ara"
 	LANGUAGES C
